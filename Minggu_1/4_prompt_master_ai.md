@@ -18,31 +18,34 @@ Tugas kamu adalah membantu saya menyusun materi bisnis (seperti Presentasi/Slide
 
 ### 1. Profil Proyek Terkini
 
-- **Nama Brand**: Aura Digital
-- **Bidang Bisnis**: E-Commerce Produk Spesifik & Aset Digital (Digital Goods Reseller).
-- **Tagline**: _"Akses Premium, Instan & Elegan."_
-- **Visi Utama**: Menyediakan platform pembelian lisensi digital dan _sharing account_ dengan pengalaman UI/UX semewah perusahaan teknologi tingkat dunia (Apple/Stripe), bebas ribet, dan sangat otomatis.
+- **Nama Brand**: TrailForge
+- **Bidang Bisnis**: E-Commerce Peralatan Adventure & Outdoor (Adventure Tools Marketplace).
+- **Tagline**: _"Gear Up. Go Wild."_
+- **Visi Utama**: Menjadi platform e-commerce peralatan adventure & outdoor terpercaya di Indonesia, dengan pengalaman belanja online yang modern, immersive, dan memberikan rasa percaya diri bagi setiap petualang.
 
 ### 2. Differensiasi Kunci (Unique Selling Proposition)
 
-Berbeda dari penjual "gelap" di Instagram/Shopee, **Aura Digital** memiliki keunggulan:
+Berbeda dari toko outdoor konvensional atau marketplace generik, **TrailForge** memiliki keunggulan:
 
-- **Pengiriman 1-Detik (Otomasi Penuh)**: User bayar via Payment Gateway (Midtrans) -> Status sukses -> Sistem langsung memunculkan kode lisensi / link invite di Dashboard User secara otomatis. Tanpa admin manusia.
-- **Garansi Anti-Hold**: Memberikan keamanan dan legalitas produk.
-- **Desain Premium Minimalist**: Memakai estetika Dark Mode bernuansa warna Indigo & Deep Slate, dilengkapi animasi Morphing super halus untuk memberikan ketenangan dan kepercayaan maksimal pada pelanggan.
+- **Kurasi Produk Ketat**: Setiap produk diseleksi berdasarkan durabilitas, bobot, dan value-for-money oleh tim yang paham outdoor.
+- **Desain Web Immersive & Premium**: Estetika Dark Earth dengan warna Forest Green & Amber, animasi Morphing halus, dan efek parallax gunung — user merasa sedang merencanakan petualangan, bukan sekadar belanja.
+- **Konten Edukasi di Setiap Produk**: Panduan penggunaan, tips survival, dan review dari komunitas petualang nyata.
 
 ### 3. Katalog Produk Utama
 
-1. **Produktivitas**: Canva Pro (Team/Lifetime), ChatGPT Plus (Akses Premium sharing/private).
-2. **Hiburan**: Spotify Premium, YouTube Premium, Netflix.
-3. **Edukasi**: Bundel Template Produktivitas (Notion Templates).
+1. **Shelter**: Tenda Ultralight, Hammock Camping + Tarp.
+2. **Tidur & Istirahat**: Sleeping Pad Inflatable, Sleeping Bag 0°C.
+3. **Tools & Survival**: Pisau Lipat Multifungsi, Headlamp Rechargeable.
+4. **Masak & Makan**: Kompor Portable Ultralight.
+5. **Navigasi**: Kompas Prismatik Militer.
 
 ### 4. Target Pasar Tersegmentasi
 
-- Mahasiswa & Pelajar (Sangat hemat namun butuh tools premium).
-- Pekerja Kreatif & Programmer (Membutuhkan akses platform berbayar dengan cepat).
+- Pendaki gunung & hiking enthusiast (usia 18-35, aktif, sering ke gunung/trail).
+- Backpacker & camper (budget-conscious tapi tetap mau gear berkualitas).
+- Komunitas pencinta alam (Mapala, klub outdoor, komunitas trail running).
 
 **INSTRUKSI TUGAS UNTUKMU SEKARANG:**
-Memahami konteks "Aura Digital" di atas, tolong kerjakan instruksi berikut ini dengan gaya bahasa yang profesional, elegan, namun berjiwa muda pantang menyerah seperti mahasiswa inovatif:
+Memahami konteks "TrailForge" di atas, tolong kerjakan instruksi berikut ini dengan gaya bahasa yang profesional, berjiwa petualang, dan penuh semangat eksplorasi:
 
 _(... Ketik instruksi spesifik kamu di sini. Contoh: "Buatkan outline untuk 15 slide PPT presentasi Pitching Bisnis yang berisi masalah, solusi, BMC, dan demo produk!")_

@@ -1,32 +1,37 @@
 # 📊 Business Model Canvas (BMC) & Analisis Kompetitor
 **Penanggung Jawab:** Anggota 1 (Business Strategist)
 
-Dokumen ini memetakan model bisnis dari Aura Digital untuk memastikan proyek ini layak dan memiliki potensi keuntungan.
+Dokumen ini memetakan model bisnis dari TrailForge untuk memastikan proyek ini layak dan memiliki potensi keuntungan.
 
 ## 1. Business Model Canvas (BMC)
 
-| Elemen BMC | Deskripsi Strategi Aura Digital |
+| Elemen BMC | Deskripsi Strategi TrailForge |
 | :--- | :--- |
-| **1. Customer Segments** | Mahasiswa (butuh Canva/Notion), Profesional Tech (butuh GPT Plus), dan Gen Z (butuh layanan streaming murah). |
-| **2. Value Propositions** | 100% Pengiriman instan tanpa nunggu admin, Antarmuka web paling estetik & aman, Garansi *replace* akun jika terkena hold/banned. |
-| **3. Channels** | Media Sosial (TikTok & Instagram Reels), Afiliasi antar Mahasiswa (Word of Mouth), Web e-commerce langsung. |
-| **4. Customer Relationships** | Layanan Self-Service penuh melalui Dashboard User, Grup Telegram/WhatsApp untuk *support* dan komplain. |
-| **5. Revenue Streams** | Keuntungan dari margin penjualan *sharing account* (misal: Beli Family Plan Rp 80k, dibagi 5 orang masing-masing Rp 25k), Penjualan bundel template (Modal 0, Profit 100%). |
-| **6. Key Resources** | Platform Web (Vercel & Supabase), Gateway Pembayaran (Midtrans), Pasokan Akun/Lisensi dari distributor pertama. |
-| **7. Key Activities** | Memastikan *uptime* server, melakukan "restock" kode lisensi ke dalam database, melayani komplain akun bermasalah. |
-| **8. Key Partnerships** | Provider Payment Gateway (Midtrans), Vercel (Hosting), Pemasok Akun Premium (Supplier/Distributor terpercaya). |
-| **9. Cost Structure** | Biaya platform (gratis karena pakai Vercel + Supabase free tier), Potongan/Fee Payment Gateway per transaksi, Modal beli akun Family/Premium bulanan. |
+| **1. Customer Segments** | Pendaki gunung & hiking enthusiast, Backpacker & camper (usia 18-35), Komunitas pencinta alam dan outdoor sports. |
+| **2. Value Propositions** | Produk terkurasi & terjamin kualitasnya, UI/UX web modern setara brand internasional (REI, Decathlon), panduan & edukasi outdoor di setiap produk. |
+| **3. Channels** | Media Sosial (Instagram Reels, TikTok adventure content), Komunitas outdoor (Mapala, grup hiking), Web e-commerce langsung. |
+| **4. Customer Relationships** | Review & rating dari komunitas petualang nyata, live chat support, blog tips survival & panduan gear. |
+| **5. Revenue Streams** | Margin penjualan peralatan outdoor (markup 25-40%), bundel paket petualang (Starter Pack, Summit Pack), affiliate & sponsorship dari brand outdoor. |
+| **6. Key Resources** | Platform Web (Vercel & Supabase), Gateway Pembayaran (Midtrans), Jaringan supplier peralatan outdoor terpercaya. |
+| **7. Key Activities** | Kurasi produk baru, quality check sebelum listing, pembuatan konten edukasi outdoor, fulfillment & pengiriman. |
+| **8. Key Partnerships** | Supplier peralatan outdoor lokal & impor, Midtrans (payment), Vercel (hosting), ekspedisi pengiriman (JNE/SiCepat). |
+| **9. Cost Structure** | Modal beli stok barang, biaya fulfillment & packing, fee payment gateway per transaksi, biaya hosting (free tier awal). |
 
 ---
 
 ## 2. Analisis Kompetitor (Pesaing Bisnis)
 
-### Kompetitor A: Penjual "Gelap" di Instagram/Twitter
-- **Kelebihan**: Harga sangat murah, sering bagi-bagi promo.
-- **Kelemahan**: Rawan penipuan, pengiriman lama karena nunggu admin "bangun tidur", kalau akun error admin sering kabur.
-- **Strategi Kita menang**: Sistem kita **otomatis**. User percaya karena webnya profesional dan pakai *Payment Gateway* resmi (bukan transfer manual ke rekening pribadi).
+### Kompetitor A: Toko Outdoor Konvensional (Toko Fisik / Instagram)
+- **Kelebihan**: Bisa pegang langsung barangnya, terpercaya karena punya toko fisik.
+- **Kelemahan**: Jangkauan terbatas lokal, harga cenderung tinggi karena biaya sewa, tidak ada sistem review terstruktur.
+- **Strategi Kita menang**: TrailForge hadir **online-first** dengan jangkauan nasional, harga lebih kompetitif karena low-overhead, dan setiap produk dilengkapi review komunitas.
 
-### Kompetitor B: Marketplace Game/Digital Besar (contoh: Itemku)
-- **Kelebihan**: Sangat terpercaya karena sistemnya dana ditahan (Escrow).
-- **Kelemahan**: Antarmuka terlalu ramai, rumit bagi orang awam. Fee admin cukup besar.
-- **Strategi Kita menang**: Aura Digital fokus ke UI/UX Minimalist ala Apple. User tidak bingung, cukup 3 kali klik: **Pilih Produk -> Bayar -> Ambil Kode**.
+### Kompetitor B: Marketplace Besar (Tokopedia/Shopee)
+- **Kelebihan**: Traffic sangat tinggi, banyak pilihan seller dan produk.
+- **Kelemahan**: Produk tidak terkurasi (banyak barang KW/palsu), UI sangat ramai & overwhelming, tidak ada edukasi produk.
+- **Strategi Kita menang**: TrailForge fokus ke **kurasi ketat** — hanya produk berkualitas yang lolos seleksi. Ditambah konten edukasi dan UI minimalist yang membuat pengalaman belanja gear outdoor jadi menyenangkan, bukan melelahkan.
+
+### Kompetitor C: Brand Outdoor Internasional (REI, Decathlon Online)
+- **Kelebihan**: Brand kuat, kualitas terjamin, website bagus.
+- **Kelemahan**: Harga premium dan mahal untuk pasar Indonesia, pengiriman lama & mahal jika impor.
+- **Strategi Kita menang**: TrailForge menawarkan **produk lokal & impor pilihan** dengan harga yang disesuaikan pasar Indonesia, pengiriman domestik cepat, dan support bahasa Indonesia.

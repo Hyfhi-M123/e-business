@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Premium Digital Store | Marketplace Produk Digital",
-  description: "Marketplace produk digital terbaik dengan estetika premium.",
+  title: "TrailForge | Adventure Tools Marketplace",
+  description: "Gear Up. Go Wild. — Platform e-commerce peralatan adventure & outdoor terpercaya dengan kurasi produk terbaik untuk pendaki, camper, dan petualang.",
 };
 
 export default function RootLayout({
