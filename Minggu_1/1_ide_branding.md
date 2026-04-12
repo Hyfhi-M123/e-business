@@ -3,7 +3,7 @@
 Dokumen ini berisi hasil kesepakatan seluruh anggota tim mengenai identitas bisnis yang akan kita bangun.
 
 ## 1. Identitas Brand
-- **Nama Brand yang Disepakati**: **Lumina Digital** (Memberikan kesan modern, terang, masa depan, dan premium).
+- **Nama Brand yang Disepakati**: **Aura Digital** (Memberikan kesan estetik, bercahaya, kelas atas, dan premium).
 - **Tagline**: *"Akses Premium, Instan & Elegan."*
 - **Visi**: Menjadi platform penyedia aset digital paling terpercaya dengan pengalaman berbelanja setara brand teknologi raksasa (Apple/Stripe).
 
@@ -26,7 +26,7 @@ Kita akan fokus pada produk dengan permintaan tinggi (High Demand) di kalangan m
 | **Pendidikan** | Bundle Template Notion "Ultimate Brain"| Mahasiswa, Pekerja | File PDF berisi Link Duplikasi |
 
 ## 4. Unique Selling Proposition (USP)
-Apa yang membuat **Lumina Digital** berbeda dari penjual di Instagram atau Shopee?
+Apa yang membuat **Aura Digital** berbeda dari penjual di Instagram atau Shopee?
 1. **Pengiriman Instan 1 Detik**: Tidak perlu *chat* admin nunggu dibalas. Bayar sukses = Kode/Link langsung keluar di layar.
 2. **Desain Mewah & Nyaman**: Pengguna merasa sedang berlangganan layanan resmi, bukan beli "kucing dalam karung" di toko mencurigakan.
 3. **Sistem Ter-Otomatisasi**: Dari pembayaran hingga pengiriman, 100% di-handle sistem (Midtrans + Webhook).

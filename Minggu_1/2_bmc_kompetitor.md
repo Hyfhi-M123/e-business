@@ -1,11 +1,11 @@
 # 📊 Business Model Canvas (BMC) & Analisis Kompetitor
 **Penanggung Jawab:** Anggota 1 (Business Strategist)
 
-Dokumen ini memetakan model bisnis dari Lumina Digital untuk memastikan proyek ini layak dan memiliki potensi keuntungan.
+Dokumen ini memetakan model bisnis dari Aura Digital untuk memastikan proyek ini layak dan memiliki potensi keuntungan.
 
 ## 1. Business Model Canvas (BMC)
 
-| Elemen BMC | Deskripsi Strategi Lumina Digital |
+| Elemen BMC | Deskripsi Strategi Aura Digital |
 | :--- | :--- |
 | **1. Customer Segments** | Mahasiswa (butuh Canva/Notion), Profesional Tech (butuh GPT Plus), dan Gen Z (butuh layanan streaming murah). |
 | **2. Value Propositions** | 100% Pengiriman instan tanpa nunggu admin, Antarmuka web paling estetik & aman, Garansi *replace* akun jika terkena hold/banned. |
@@ -29,4 +29,4 @@ Dokumen ini memetakan model bisnis dari Lumina Digital untuk memastikan proyek i
 ### Kompetitor B: Marketplace Game/Digital Besar (contoh: Itemku)
 - **Kelebihan**: Sangat terpercaya karena sistemnya dana ditahan (Escrow).
 - **Kelemahan**: Antarmuka terlalu ramai, rumit bagi orang awam. Fee admin cukup besar.
-- **Strategi Kita menang**: Lumina Digital fokus ke UI/UX Minimalist ala Apple. User tidak bingung, cukup 3 kali klik: **Pilih Produk -> Bayar -> Ambil Kode**.
+- **Strategi Kita menang**: Aura Digital fokus ke UI/UX Minimalist ala Apple. User tidak bingung, cukup 3 kali klik: **Pilih Produk -> Bayar -> Ambil Kode**.
