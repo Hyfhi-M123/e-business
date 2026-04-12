@@ -2,6 +2,24 @@
 
 Dokumen ini adalah panduan resmi proyek E-Commerce Produk Digital yang berfokus pada estetika mewah, performa tinggi, dan pengalaman pengguna yang modern.
 
+## 💎 Visi Estetika & UX
+- **Gaya Visual**: *Premium Minimalist* (Inspirasi: Apple, Stripe, Linear).
+- **Karakter Desain**: Tipografi bersih, pemanfaatan ruang (white space), gradasi halus, dan efek kaca (*Glassmorphism*).
+- **Animasi Inti**: *Organic Transitions* & *Shared Element Morphing* menggunakan Framer Motion.
+- **Kenyamanan**: Tetap fungsional dan intuitif (User-Friendly), tidak berlebihan.
+
+## 📂 Aturan Struktur Folder (Sederhana & Mandiri)
+1. **Satu Folder per Halaman**: Setiap halaman (misal: Home, Login, Produk) memiliki foldernya sendiri di dalam folder `app/`.
+2. **Kemandirian File**: Semua file yang berkaitan (Komponen kecil, CSS khusus, hingga API lokal) diletakkan di dalam folder halaman tersebut.
+3. **Flat Structure**: Tidak menggunakan folder `src/` yang mendalam. Struktur dibuat "rata" agar navigasi file lebih cepat.
+4. **Shared Folder**: Folder luar (seperti `/components`) hanya digunakan untuk hal-hal yang benar-benar dipakai oleh SEMUA halaman.
+
+## 🛠️ Tech Stack Juara
+- **Frontend**: Next.js (App Router) + TypeScript.
+- **Styling**: Tailwind CSS + Framer Motion.
+- **Backend & Database**: Supabase (Auth, DB PostgreSQL, Storage).
+- **Payment Gateway**: Midtrans / Xendit (Mode Sandbox).
+
 ## 👥 Struktur Tim & Peran Utama
 - **Anggota 1**: Business Strategist (BMC, SWOT, Copywriting) & UI/UX Designer.
 - **Anggota 2**: Frontend Developer & Animation Expert (Framer Motion).
@@ -24,7 +42,7 @@ Dokumen ini adalah panduan resmi proyek E-Commerce Produk Digital yang berfokus 
 - **Anggota 3**: Setup Supabase Project (Database & Auth) dan perancangan ERD.
 
 ### Minggu 3: Design Language & Komponen UI Dasar
-- **Anggota 1**: Pembuatan High-Fidelity Mockup (Figmastyle).
+- **Anggota 1**: Pembuatan High-Fidelity Mockup (Figma style).
 - **Anggota 2**: Pembuatan komponen atom (Button, Input, Card) dengan animasi Morphing.
 - **Anggota 3**: Implementasi sistem login dan proteksi route (Middleware).
 
@@ -59,4 +77,4 @@ Dokumen ini adalah panduan resmi proyek E-Commerce Produk Digital yang berfokus 
 - **Anggota 2 & 3**: Optimasi kecepatan (Lighthouse score) dan Launching ke Vercel.
 
 ---
-*Status: Minggu 1-Discovery & Brainstorming sedang berlangsung (Offline/Diskusi).*
+*Status: Minggu 1-Discovery & Ideasi sedang berlangsung.*
