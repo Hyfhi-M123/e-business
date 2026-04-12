@@ -1,159 +1,100 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Mountain, ArrowRight, Tent, Compass, Flame, Flashlight, MapPin, Wind } from "lucide-react";
+import { Compass, Mountain, ArrowRight, Zap, ShieldCheck } from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 text-center relative overflow-hidden">
-      
-      {/* Elemen Organik Bergerak di Latar Belakang — Kesan Alam & Gunung */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 blur-[120px]">
+    <main className="flex min-h-screen flex-col items-center justify-center p-6 text-center">
+      {/* Animasi Elemen Alam (Deep Green Glow) di Latar Belakang */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 blur-[150px]">
         <motion.div
           animate={{
-            scale: [1, 1.3, 1],
-            rotate: [0, 60, 0],
-            borderRadius: ["30% 70% 70% 30% / 30% 30% 70% 70%", "50% 50% 20% 80% / 25% 80% 20% 75%", "30% 70% 70% 30% / 30% 30% 70% 70%"],
+            scale: [1, 1.15, 1],
+            opacity: [0.3, 0.45, 0.3],
+            borderRadius: ["40% 60% 70% 30% / 40% 40% 60% 60%", "60% 40% 30% 70% / 60% 30% 70% 40%", "40% 60% 70% 30% / 40% 40% 60% 60%"],
           }}
           transition={{
             duration: 12,
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          className="w-[450px] h-[450px] bg-primary/30"
+          className="w-[500px] h-[500px] bg-emerald-900/40"
         />
       </div>
 
-      {/* Blob kedua — Aksen Amber */}
-      <div className="absolute top-1/3 right-1/4 -z-10 blur-[100px]">
-        <motion.div
-          animate={{
-            scale: [1, 1.15, 1],
-            rotate: [0, -45, 0],
-            borderRadius: ["60% 40% 30% 70% / 60% 30% 70% 40%", "30% 60% 70% 40% / 50% 60% 30% 60%", "60% 40% 30% 70% / 60% 30% 70% 40%"],
-          }}
-          transition={{
-            duration: 15,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          className="w-[300px] h-[300px] bg-accent/20"
-        />
-      </div>
-
-      {/* Konten Hero — Bertema Petualangan */}
+      {/* Konten Hero TrailForge */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="max-w-3xl"
+        transition={{ duration: 1 }}
+        className="max-w-4xl"
       >
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8 text-sm text-earth-300">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8 text-sm text-emerald-400 font-medium tracking-wide">
           <Mountain size={16} />
-          <span>Adventure Starts Here</span>
+          <span>PROVEN IN THE WILD. BUILT FOR YOU.</span>
         </div>
         
-        {/* Headline Utama */}
-        <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-earth-100 to-earth-400">
-          Gear Up. <br /> Go Wild.
+        <h1 className="text-6xl md:text-8xl font-black tracking-tight mb-8 bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-emerald-800 uppercase leading-[0.9]">
+          Gear Up.<br />Go Wild.
         </h1>
         
-        {/* Deskripsi Singkat */}
-        <p className="text-lg text-earth-300/80 mb-10 max-w-xl mx-auto">
-          Temukan peralatan adventure terbaik — tenda ultralight, sleeping bag, pisau survival, dan gear outdoor pilihan untuk setiap petualanganmu.
+        <p className="text-xl text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed">
+          Temukan peralatan outdoor kelas dunia yang dikurasi khusus untuk ekspedisi paling menantang. Tangguh, ringan, dan siap menemani perjalananmu.
         </p>
 
-        {/* Tombol CTA */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-5 justify-center">
           <motion.button
             whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="px-8 py-4 bg-accent text-earth-900 rounded-2xl font-semibold flex items-center gap-2 transition-all hover:bg-accent-light shadow-lg shadow-accent/20"
+            whileTap={{ scale: 0.98 }}
+            className="px-10 py-5 bg-emerald-600 text-white rounded-2xl font-bold flex items-center justify-center gap-3 shadow-lg shadow-emerald-900/20 hover:bg-emerald-500 transition-all text-lg"
           >
             Jelajahi Gear <ArrowRight size={20} />
           </motion.button>
           
-          <button className="px-8 py-4 glass rounded-2xl font-semibold hover:bg-primary/10 transition-all text-earth-200">
-            Lihat Katalog
+          <button className="px-10 py-5 glass rounded-2xl font-bold hover:bg-white/5 transition-all text-lg border border-white/10">
+            Panduan Survival
           </button>
         </div>
       </motion.div>
 
-      {/* Section Produk — Grid Bertema Outdoor */}
+      {/* Fitur Utama (Adventure Specs) */}
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.5, duration: 1 }}
-        className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl"
+        transition={{ delay: 0.6, duration: 1 }}
+        className="mt-32 grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl"
       >
         {[
-          { name: "Tenda Ultralight 2P", price: "Rp 450k", tag: "Best Seller", icon: Tent },
-          { name: "Pisau Multifungsi", price: "Rp 150k", tag: "Essential", icon: Compass },
-          { name: "Kompor Portable", price: "Rp 250k", tag: "New", icon: Flame },
+          { 
+            title: "Tough Tested", 
+            desc: "Setiap alat telah diuji di kondisi ekstrem pegunungan tinggi.",
+            icon: <ShieldCheck size={28} />
+          },
+          { 
+            title: "Ultralight", 
+            desc: "Material aero-grade yang meminimalisir beban di punggungmu.",
+            icon: <Zap size={28} />
+          },
+          { 
+            title: "Precision Navigation", 
+            desc: "Akurasi tanpa batas untuk memastikan kamu tidak pernah tersesat.",
+            icon: <Compass size={28} />
+          }
         ].map((item, i) => (
           <motion.div
             key={i}
-            whileHover={{ y: -10 }}
-            className="p-6 glass rounded-3xl text-left group cursor-pointer"
+            whileHover={{ y: -12, backgroundColor: "rgba(255, 255, 255, 0.04)" }}
+            className="p-8 glass rounded-[32px] text-left group cursor-pointer transition-all duration-300"
           >
-            {/* Ikon Produk */}
-            <div className="w-12 h-12 rounded-2xl bg-primary/20 mb-4 flex items-center justify-center text-earth-400 group-hover:bg-accent group-hover:text-earth-900 transition-all">
-              <item.icon size={24} />
+            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 mb-6 flex items-center justify-center text-emerald-400 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+              {item.icon}
             </div>
-            <h3 className="text-xl font-bold mb-1 text-earth-100">{item.name}</h3>
-            <p className="text-earth-400/70 text-sm mb-4">Gear terkurasi, siap tempur di segala medan.</p>
-            <div className="flex justify-between items-center">
-              <span className="font-bold text-accent">{item.price}</span>
-              <span className="text-[10px] px-2 py-1 glass rounded-md uppercase tracking-widest text-earth-300">{item.tag}</span>
-            </div>
+            <h3 className="text-2xl font-black mb-3 text-white uppercase tracking-tight">{item.title}</h3>
+            <p className="text-slate-400 leading-relaxed text-sm">{item.desc}</p>
           </motion.div>
         ))}
       </motion.div>
-
-      {/* Section Kenapa TrailForge */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1, duration: 0.8 }}
-        className="mt-32 w-full max-w-4xl"
-      >
-        <h2 className="text-3xl font-bold text-earth-100 mb-12 text-center">
-          Kenapa <span className="text-accent">TrailForge</span>?
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[
-            {
-              icon: MapPin,
-              title: "Kurasi Ketat",
-              desc: "Setiap produk diseleksi berdasarkan durabilitas, bobot, dan value-for-money.",
-            },
-            {
-              icon: Flashlight,
-              title: "Panduan Outdoor",
-              desc: "Tips survival dan panduan penggunaan di setiap produk — bukan sekadar jualan.",
-            },
-            {
-              icon: Wind,
-              title: "Komunitas Nyata",
-              desc: "Review dan rating dari petualang sungguhan yang sudah pakai di lapangan.",
-            },
-          ].map((feature, i) => (
-            <motion.div
-              key={i}
-              whileHover={{ scale: 1.03 }}
-              className="text-center p-6"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-primary/15 mx-auto mb-4 flex items-center justify-center text-earth-400">
-                <feature.icon size={28} />
-              </div>
-              <h3 className="font-bold text-lg text-earth-100 mb-2">{feature.title}</h3>
-              <p className="text-earth-400/70 text-sm">{feature.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-
     </main>
   );
 }

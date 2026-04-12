@@ -3,30 +3,30 @@
 @tailwind utilities;
 
 :root {
-  --background: #1a1a2e; /* Deep Earth (Mewah & Alam) */
-  --foreground: #f5f0e8; /* Warm White (seperti kertas peta tua) */
+  --background: #0d1b1e; /* Night Forest Dark */
+  --foreground: #f0fdf4; /* Soft Off-white */
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Outfit', 'Inter', sans-serif;
+  font-family: 'Inter', sans-serif;
   overflow-x: hidden;
 }
 
-/* Gradasi Latar Belakang Bertema Alam/Gunung */
+/* Sihir Gradasi Petualangan (Deep Forest Mesh) */
 .bg-mesh {
-  background-color: #1a1a2e;
+  background-color: #0d1b1e;
   background-image: 
-    radial-gradient(at 0% 0%, hsla(160, 40%, 12%, 1) 0, transparent 50%), 
-    radial-gradient(at 60% 10%, hsla(145, 30%, 18%, 1) 0, transparent 50%), 
-    radial-gradient(at 100% 0%, hsla(35, 60%, 20%, 1) 0, transparent 50%);
+    radial-gradient(at 0% 0%, hsla(158,36%,12%,1) 0, transparent 50%), 
+    radial-gradient(at 50% 0%, hsla(156,43%,24%,1) 0, transparent 50%), 
+    radial-gradient(at 100% 0%, hsla(38,92%,30%,1) 0, transparent 50%);
   background-attachment: fixed;
 }
 
-/* Glassmorphism Utility — Earth Tone */
+/* Glassmorphism Modern */
 .glass {
-  background: rgba(45, 106, 79, 0.08);
+  background: rgba(255, 255, 255, 0.02);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
