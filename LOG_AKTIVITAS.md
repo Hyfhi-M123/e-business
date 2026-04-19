@@ -39,4 +39,19 @@ Dokumen ini mencatat setiap langkah yang dilakukan oleh tim (Manusia & Antigravi
     - [x] Update `globals.css` — Background mesh bernuansa hutan/alam, glass effect earth tone.
     - [x] Update `layout.tsx` — Metadata TrailForge.
     - [x] Update `page.tsx` — Landing page bertema outdoor (ikon Tent/Compass/Flame, produk outdoor, section "Kenapa TrailForge").
-- **Catatan**: **Pivot 100% selesai.** Semua 12 file telah disesuaikan. Brand, dokumen strategi, arsitektur, dan kode sudah seragam bertema Adventure Tools. Siap dilanjutkan ke Minggu 2.
+### [2026-04-13] - Persiapan & Arsitektur Teknis (Minggu 2)
+- **Pelaku**: Antigravity
+- **Tindakan**:
+    - [x] Sinkronisasi ulang dengan repository GitHub (`git fetch` & `reset --hard`) untuk memastikan data terbaru.
+    - [x] Instalasi ulang dependensi (`npm install`) untuk konsistensi lingkungan.
+    - [x] Pembuatan folder `Minggu_2` untuk menampung seluruh progres teknis dan bisnis minggu ini.
+    - [x] Pembuatan dokumen detail rencana kerja per anggota (`RENCANA_KERJA.md`) di folder `Minggu_2`.
+- **Catatan**: Folder struktur siap digunakan. Progres teknis selanjutnya adalah setup mandiri Supabase dan refinement folder app.
+
+### [2026-04-19] - Eksekusi Blueprint Minggu 2 (Tim Inti)
+- **Pelaku**: Antigravity
+- **Tindakan**:
+    - [x] **Anggota 1**: Membuat `SWOT_Analysis.md` dan `User_Journey.md` di dalam folder `Minggu_2/Bisnis/`.
+    - [x] **Anggota 2**: Standarisasi `tailwind.config.ts`, membuat kerangka rute Page-Centric (`app/katalog/page.tsx` & `app/login/page.tsx`).
+    - [x] **Anggota 3**: Instalasi `@supabase/supabase-js`, pembuatan `utils/supabase/client.ts`, `.env.local.example`, serta rancangan `ERD_Database.md`.
+- **Catatan**: Seluruh fondasi dasar proyek untuk Minggu 2 telah terpasang di repository lokal. Siap untuk push.
