@@ -27,54 +27,56 @@ Dokumen ini adalah panduan resmi proyek E-Commerce Peralatan Adventure & Outdoor
 
 ---
 
-## 📅 Timeline & Milestone Mingguan (Siklus 9 Minggu)
+## 📅 Siklus SDLC Agile Scrum: Rencana Sprints (Timeline 9 Minggu)
 
-### Minggu 1: Kick-off, Ideasi & Strategi Bisnis (Semua Anggota)
-*Fokus: Memantapkan konsep tanpa menyentuh teknis.*
-- **Semua Anggota**: Brainstorming ide produk outdoor, penentuan nama brand, dan identitas visual.
-- **Anggota 1**: Pembuatan **Business Model Canvas (BMC)** dan analisis kompetitor outdoor.
-- **Anggota 2 & 3**: Riset referensi UI/UX outdoor website dan arsitektur data yang akan digunakan.
+Kita menggunakan pendekatan **Agile Scrum** agar proyek lebih adaptif, modern, dan profesional. Pembagian tugas dipecah menjadi siklus-*Sprint* mingguan dengan target rilis kecil (*increment*) yang jelas.
 
-### Minggu 2: Inisialisasi & Arsitektur Teknis
-*Fokus: Persiapan "Skeleton" Proyek.*
-- **Anggota 1**: Pembuatan Analisis **SWOT** dan User Journey diagram.
-- **Anggota 2**: Inisialisasi Next.js, Tailwind, dan struktur folder "Page-Centric".
-- **Anggota 3**: Setup Supabase Project (Database & Auth) dan perancangan ERD.
+### 🏃 Sprint 0: Product Discovery & Architecture Setup (Minggu 1 & 2)
+*Fokus: Memantapkan fondasi bisnis (Tahap Analisis Kebutuhan) & Setup Kerangka*
+- **Minggu 1 (Ideasi Bisnis)**: Pembuatan *Business Model Canvas (BMC)*, Analisis Kompetitor, kurasi ide produk, dan penentuan gaya visual (*Earthy Premium*). 
+- **Minggu 2 (Inisialisasi Teknis)**: Pembuatan *Analisis SWOT*, *User Journey Diagram*, setup *Next.js (Page-Centric)*, *Tailwind CSS*, dan rancangan *ERD* awal menggunakan *Supabase Auth*.
 
-### Minggu 3: Design Language & Komponen UI Dasar
-- **Anggota 1**: Pembuatan High-Fidelity Mockup (Figma style) bertema outdoor.
-- **Anggota 2**: Pembuatan komponen atom (Button, Input, ProductCard) dengan animasi Morphing.
-- **Anggota 3**: Implementasi sistem login dan proteksi route (Middleware).
+### 🏃 Sprint 1: Design Language & UI Atom Components (Minggu 3)
+*Fokus: Mengubah desain menjadi kode komponen bebas kutu (Reusable Components)*
+- **Anggota 1**: Pembuatan *High-Fidelity Mockup* (Gaya Figma) bertema outdoor.
+- **Anggota 2**: Pembuatan komponen atom (*Button, Input, ProductCard*) dengan integrasi animasi *Morphing (Framer Motion)*.
+- **Anggota 3**: Uji coba unit *Auth* (Login/Daftar) langsung ke *Database* dan perbaikan *Middleware* rute pengguna.
 
-### Minggu 4: Landing Page & User Flow Utama
-- **Anggota 1**: Penulisan konten penawaran (Copywriting) bernuansa petualangan yang persuasif.
-- **Anggota 2**: Pengembangan Landing Page interaktif dengan Parallax & Scroll Animations.
-- **Anggota 3**: Integrasi database ke Frontend untuk menampilkan daftar produk awal.
+### 🏃 Sprint 2: Core Discovery & Landing Page (Minggu 4)
+*Fokus: Penyelesaian "Wajah Merek" TrailForge*
+- **Anggota 1**: *Copywriting* penawaran bersensasi petualangan dan heroikal.
+- **Anggota 2**: Menyelesaikan pergerakan mulus antarmuka pendaratan (*Landing Page*) lengkap dengan efek *Parallax/Scroll Animations*.
+- **Anggota 3**: Menyeret *Data Model* Supabase agar Landing Page mengambil informasi produk teratas langsung dari *Server*.
 
-### Minggu 5: Katalog Produk & Fitur Pencarian
-- **Anggota 1**: Strategi kurasi visual (Foto produk outdoor yang menarik).
-- **Anggota 2**: Pembuatan halaman katalog produk dengan filtering kategori (Shelter, Tools, dll).
-- **Anggota 3**: Pembuatan API Pencarian (Search) yang cepat dan akurat.
+### 🏃 Sprint 3: Product Catalog & Search Efficiency (Minggu 5)
+*Fokus: Memberikan pengalaman pencarian gear termudah*
+- **Anggota 1**: Pengumpulan/kurasi aset visual *gear* riil *(Asset Curation)*.
+- **Anggota 2**: Mengawinkan filter UI komponen kategori (*Shelters, Tools*, dll) dengan grid dinamis.
+- **Anggota 3**: Penulisan *Query/API* pencarian spesifik Supabase dengan waktu *Load* di bawah batas rasional.
 
-### Minggu 6: Logika Keranjang & Transaksi
-- **Anggota 1**: Desain pengalaman checkout (Checkout Experience Design).
-- **Anggota 2**: Implementasi keranjang belanja (State Management) yang mulus.
-- **Anggota 3**: Logika server-side untuk menghitung diskon, ongkir, dan total belanja.
+### 🏃 Sprint 4: Cart System & State Management (Minggu 6)
+*Fokus: Manajemen alur logistik barang*
+- **Anggota 1**: Pembangunan UX konversi (*Checkout Experience*).
+- **Anggota 2**: Pembuatan laci keranjang melayang (*floating cart window*) bebas kedip tanpa *reload*.
+- **Anggota 3**: Logika kalkulator bayangan ongkir, potongan kurir, beserta kompilasi harga produk akhir.
 
-### Minggu 7: Payment Gateway & Verifikasi Otomatis
-- **Anggota 1**: Pembuatan panduan pembayaran untuk customer.
-- **Anggota 2**: Integrasi antarmuka pembayaran (Midtrans/Xendit).
-- **Anggota 3**: Implementasi Webhook untuk menangkap notifikasi sukses pembayaran & update stok.
+### 🏃 Sprint 5: Payment Gateway Integration (Minggu 7)
+*Fokus: Uang Masuk Otomatis*
+- **Anggota 1**: *UX/UI Microcopy* instruksi QRIS / VA.
+- **Anggota 2**: Adaptasi halaman perantara (*Midtrans/Xendit Sandbox Interface*).
+- **Anggota 3**: *Webhook handler*, jika Midtrans berkata "Bayar Lunas", maka persediaan stok di tabel produk akan berkurang.
 
-### Minggu 8: Dashboard & Tracking Pesanan
-- **Anggota 1**: Laporan perkembangan bisnis dan pengumpulan feedback.
-- **Anggota 2**: Pembuatan Dashboard User untuk tracking status pesanan.
-- **Anggota 3**: Sistem notifikasi email ke user + integrasi tracking pengiriman.
+### 🏃 Sprint 6: User Dashboard & Tracking (Minggu 8)
+*Fokus: Sistem pemeliharaan pengguna (Retention)*
+- **Anggota 1**: Pengecekan alur notifikasi.
+- **Anggota 2**: Pembuatan _UI Resi Pengiriman_ per *User*.
+- **Anggota 3**: Inisialisasi Email Notifikasi kepada pelanggan ketika barang di-_update_ menuju fase "Dikirim".
 
-### Minggu 9: QA, SEO, & Final Deployment
-- **Semua Anggota**: Pengetesan menyeluruh (UAT) dan perbaikan bug.
-- **Anggota 1**: Persiapan materi presentasi akhir (Pitch Deck).
-- **Anggota 2 & 3**: Optimasi kecepatan (Lighthouse score) dan Launching ke Vercel.
+### 🏃 Sprint 7: Release Readiness & Optimization (Minggu 9)
+*Fokus: Memoles kekurangan dan Deploy publik*
+- **Semua Anggota**: *QA (Quality Assurance)*, meredakan *bug* aplikasi (*UAT testing*).
+- **Anggota 1**: Merampungkan Laporan Akhir & *Pitch Deck* Final.
+- **Anggota 2 & 3**: Akselerasi metrik Core Web Vitals (*SEO Score, Lighthouse*), penyempurnaan _Environment Variables_, dan merilis TrailForge secara _Live_ di Vercel.
 
 ---
-*Status: Minggu 1-Discovery & Ideasi sedang berlangsung.*
+*Status: Tahap Sprint 0 (Minggu 2 - Architecture Setup) telah tercapai.*
