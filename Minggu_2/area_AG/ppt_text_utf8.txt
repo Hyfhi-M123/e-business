@@ -1,0 +1,295 @@
+﻿TRAIL
+FORGE
+"Gear Up. Go Wild."
+Skeleton & Arsitektur Sistem
+Laporan Progress
+Minggu ke-2
+Mata Kuliah E-Business 2025
+ SWOT Selesai
+ ERD Selesai
+ Skeleton Siap
+Kelompok TrailForge Progress Report
+
+1
+ 
+Kilas Balik: Apa itu TrailForge?
+Visi Proyek
+Platform e-commerce khusus peralatan adventure & outdoor yang menjual gear terkurasi untuk pendaki, camper, dan petualang Indonesia.
+ UI Earthy Premium
+Glassmorphism + Parallax Mountain
+ Kurasi Ketat
+Hanya produk berkualitas lolos seleksi
+ Edukasi Produk
+Panduan & review komunitas petualang
+8
+Produk Terkurasi
+(Fase 1)
+3
+Segmen
+Target Pasar
+100%
+Perencanaan
+Minggu 1 
+
+2
+03
+Fokus & Tujuan Minggu ke-2
+Tema: Inisialisasi & Arsitektur Teknis ΓÇö Membangun Pondasi yang Kuat
+01
+Analisis SWOT Mendalam
+Anggota 1 ΓÇö Business Strategist
+Memetakan posisi strategis TrailForge: Strengths dari UI Premium, hingga ancaman dominasi marketplace besar.
+02
+User Journey Diagram
+Anggota 1 ΓÇö Business Strategist
+Pemetaan 4 fase perjalanan pengguna: Discovery Evaluasi Transaksi Pasca-Pembelian.
+03
+Next.js + Tailwind + Framer Motion
+Anggota 2 ΓÇö Frontend Developer
+Page-centric architecture, konfigurasi Earthy Premium Tailwind, uji Staggered Animation.
+04
+ERD Supabase + Auth Middleware
+Anggota 3 ΓÇö Backend Engineer
+Skema 5 tabel PostgreSQL, isolasi API Keys di .env.local, middleware proteksi rute admin.
+
+3
+04
+Analisis SWOT ΓÇö TrailForge
+Anggota 1 (Business Strategist) ΓÇö Analisis Posisi Strategis Bisnis
+S Strengths
+ UI/UX Premium Immersive (Earthy + Glassmorphism)
+ Kurasi produk ketat: durabilitas & value-for-money
+ Konten edukasi & review komunitas petualang nyata
+W Weaknesses
+ Belum ada toko fisik untuk demo produk langsung
+ Brand awareness masih baru, butuh marketing besar
+ Bergantung 100% pada ekspedisi pihak ke-3
+O Opportunities
+ Tren gaya hidup outdoor meroket pasca-pandemi
+ Gap: belum ada toko outdoor online berkelas lokal
+ Kolaborasi B2B: Mapala, KOL outdoor, travel vlogger
+T Threats
+ Dominasi Tokopedia/Shopee dengan promo ongkir gratis
+ Merek besar (Eiger, Arei) bisa perang harga agresif
+ Fluktuasi kurs impor memangkas margin ultralight gear
+
+4
+05
+User Journey Diagram
+Anggota 1 ΓÇö Pemetaan 4 fase perjalanan pengguna: Discovery Evaluasi Transaksi Retention
+1. Discovery
+1
+Buka Landing Page
+2
+Lihat efek parallax gunung
+3
+Klik 'Jelajahi Gear'
+ Terkesima & excited
+2. Evaluasi
+1
+Masuk katalog produk
+2
+Klik card produk
+3
+Baca spesifikasi & review
+ Yakin & percaya
+3. Transaksi
+1
+Tambah ke keranjang
+2
+Isi alamat & ekspedisi
+3
+Bayar via Midtrans/QRIS
+ Aman & cepat
+4. Pasca-Beli
+1
+Email konfirmasi otomatis
+2
+Lacak status di dashboard
+3
+Beri review produk
+ Puas & loyal
+
+5
+06
+Arsitektur Frontend ΓÇö Next.js + Tailwind + Framer Motion
+Anggota 2 (Frontend Developer) ΓÇö Page-Centric Structure & Earthy Premium UI
+ Page-Centric Architecture
+ app/
+ layout.tsx Root layout
+ page.tsx Landing Page
+ katalog/
+ page.tsx Halaman Katalog
+ katalog.module.css
+ login/
+ page.tsx Auth Page
+ produk/[id]/
+ page.tsx Detail Produk
+Tailwind ΓÇö Earthy Premium Config
+ Custom color tokens: forest-green, campfire-orange
+ Font: Inter (sans) + JetBrains Mono (kode)
+ Dark mode strategy: class-based
+Framer Motion ΓÇö Staggered Animation
+ Uji transisi halaman: AnimatePresence
+ Staggered card reveal di halaman katalog
+ Parallax scroll effect pada hero section
+ Skeleton Frontend: SELESAI
+
+6
+07
+ERD Database ΓÇö Supabase PostgreSQL
+Anggota 3 (Backend Engineer) ΓÇö Skema 5 tabel relasional untuk TrailForge
+ users
+uuid id (PK)
+string email
+string full_name
+timestamp created_at
+ products
+int id (PK)
+string name
+numeric price
+string category
+int stock_qty
+ orders
+int id (PK)
+uuid user_id (FK)
+numeric total_price
+string payment_status
+string shipping_status
+ cart_items
+int id (PK)
+uuid user_id (FK)
+int product_id (FK)
+int quantity
+ order_items
+int id (PK)
+int order_id (FK)
+int product_id (FK)
+int quantity
+numeric price_at_purchase
+Relasi: users orders, cart_items " products order_items, cart_items " orders order_items
+
+7
+08
+Keamanan & Middleware ΓÇö Proteksi Rute Admin
+Anggota 3 ΓÇö Supabase Auth + Next.js Middleware untuk autentikasi & otorisasi
+ Alur Middleware Autentikasi
+1
+Request masuk ke /admin/* atau /dashboard/*
+2
+Next.js Middleware intercept request
+3
+Cek session token via Supabase Auth
+ 
+Token valid Request diteruskan ke halaman
+ 
+Token invalid Redirect ke /login
+Supabase Project Setup
+ API Keys diisolasi di .env.local
+ Client connections via createClient()
+ Row Level Security (RLS) diaktifkan
+Auth Strategy
+ Email/Password + Magic Link
+ Session management otomatis
+ JWT token untuk API calls
+Route Protection
+ middleware.ts di root project
+ Matcher: /admin/*, /dashboard/*
+ Redirect ke /login jika unauthorized
+
+8
+09
+Dokumentasi & Bukti Pengerjaan
+Placeholder untuk tim ΓÇö Tempelkan screenshot/screencap kode & repository di sini
+A
+Folder Repository GitHub
+[ Tempel Screenshot di Sini ]
+Struktur folder app/ Next.js (katalog/, login/, produk/[id]/)
+B
+Supabase Dashboard
+[ Tempel Screenshot di Sini ]
+5 tabel yang sudah dibuat di PostgreSQL
+C
+Kode Middleware.ts
+[ Tempel Screenshot di Sini ]
+Potongan kode fungsi proteksi rute admin
+D
+Diagram ERD (Mermaid)
+[ Tempel Screenshot di Sini ]
+Render visual relasi antar tabel dari ERD_Database.md
+E
+Tailwind Config
+[ Tempel Screenshot di Sini ]
+tailwind.config.js dengan custom colors Earthy Premium
+F
+Framer Motion Demo
+[ Tempel Screenshot di Sini ]
+GIF/Video staggered cards & parallax hero animation
+
+9
+10
+Status Minggu ke-2 ΓÇö Skeleton 100% Siap
+100%
+Skeleton Selesai
+Pondasi Minggu 2 Aman 
+A1
+Analisis SWOT mendalam (4 kuadran)
+A1
+User Journey Diagram (4 fase)
+A2
+Next.js page-centric architecture
+A2
+Tailwind Earthy Premium config
+A2
+Framer Motion staggered animation
+A3
+Supabase project + API Keys setup
+A3
+ERD 5 tabel (PostgreSQL)
+A3
+Next.js Middleware auth protection
+
+10
+11
+Target & Next Step ΓÇö Minggu ke-3
+Fokus: Pembuatan Design System & UI Interaktif Penuh
+Anggota 1
+Business & UI/UX
+Wireframe hi-fi (Figma) semua halaman utama
+Finalisasi copywriting landing page & katalog
+Konten edukasi untuk 8 produk pertama
+Anggota 2
+Frontend Developer
+Build Design System: Button, Card, Badge, Modal
+Landing Page fully responsive + parallax hero
+Halaman Katalog interaktif + filter kategori
+Anggota 3
+Backend Engineer
+Seed data produk awal ke Supabase
+API Routes: GET /products, GET /products/:id
+Cart API: POST /cart, DELETE /cart/:id
+ Sync Up setiap 2 hari ΓÇö Figma (A1) ├ù UI Components (A2) ├ù API Routes (A3) harus selaras!
+
+11
+TRAIL
+FORGE
+"Gear Up. Go Wild."
+Minggu ke-2 Selesai 
+Terima Kasih!
+Ada Pertanyaan?
+ 
+SWOT + User Journey
+Analisis bisnis selesai
+ 
+Next.js + Tailwind + Motion
+Frontend skeleton siap
+ 
+Supabase + ERD + Middleware
+Backend infra selesai
+ 
+Target Minggu 3
+Design System + Full UI
+Progress Minggu ke-2 E-Business 2025
+
+12
+
