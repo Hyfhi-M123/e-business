@@ -1,50 +1,44 @@
-# 🎯 Master Prompt untuk AI PPT Maker (Slide Presentasi)
+# 🎯 Master Prompt AI PPT (Khusus Laporan Progres Minggu 2)
 
-*Tujuan: Silakan "Copy" seluruh teks di bawah ini (tepat di bawah garis putus-putus) dan "Paste" ke dalam Chatbot AI pembuat PPT pilihan Anda (seperti Gamma.app, Tome, Canva AI, atau ChatGPT Prompt).*
+*Tujuan: Silakan "Copy" seluruh teks di bawah ini (tepat di bawah garis putus-putus) dan "Paste" ke dalam Chatbot AI pembuat PPT (seperti Gamma.app, Tome, atau ChatGPT) untuk menghasilkan garis besar presentasi Laporan Progres Minggu 2.*
 
 --------------------------------------------------------------------------------
 
-Halo! Kamu adalah seorang **Konsultan Bisnis Profesional dan Expert Presenter**. Saya sedang menyusun bahan presentasi (Pitch Deck) proyek E-Business kelompok saya. Saya telah menyiapkan datanya, tugasmu adalah membuatkan **Outline Isi Slide PPT yang terstruktur dari Slide 1 sampai akhir, lengkap dengan saran copywriting / teks untuk masing-masing slide** agar presentasinya estetik, meyakinkan, dan profesional.
+Halo! Kamu adalah seorang **Konsultan E-Business dan Presenter Profesional**. Saat ini saya dan mahasiswa di tim saya perlu membuat **Slide Presentasi Laporan Progres Mingguan (Khusus Progres Minggu ke-2)** untuk proyek akhir e-commerce kami.
 
-Gunakan gaya bahasa yang *modern, tech-savvy, dan berjiwa petualang/outdoor*.
+Tugas kamu adalah membuatkan **Outline Isi Slide PPT yang terstruktur, rapi, dan meyakinkan, lengkap dengan narasinya (*Talking Points*)** untuk setiap slide. Presentasi ini tidak berfokus pada ide dari awal lagi, melainkan berfokus penuh melaporkan apa saja yang **sudah tim kami selesaikan secara teknis dan analitis di Minggu ke-2**.
 
-Berikut adalah data proyek yang HARUS kamu gunakan sebagai bahan dasar materi slide:
+### KONTEKS PROYEK & PENCAPAIAN MINGGU 2:
+*   **Nama Proyek:** TrailForge (Marketplace Peralatan Adventure & Outdoor).
+*   **Tema UI/UX:** Earthy Premium (*Dark forest green, campfire orange, glassmorphism*).
+*   **Fokus Rencana Minggu 2:** Menyiapkan kerangka sistem (Skeleton) aplikasi baik dari segi logika bisnis, _frontend_, maupun infrastruktur _database_. Tim kami telah menyelesaikan 3 pembagian tugas berikut di minggu ini:
 
-### 1. IDENTITAS PROYEK
-* **Nama Brand**: TrailForge
-* **Tagline**: "Gear Up. Go Wild."
-* **Bidang**: E-Commerce / Marketplace Spesialis Peralatan Adventure & Outdoor.
-* **Gaya Visual (UI/UX)**: Konsep "Earthy Premium" bergaya antarmuka gelap (Dark Night Forest), efek kaca (Glassmorphism), dan diwarnai perpaduan *Forest Green* & *Campfire Orange*.
+1.  **Pencapaian Anggota 1 (Business Strategist):**
+    *   Selesai merumuskan **Analisis SWOT** mendalam (melihat sisi *premium UI* kita sebagai *Strength*, versus dominasi marketplace besar sebagai *Threats* dengan strategi perang diskon).
+    *   Selesai memetakan **User Journey Diagram** mulai dari fase *Discovery* di *Landing Page*, evaluasi membaca uji coba produk, hingga fase konversi (*Checkout*) mulus.
 
-### 2. UNIQUE SELLING PROPOSITION (Keunggulan Utama)
-Berbeda dari *marketplace* umum seperti Tokopedia/Shopee, TrailForge menawarkan:
-1. **Kurasi Produk Ketat**: Kami tidak menjual barang KW/Abal-abal. Semua gear (Tenda, Hammock, Pisau, Headlamp) sudah lolos seleksi kualitas, durabilitas, dan bobot untuk kegiatan alam/survival.
-2. **Pengalaman Immersive**: UI disisipi animasi dinamis dan latar bernuansa petualangan, memberikan sensasi asyik merencanakan _trip_ sebelum benar-benar membelinya.
-3. **Edukasi & Komunitas**: Ada fitur *knowledge base* dan ulasan jujur berbasis pengalaman langsung (*field tested*) di setiap *page* produk.
+2.  **Pencapaian Anggota 2 (Frontend & Animation Expert):**
+    *   Berhasil menginisialisasi rute **Page-Centric Architecture** pada Next.js (`app/katalog/page.tsx` & `app/login/page.tsx`).
+    *   Menyelesaikan injeksi modul visual **Tailwind CSS** sesuai standarisasi "Earthy Premium" dan implementasi uji coba *Staggered Animation* dengan **Framer Motion**.
 
-### 3. HASIL ANALISIS SWOT (Strategi Bisnis)
-* **Demografi / Target Pasar**: Gen-Z dan Milenial pegiat alam bebas (Usia 18-35 tahun). 
-* **Strengths**: UI premium yang mengalahkan toko lokal pesaing, fokus ke edukasi komunitas.
-* **Weaknesses**: Membutuhkan modal pemasaran besar di awal sebagai pendatang baru untuk membangun _awareness_.
-* **Opportunities**: Tren *outdoor lifestyle (camping/hiking)* melonjak drastis, adanya potensi kemitraan afiliasi B2B dengan Mapala (Mahasiswa Pencinta Alam) Kampus.
-* **Threats**: Perang diskon "bakar uang" dari raksasa grosir, dominasi brand lama yg punya ketersediaan toko *offline* kuat seperti Eiger/Consina.
-
-### 4. ARSITEKTUR TEKNIS (Tech-Stack & Alur)
-* **Frontend**: Next.js App Router dengan Tailwind CSS & sintaks visual dari Framer Motion. 
-* **Backend & Integrasi**: *Database* PostgreSQL dari Supabase dengan rute *middleware* *Auth* terproteksi, serta interkoneksi pemrosesan *Gateway* transaksi pembayaran *(Midtrans)*. 
-* **Alur Pengguna (User Journey)**: 1. Masuk *Landing Page* (Discovery) → 2. Lihat Katalog Edukasi Produk (Evaluation) → 3. Checkout dengan *smooth UI* keranjang belanja (Transaction) → 4. Cek *Dashboard Tracking* Pengiriman Otomatis (Post-Purchase).
+3.  **Pencapaian Anggota 3 (Backend & Database Engineer):**
+    *   Telah menyiapkan **Database Supabase (PostgreSQL)**, mengisolasi *API Keys* via `.env.local` dan membuat konfigurasi *Client Connections*.
+    *   Selesai merancang skema relasi dasar **ERD** (untuk tabel *users, products, orders, cart_items*).
+    *   Merilis injeksi kode asli **Next.js Middleware** untuk mem-blokir akses _route_ admin bagi *user* yang belum melakukan autentikasi *login*.
 
 ### 📝 INSTRUKSI TUGASMU SEKARANG:
-Berdasarkan seluruh informasi berharga di atas, buatkan rancangan **10 sampai 12 Slide presentasi (PowerPoint)** yang mencakup Elemen-elemen berikut:
-1. Slide Judul / Pembuka yang *Catchy* (memuat nama & tagline).
-2. Latar Belakang Masalah (keresahan *user* pada UI/UX belanja _gear_ yang membosankan dan banyak barang palsu di luar sana).
-3. Solusi Produk (Pengenalan TrailForge).
-4. *Core Features* (Fitur & Keunggulan / USP).
-5. Katalog Unggulan.
-6. Target Pasar & Demografi.
-7. Rangkuman SWOT.
-8. _Tech Stack_ Modern (Next.js x Supabase).
-9. _User Journey_ Singkat.
-10. Slide Penutup (Call to action / Q&A).
+Berdasarkan laporan progres Minggu ke-2 di atas, tolong buatkan rancangan **presentasi yang berjumlah sekitar 8 sampai 15 Slide** untuk dipresentasikan di depan penguji / dosen. Susunlah urutannya dengan pola sebagai berikut:
 
-Rancanglah urutan narasinya dengan baik! Tolong jabarkan baris per baris. Tentukan juga judul slidenya *(Headline)* dan *"Talking points" (Bullet points)* yang singkat tapi tajam per slide!
+1.  **Slide Pembuka**: Judul Laporan Progres Minggu 2 & Nama Kelompok.
+2.  **Kilas Balik Singkat (1 Slide saja)**: Mengingatkan sebentar apa itu TrailForge (visi & UI yang diusung).
+3.  **Fokus & Tujuan Minggu 2**: Apa target utama minggu ini (Kerangka Sistem & Logika Dasar).
+4.  **Laporan Progres Strategi Bisnis (Anggota 1)**: Rangkuman SWOT.
+5.  **Laporan Progres Pemetaan (Anggota 1)**: User Journey.
+6.  **Laporan Progres Arsitektur Frontend (Anggota 2)**: Next.js *Page-Centric* & *Setup* UI *Earthy Tailwind* + *Framer Motion*.
+7.  **Laporan Progres Keamanan & Database (Anggota 3)**: Desain ERD Supabase dan Perlindungan Rute Middleware.
+8.  **Pembuktian / Dokumentasi (Placeholder untuk Tim)**: Arahan bagi tim kami di slide ke berapa harus menempelkan potong-potongan *screenshoot* kode / *screenshot folder repository* / grafik Mermaid untuk membuktikan klaim pengerjaan.
+9.  **Kesimpulan Status Minggu 2**: Persentase kepuasan tim bahwa *skeleton* aman 100%.
+10. **Target & _Next Step_ Minggu 3**: Rencana kerja berikutnya (Pembuatan Komponen Design System / UI interaktif penuh).
+11. **Slide Penutup & Q/A**.
+
+Berikan keterangan *Headline* per slide, *Bullet Points*, dan narasi yang meyakinkan layaknya kita sudah benar-benar selesai *ngoding* sesuai porsi minggu ini!
