@@ -38,7 +38,7 @@ Kita menggunakan pendekatan **Agile Scrum** agar proyek lebih adaptif, modern, d
 
 ### 🏃 Sprint 1: Design Language & UI Atom Components (Minggu 3)
 *Fokus: Mengubah desain menjadi kode komponen bebas kutu (Reusable Components)*
-- **Anggota 1**: Pembuatan *High-Fidelity Mockup* (Gaya Figma) bertema outdoor.
+- **Anggota 1**: Pembuatan *Layout Wireframes* praktis dan panduan identitas visual (*Design System*) bertema *outdoor* tanpa menggunakan *mockup* tradisional.
 - **Anggota 2**: Pembuatan komponen atom (*Button, Input, ProductCard*) dengan integrasi animasi *Morphing (Framer Motion)*.
 - **Anggota 3**: Uji coba unit *Auth* (Login/Daftar) langsung ke *Database* dan perbaikan *Middleware* rute pengguna.
 
