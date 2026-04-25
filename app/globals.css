@@ -1,15 +1,25 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+@theme {
+  --color-forest-green: #2d6a4f;
+  --color-campfire-orange: #f97316;
+}
 :root {
-  --background: #0d1b1e; /* Night Forest Dark */
-  --foreground: #f0fdf4; /* Soft Off-white */
+  --background: #0a0a0a;
+  --foreground: #f0fdf4;
+}
+
+*, *::before, *::after {
+  border-color: transparent;
+}
+
+html {
+  background: #0a0a0a !important;
 }
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background: #0a0a0a !important;
   font-family: 'Inter', sans-serif;
   overflow-x: hidden;
 }
