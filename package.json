@@ -1,4 +1,7 @@
 {
+  "name": "trailforge",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -7,7 +10,6 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.3",
-    "@tailwindcss/postcss": "^4.2.2",
     "autoprefixer": "^10.4.27",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
@@ -20,7 +22,8 @@
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
+    "@types/node": "25.6.0",
     "@types/react": "19.2.14",
-    "typescript": "6.0.3"
+    "typescript": "6.0.2"
   }
 }
