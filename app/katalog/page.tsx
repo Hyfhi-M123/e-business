@@ -116,23 +116,23 @@ export default function KatalogPage() {
   if (priceRange[0] > 0 || priceRange[1] < 5000000) activeFilters.push({ label: `${formatRupiah(priceRange[0])} - ${formatRupiah(priceRange[1])}`, onRemove: () => setPriceRange([0, 5000000]) });
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-white font-sans pt-24 pb-20 selection:bg-orange-500 selection:text-white">
+    <main className="min-h-screen bg-[#F8F9FA] dark:bg-neutral-950 text-[#212529] dark:text-white font-sans pt-24 pb-20 selection:bg-[#F77F00] dark:bg-orange-500 selection:text-[#212529] dark:text-white">
       
       {/* NAVBAR */}
-      <nav className="fixed top-0 w-full z-50 flex items-center justify-between px-6 py-5 md:px-12 bg-neutral-950 border-b border-white/5">
+      <nav className="fixed top-0 w-full z-50 flex items-center justify-between px-6 py-5 md:px-12 bg-[#F8F9FA] dark:bg-neutral-950 border-b border-[#1B4332]/10 dark:border-white/5">
         <div className="flex items-center gap-6">
           <div className="w-10 h-10 border border-white/20 flex items-center justify-center rounded-full hover:bg-white hover:text-black transition-colors cursor-pointer">
             <Menu className="w-4 h-4" />
           </div>
           <Link href="/" className="text-xl font-black tracking-tighter uppercase flex items-center gap-2">
-            TrailForge<span className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span>
+            TrailForge<span className="w-2 h-2 bg-[#F77F00] dark:bg-orange-500 rounded-full animate-pulse"></span>
           </Link>
         </div>
         <div className="flex items-center gap-5">
-          <Search className="w-5 h-5 text-white cursor-pointer hover:text-orange-500 transition-colors" />
+          <Search className="w-5 h-5 text-[#212529] dark:text-white cursor-pointer hover:text-[#F77F00] dark:text-orange-500 transition-colors" />
           <Link href="/produk/101" className="relative cursor-pointer group">
-            <ShoppingBag className="w-5 h-5 text-white group-hover:text-orange-500 transition-colors" />
-            <span className="absolute -top-1 -right-2 bg-orange-500 text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">0</span>
+            <ShoppingBag className="w-5 h-5 text-[#212529] dark:text-white group-hover:text-[#F77F00] dark:text-orange-500 transition-colors" />
+            <span className="absolute -top-1 -right-2 bg-[#F77F00] dark:bg-orange-500 text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">0</span>
           </Link>
         </div>
       </nav>
@@ -142,20 +142,20 @@ export default function KatalogPage() {
         {/* BREADCRUMB */}
         <motion.div 
           initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}
-          className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-8"
+          className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-500 mb-8"
         >
-          <Link href="/" className="hover:text-white transition-colors">Home</Link>
+          <Link href="/" className="hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors">Home</Link>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-white">Katalog</span>
+          <span className="text-[#212529] dark:text-white">Katalog</span>
         </motion.div>
 
         {/* HEADER */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.85] mb-4">
-              Katalog<br/><span className="text-neutral-600">Ekspedisi.</span>
+              Katalog<br/><span className="text-[#ADB5BD] dark:text-neutral-600">Ekspedisi.</span>
             </h1>
-            <p className="text-neutral-400 max-w-md text-sm leading-relaxed">
+            <p className="text-[#6C757D] dark:text-neutral-400 max-w-md text-sm leading-relaxed">
               {processed.length} produk peralatan adventure yang telah lolos uji di kondisi ekstrem.
             </p>
           </motion.div>
@@ -165,17 +165,17 @@ export default function KatalogPage() {
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
             className="w-full lg:w-[400px] relative"
           >
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-500" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6C757D] dark:text-neutral-500" />
             <input 
               type="text" 
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Cari produk, kategori, atau fitur..."
-              className="w-full bg-neutral-900 border border-white/10 text-white pl-12 pr-4 py-4 text-sm font-medium placeholder:text-neutral-600 focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-orange-500/10 transition-all"
+              className="w-full bg-white dark:bg-neutral-900 border border-[#DEE2E6] dark:border-white/10 text-[#212529] dark:text-white pl-12 pr-4 py-4 text-sm font-medium placeholder:text-[#ADB5BD] dark:text-neutral-600 focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-[#F77F00] dark:ring-orange-500/10 transition-all"
             />
             {search && (
               <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2">
-                <X className="w-4 h-4 text-neutral-500 hover:text-white transition-colors" />
+                <X className="w-4 h-4 text-[#6C757D] dark:text-neutral-500 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors" />
               </button>
             )}
           </motion.div>
@@ -184,11 +184,11 @@ export default function KatalogPage() {
         {/* TOOLBAR: Filter + Sort + View Toggle */}
         <motion.div 
           initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
-          className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8 pb-8 border-b border-white/5"
+          className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8 pb-8 border-b border-[#1B4332]/10 dark:border-white/5"
         >
           {/* Category Filter Pills */}
           <div className="flex items-center gap-2 overflow-x-auto w-full lg:w-auto pb-2 lg:pb-0 scrollbar-hide">
-            <Filter className="w-4 h-4 text-neutral-500 flex-shrink-0" />
+            <Filter className="w-4 h-4 text-[#6C757D] dark:text-neutral-500 flex-shrink-0" />
             {CATEGORIES.map(cat => (
               <button 
                 key={cat}
@@ -196,7 +196,7 @@ export default function KatalogPage() {
                 className={`text-[11px] font-bold uppercase tracking-widest px-5 py-2.5 rounded-full transition-all whitespace-nowrap ${
                   activeCategory === cat 
                     ? "bg-white text-neutral-950" 
-                    : "bg-neutral-900 text-neutral-500 hover:text-white hover:bg-neutral-800 border border-white/5"
+                    : "bg-white dark:bg-neutral-900 text-[#6C757D] dark:text-neutral-500 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white hover:bg-[#E9ECEF] dark:bg-neutral-800 border border-[#1B4332]/10 dark:border-white/5"
                 }`}
               >
                 {cat}
@@ -211,7 +211,7 @@ export default function KatalogPage() {
             <div className="relative">
               <button 
                 onClick={() => { setShowPriceFilter(!showPriceFilter); setShowSort(false); }}
-                className="flex items-center gap-2 bg-neutral-900 border border-white/5 px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest text-neutral-400 hover:text-white transition-colors"
+                className="flex items-center gap-2 bg-white dark:bg-neutral-900 border border-[#1B4332]/10 dark:border-white/5 px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-400 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" /> Harga <ChevronDown className={`w-3 h-3 transition-transform ${showPriceFilter ? "rotate-180" : ""}`} />
               </button>
@@ -219,23 +219,23 @@ export default function KatalogPage() {
                 {showPriceFilter && (
                   <motion.div 
                     initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
-                    className="absolute right-0 top-12 bg-neutral-900 border border-white/10 p-5 rounded-xl shadow-2xl z-40 min-w-[280px]"
+                    className="absolute right-0 top-12 bg-white dark:bg-neutral-900 border border-[#DEE2E6] dark:border-white/10 p-5 rounded-xl shadow-2xl z-40 min-w-[280px]"
                   >
-                    <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500 block mb-4">Rentang Harga</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#6C757D] dark:text-neutral-500 block mb-4">Rentang Harga</span>
                     <div className="flex items-center gap-3 mb-4">
                       <input 
                         type="number" value={priceRange[0]} step={100000}
                         onChange={e => setPriceRange([Number(e.target.value), priceRange[1]])}
-                        className="w-full bg-neutral-800 border border-white/10 text-white px-3 py-2 text-sm font-mono focus:outline-none focus:border-orange-500"
+                        className="w-full bg-[#E9ECEF] dark:bg-neutral-800 border border-[#DEE2E6] dark:border-white/10 text-[#212529] dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:border-orange-500"
                       />
-                      <span className="text-neutral-500 text-sm">—</span>
+                      <span className="text-[#6C757D] dark:text-neutral-500 text-sm">—</span>
                       <input 
                         type="number" value={priceRange[1]} step={100000}
                         onChange={e => setPriceRange([priceRange[0], Number(e.target.value)])}
-                        className="w-full bg-neutral-800 border border-white/10 text-white px-3 py-2 text-sm font-mono focus:outline-none focus:border-orange-500"
+                        className="w-full bg-[#E9ECEF] dark:bg-neutral-800 border border-[#DEE2E6] dark:border-white/10 text-[#212529] dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:border-orange-500"
                       />
                     </div>
-                    <button onClick={() => setShowPriceFilter(false)} className="w-full bg-orange-500 text-neutral-950 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-orange-400 transition-colors">
+                    <button onClick={() => setShowPriceFilter(false)} className="w-full bg-[#F77F00] dark:bg-orange-500 text-neutral-950 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-[#E06F00] dark:hover:bg-orange-400 transition-colors">
                       Terapkan
                     </button>
                   </motion.div>
@@ -247,7 +247,7 @@ export default function KatalogPage() {
             <div className="relative">
               <button 
                 onClick={() => { setShowSort(!showSort); setShowPriceFilter(false); }}
-                className="flex items-center gap-2 bg-neutral-900 border border-white/5 px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest text-neutral-400 hover:text-white transition-colors"
+                className="flex items-center gap-2 bg-white dark:bg-neutral-900 border border-[#1B4332]/10 dark:border-white/5 px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-400 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors"
               >
                 Urutkan <ChevronDown className={`w-3 h-3 transition-transform ${showSort ? "rotate-180" : ""}`} />
               </button>
@@ -255,14 +255,14 @@ export default function KatalogPage() {
                 {showSort && (
                   <motion.div 
                     initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
-                    className="absolute right-0 top-12 bg-neutral-900 border border-white/10 rounded-xl shadow-2xl z-40 min-w-[200px] overflow-hidden"
+                    className="absolute right-0 top-12 bg-white dark:bg-neutral-900 border border-[#DEE2E6] dark:border-white/10 rounded-xl shadow-2xl z-40 min-w-[200px] overflow-hidden"
                   >
                     {SORT_OPTIONS.map(opt => (
                       <button 
                         key={opt.value}
                         onClick={() => { setSortBy(opt.value); setShowSort(false); }}
                         className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
-                          sortBy === opt.value ? "bg-orange-500/10 text-orange-500" : "text-neutral-400 hover:bg-white/5 hover:text-white"
+                          sortBy === opt.value ? "bg-[#F77F00] dark:bg-[#F77F00]/10 dark:bg-orange-500/10 text-[#F77F00] dark:text-orange-500" : "text-[#6C757D] dark:text-neutral-400 hover:bg-[#E9ECEF] dark:bg-white/5 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white"
                         }`}
                       >
                         {opt.label}
@@ -274,11 +274,11 @@ export default function KatalogPage() {
             </div>
 
             {/* View Toggle */}
-            <div className="hidden md:flex items-center bg-neutral-900 border border-white/5 overflow-hidden">
-              <button onClick={() => setViewMode("grid")} className={`p-2.5 transition-colors ${viewMode === "grid" ? "bg-white text-neutral-950" : "text-neutral-500 hover:text-white"}`}>
+            <div className="hidden md:flex items-center bg-white dark:bg-neutral-900 border border-[#1B4332]/10 dark:border-white/5 overflow-hidden">
+              <button onClick={() => setViewMode("grid")} className={`p-2.5 transition-colors ${viewMode === "grid" ? "bg-white text-neutral-950" : "text-[#6C757D] dark:text-neutral-500 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white"}`}>
                 <Grid3X3 className="w-4 h-4" />
               </button>
-              <button onClick={() => setViewMode("list")} className={`p-2.5 transition-colors ${viewMode === "list" ? "bg-white text-neutral-950" : "text-neutral-500 hover:text-white"}`}>
+              <button onClick={() => setViewMode("list")} className={`p-2.5 transition-colors ${viewMode === "list" ? "bg-white text-neutral-950" : "text-[#6C757D] dark:text-neutral-500 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white"}`}>
                 <List className="w-4 h-4" />
               </button>
             </div>
@@ -292,20 +292,20 @@ export default function KatalogPage() {
               initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
               className="flex items-center gap-3 mb-8 overflow-hidden"
             >
-              <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 flex-shrink-0">Filter Aktif:</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-500 flex-shrink-0">Filter Aktif:</span>
               {activeFilters.map((f, i) => (
                 <motion.button
                   key={i} layout
                   initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
                   onClick={f.onRemove}
-                  className="flex items-center gap-2 bg-orange-500/10 text-orange-500 border border-orange-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-orange-500/20 transition-colors"
+                  className="flex items-center gap-2 bg-[#F77F00] dark:bg-[#F77F00]/10 dark:bg-orange-500/10 text-[#F77F00] dark:text-orange-500 border border-orange-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-[#F77F00] dark:bg-orange-500/20 transition-colors"
                 >
                   {f.label} <X className="w-3 h-3" />
                 </motion.button>
               ))}
               <button 
                 onClick={() => { setActiveCategory("Semua"); setSearch(""); setPriceRange([0, 5000000]); }}
-                className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 hover:text-white transition-colors underline"
+                className="text-[10px] font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-500 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors underline"
               >
                 Hapus Semua
               </button>
@@ -321,12 +321,12 @@ export default function KatalogPage() {
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center justify-center py-32 text-center"
             >
-              <Package className="w-16 h-16 text-neutral-700 mb-6" />
+              <Package className="w-16 h-16 text-[#DEE2E6] dark:text-neutral-700 mb-6" />
               <h3 className="text-2xl font-black uppercase tracking-tight mb-3">Tidak Ditemukan</h3>
-              <p className="text-neutral-500 max-w-md mb-8">Tidak ada produk yang cocok dengan filter Anda. Coba ubah kategori atau kata kunci pencarian.</p>
+              <p className="text-[#6C757D] dark:text-neutral-500 max-w-md mb-8">Tidak ada produk yang cocok dengan filter Anda. Coba ubah kategori atau kata kunci pencarian.</p>
               <button 
                 onClick={() => { setActiveCategory("Semua"); setSearch(""); setPriceRange([0, 5000000]); }}
-                className="px-8 py-3 bg-orange-500 text-neutral-950 font-black uppercase tracking-widest text-sm hover:bg-orange-400 transition-colors"
+                className="px-8 py-3 bg-[#F77F00] dark:bg-orange-500 text-neutral-950 font-black uppercase tracking-widest text-sm hover:bg-[#E06F00] dark:hover:bg-orange-400 transition-colors"
               >
                 Reset Filter
               </button>
@@ -350,22 +350,22 @@ export default function KatalogPage() {
                     <motion.div
                       key={product.id} layout variants={cardReveal}
                       exit={{ opacity: 0, scale: 0.9 }}
-                      className="group cursor-pointer bg-neutral-900/50 border border-white/5 overflow-hidden hover:border-orange-500/20 transition-colors"
+                      className="group cursor-pointer bg-white dark:bg-neutral-900/50 border border-[#1B4332]/10 dark:border-white/5 overflow-hidden hover:border-orange-500/20 transition-colors"
                     >
                       {/* Image */}
-                      <Link href={`/produk/${product.id}`} className="relative block aspect-[3/4] overflow-hidden bg-neutral-900">
+                      <Link href={`/produk/${product.id}`} className="relative block aspect-[3/4] overflow-hidden bg-white dark:bg-neutral-900">
                         <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
                         <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/70 via-transparent to-transparent" />
                         
                         {/* Badge Diskon */}
                         {discount > 0 && (
-                          <div className="absolute top-4 left-4 z-10 px-2.5 py-1 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest">
+                          <div className="absolute top-4 left-4 z-10 px-2.5 py-1 bg-red-600 text-[#212529] dark:text-white text-[10px] font-black uppercase tracking-widest">
                             -{discount}%
                           </div>
                         )}
                         
                         {/* Tag */}
-                        <div className="absolute top-4 right-4 z-10 px-2.5 py-1 bg-neutral-950/70 backdrop-blur-md border border-white/10 text-[9px] font-black uppercase tracking-widest text-neutral-200">
+                        <div className="absolute top-4 right-4 z-10 px-2.5 py-1 bg-[#F8F9FA] dark:bg-neutral-950/70 backdrop-blur-md border border-[#DEE2E6] dark:border-white/10 text-[9px] font-black uppercase tracking-widest text-neutral-200">
                           {product.tag}
                         </div>
 
@@ -375,7 +375,7 @@ export default function KatalogPage() {
                             whileTap={{ scale: 0.9 }}
                             onClick={(e) => { e.preventDefault(); quickAdd(product.id); }}
                             className={`flex-1 py-3 font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-colors ${
-                              isAdded ? "bg-green-600 text-white" : "bg-white text-neutral-950 hover:bg-orange-500"
+                              isAdded ? "bg-green-600 text-[#212529] dark:text-white" : "bg-white text-neutral-950 hover:bg-[#F77F00] dark:bg-orange-500"
                             }`}
                           >
                             {isAdded ? "✓ Ditambahkan" : <><ShoppingBag className="w-3.5 h-3.5" /> Quick Add</>}
@@ -384,7 +384,7 @@ export default function KatalogPage() {
                             whileTap={{ scale: 0.8 }}
                             onClick={(e) => { e.preventDefault(); toggleWishlist(product.id); }}
                             className={`w-12 h-12 flex items-center justify-center border transition-colors ${
-                              isWished ? "bg-red-500 border-red-500 text-white" : "bg-neutral-950/50 backdrop-blur-md border-white/20 text-white hover:border-red-500"
+                              isWished ? "bg-red-500 border-red-500 text-[#212529] dark:text-white" : "bg-[#F8F9FA] dark:bg-neutral-950/50 backdrop-blur-md border-white/20 text-[#212529] dark:text-white hover:border-red-500"
                             }`}
                           >
                             <Heart className={`w-4 h-4 ${isWished ? "fill-white" : ""}`} />
@@ -397,23 +397,23 @@ export default function KatalogPage() {
                         <div className="flex items-center gap-2 mb-2">
                           <div className="flex gap-0.5">
                             {[1,2,3,4,5].map(i => (
-                              <Star key={i} className={`w-3 h-3 ${i <= Math.round(product.rating) ? "fill-orange-500 text-orange-500" : "fill-neutral-700 text-neutral-700"}`} />
+                              <Star key={i} className={`w-3 h-3 ${i <= Math.round(product.rating) ? "fill-[#F77F00] dark:fill-orange-500 text-[#F77F00] dark:text-orange-500" : "fill-[#DEE2E6] dark:fill-neutral-700 text-[#DEE2E6] dark:text-neutral-700"}`} />
                             ))}
                           </div>
-                          <span className="text-[10px] text-neutral-500 font-bold">{product.rating} ({product.reviews})</span>
+                          <span className="text-[10px] text-[#6C757D] dark:text-neutral-500 font-bold">{product.rating} ({product.reviews})</span>
                         </div>
                         
                         <Link href={`/produk/${product.id}`}>
-                          <h3 className="text-sm font-bold uppercase tracking-tight mb-3 group-hover:text-orange-500 transition-colors leading-tight">
+                          <h3 className="text-sm font-bold uppercase tracking-tight mb-3 group-hover:text-[#F77F00] dark:text-orange-500 transition-colors leading-tight">
                             {product.name}
                           </h3>
                         </Link>
                         
                         <div className="flex items-end gap-2">
-                          <span className="text-lg font-black text-white tracking-tight">{formatRupiah(product.price)}</span>
-                          {discount > 0 && <span className="text-xs text-neutral-500 line-through">{formatRupiah(product.originalPrice)}</span>}
+                          <span className="text-lg font-black text-[#212529] dark:text-white tracking-tight">{formatRupiah(product.price)}</span>
+                          {discount > 0 && <span className="text-xs text-[#6C757D] dark:text-neutral-500 line-through">{formatRupiah(product.originalPrice)}</span>}
                         </div>
-                        <span className="text-[10px] text-neutral-600 font-mono mt-1 block">{product.sold} terjual</span>
+                        <span className="text-[10px] text-[#ADB5BD] dark:text-neutral-600 font-mono mt-1 block">{product.sold} terjual</span>
                       </div>
                     </motion.div>
                   ) : (
@@ -421,12 +421,12 @@ export default function KatalogPage() {
                     <motion.div
                       key={product.id} layout variants={cardReveal}
                       exit={{ opacity: 0, x: -20 }}
-                      className="group flex bg-neutral-900/50 border border-white/5 overflow-hidden hover:border-orange-500/20 transition-colors"
+                      className="group flex bg-white dark:bg-neutral-900/50 border border-[#1B4332]/10 dark:border-white/5 overflow-hidden hover:border-orange-500/20 transition-colors"
                     >
-                      <Link href={`/produk/${product.id}`} className="relative w-48 md:w-64 flex-shrink-0 overflow-hidden bg-neutral-900">
+                      <Link href={`/produk/${product.id}`} className="relative w-48 md:w-64 flex-shrink-0 overflow-hidden bg-white dark:bg-neutral-900">
                         <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
                         {discount > 0 && (
-                          <div className="absolute top-3 left-3 z-10 px-2 py-1 bg-red-600 text-white text-[9px] font-black uppercase tracking-widest">
+                          <div className="absolute top-3 left-3 z-10 px-2 py-1 bg-red-600 text-[#212529] dark:text-white text-[9px] font-black uppercase tracking-widest">
                             -{discount}%
                           </div>
                         )}
@@ -435,32 +435,32 @@ export default function KatalogPage() {
                       <div className="flex-1 p-6 flex flex-col justify-between">
                         <div>
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest">{product.category}</span>
-                            <span className="text-[9px] font-mono text-neutral-600 uppercase tracking-widest">{product.tag}</span>
+                            <span className="text-[10px] font-black text-[#F77F00] dark:text-orange-500 uppercase tracking-widest">{product.category}</span>
+                            <span className="text-[9px] font-mono text-[#ADB5BD] dark:text-neutral-600 uppercase tracking-widest">{product.tag}</span>
                           </div>
                           <Link href={`/produk/${product.id}`}>
-                            <h3 className="text-xl font-bold uppercase tracking-tight mb-2 group-hover:text-orange-500 transition-colors">{product.name}</h3>
+                            <h3 className="text-xl font-bold uppercase tracking-tight mb-2 group-hover:text-[#F77F00] dark:text-orange-500 transition-colors">{product.name}</h3>
                           </Link>
                           <div className="flex items-center gap-2 mb-3">
                             <div className="flex gap-0.5">
                               {[1,2,3,4,5].map(i => (
-                                <Star key={i} className={`w-3 h-3 ${i <= Math.round(product.rating) ? "fill-orange-500 text-orange-500" : "fill-neutral-700 text-neutral-700"}`} />
+                                <Star key={i} className={`w-3 h-3 ${i <= Math.round(product.rating) ? "fill-[#F77F00] dark:fill-orange-500 text-[#F77F00] dark:text-orange-500" : "fill-[#DEE2E6] dark:fill-neutral-700 text-[#DEE2E6] dark:text-neutral-700"}`} />
                               ))}
                             </div>
-                            <span className="text-[10px] text-neutral-500 font-bold">{product.rating} ({product.reviews}) • {product.sold} terjual</span>
+                            <span className="text-[10px] text-[#6C757D] dark:text-neutral-500 font-bold">{product.rating} ({product.reviews}) • {product.sold} terjual</span>
                           </div>
                         </div>
                         
                         <div className="flex items-end justify-between">
                           <div className="flex items-end gap-2">
-                            <span className="text-2xl font-black text-white tracking-tight">{formatRupiah(product.price)}</span>
-                            {discount > 0 && <span className="text-sm text-neutral-500 line-through">{formatRupiah(product.originalPrice)}</span>}
+                            <span className="text-2xl font-black text-[#212529] dark:text-white tracking-tight">{formatRupiah(product.price)}</span>
+                            {discount > 0 && <span className="text-sm text-[#6C757D] dark:text-neutral-500 line-through">{formatRupiah(product.originalPrice)}</span>}
                           </div>
                           <div className="flex items-center gap-2">
                             <motion.button
                               whileTap={{ scale: 0.9 }}
                               onClick={() => toggleWishlist(product.id)}
-                              className={`w-10 h-10 flex items-center justify-center border transition-colors ${isWished ? "bg-red-500 border-red-500 text-white" : "border-white/10 text-neutral-500 hover:text-white"}`}
+                              className={`w-10 h-10 flex items-center justify-center border transition-colors ${isWished ? "bg-red-500 border-red-500 text-[#212529] dark:text-white" : "border-[#DEE2E6] dark:border-white/10 text-[#6C757D] dark:text-neutral-500 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white"}`}
                             >
                               <Heart className={`w-4 h-4 ${isWished ? "fill-white" : ""}`} />
                             </motion.button>
@@ -468,7 +468,7 @@ export default function KatalogPage() {
                               whileTap={{ scale: 0.9 }}
                               onClick={() => quickAdd(product.id)}
                               className={`px-6 py-2.5 font-black uppercase tracking-widest text-[10px] flex items-center gap-2 transition-colors ${
-                                isAdded ? "bg-green-600 text-white" : "bg-orange-500 text-neutral-950 hover:bg-orange-400"
+                                isAdded ? "bg-green-600 text-[#212529] dark:text-white" : "bg-[#F77F00] dark:bg-orange-500 text-neutral-950 hover:bg-[#E06F00] dark:hover:bg-orange-400"
                               }`}
                             >
                               {isAdded ? "✓ Added" : <><ShoppingBag className="w-3.5 h-3.5" /> Add to Cart</>}
@@ -490,13 +490,13 @@ export default function KatalogPage() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
             className="flex flex-col items-center mt-16 gap-4"
           >
-            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">
               Menampilkan {visibleCount} dari {processed.length} produk
             </span>
             <motion.button
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
               onClick={() => setVisibleCount(prev => prev + 6)}
-              className="px-10 py-4 border border-white/10 text-sm font-black uppercase tracking-widest hover:bg-white hover:text-neutral-950 transition-all duration-300 flex items-center gap-3"
+              className="px-10 py-4 border border-[#DEE2E6] dark:border-white/10 text-sm font-black uppercase tracking-widest hover:bg-white hover:text-neutral-950 transition-all duration-300 flex items-center gap-3"
             >
               Muat Lebih Banyak <ChevronDown className="w-4 h-4" />
             </motion.button>
@@ -507,7 +507,7 @@ export default function KatalogPage() {
         <motion.button
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-8 right-8 w-12 h-12 bg-neutral-900 border border-white/10 flex items-center justify-center hover:bg-orange-500 hover:text-neutral-950 transition-colors z-40 shadow-2xl"
+          className="fixed bottom-8 right-8 w-12 h-12 bg-white dark:bg-neutral-900 border border-[#DEE2E6] dark:border-white/10 flex items-center justify-center hover:bg-[#F77F00] dark:bg-orange-500 hover:text-neutral-950 transition-colors z-40 shadow-2xl"
         >
           <ChevronUp className="w-5 h-5" />
         </motion.button>

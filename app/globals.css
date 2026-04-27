@@ -1,10 +1,11 @@
 @import "tailwindcss";
-
-@theme {
-  --color-forest-green: #2d6a4f;
-  --color-campfire-orange: #f97316;
-}
+@custom-variant dark (&:is(.dark *));
 :root {
+  --background: #F8F9FA;
+  --foreground: #212529;
+}
+
+.dark {
   --background: #0a0a0a;
   --foreground: #f0fdf4;
 }
@@ -14,18 +15,18 @@
 }
 
 html {
-  background: #0a0a0a !important;
+  background: var(--background) !important;
 }
 
 body {
   color: var(--foreground);
-  background: #0a0a0a !important;
+  background: var(--background) !important;
   font-family: 'Inter', sans-serif;
   overflow-x: hidden;
 }
 
-/* Sihir Gradasi Petualangan (Deep Forest Mesh) */
-.bg-mesh {
+/* Sihir Gradasi Petualangan (Deep Forest Mesh) - Hanya terlihat di Dark Mode */
+.dark .bg-mesh {
   background-color: #0d1b1e;
   background-image: 
     radial-gradient(at 0% 0%, hsla(158,36%,12%,1) 0, transparent 50%), 
@@ -36,6 +37,12 @@ body {
 
 /* Glassmorphism Modern */
 .glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(27, 67, 50, 0.08);
+}
+
+.dark .glass {
   background: rgba(255, 255, 255, 0.02);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.05);
