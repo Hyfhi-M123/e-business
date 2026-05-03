@@ -84,6 +84,21 @@ export default function ProfilPage() {
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Validasi tipe file
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      showToast("Format file harus JPG, PNG, atau WebP!");
+      return;
+    }
+
+    // Validasi ukuran file (maks 2MB)
+    const MAX_SIZE = 2 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      showToast("Ukuran file maksimal 2MB!");
+      return;
+    }
+
     setUploadingAvatar(true);
     const reader = new FileReader();
     reader.onload = async (ev) => {
@@ -101,14 +116,24 @@ export default function ProfilPage() {
     setAddresses(list);
   };
 
+  const sanitize = (str: string) => str.replace(/[<>"'&]/g, '').trim();
+
   const handleAddAddress = async () => {
     if (!addrForm.name || !addrForm.phone || !addrForm.full) return showToast("Lengkapi semua field!");
+
+    const cleanForm = {
+      ...addrForm,
+      name: sanitize(addrForm.name),
+      phone: sanitize(addrForm.phone),
+      full: sanitize(addrForm.full),
+    };
+
     if (editingAddress) {
-      const updated = addresses.map(a => a.id === editingAddress.id ? { ...editingAddress, ...addrForm } : a);
+      const updated = addresses.map(a => a.id === editingAddress.id ? { ...editingAddress, ...cleanForm } : a);
       await saveAddresses(updated);
       showToast("Alamat berhasil diperbarui!");
     } else {
-      const newAddr: Address = { id: Date.now().toString(), ...addrForm, isDefault: addresses.length === 0 };
+      const newAddr: Address = { id: crypto.randomUUID(), ...cleanForm, isDefault: addresses.length === 0 };
       await saveAddresses([...addresses, newAddr]);
       showToast("Alamat berhasil ditambahkan!");
     }
