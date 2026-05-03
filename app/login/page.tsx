@@ -11,6 +11,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<{message: string, type: 'error' | 'success'} | null>(null);
+  const [failCount, setFailCount] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState(0);
 
   const showToast = (message: string, type: 'error' | 'success') => {
     setToast({message, type});
@@ -19,6 +21,14 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Rate limiting: blokir setelah 5x gagal
+    if (Date.now() < lockedUntil) {
+      const sisa = Math.ceil((lockedUntil - Date.now()) / 1000);
+      showToast(`Terlalu banyak percobaan. Coba lagi dalam ${sisa} detik.`, 'error');
+      return;
+    }
+
     setIsLoading(true);
     
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -27,9 +37,18 @@ export default function LoginPage() {
     });
 
     if (error) {
-      showToast(error.message, 'error');
+      const newCount = failCount + 1;
+      setFailCount(newCount);
+      if (newCount >= 5) {
+        setLockedUntil(Date.now() + 60000); // Lock 1 menit
+        setFailCount(0);
+        showToast("Terlalu banyak percobaan gagal. Akun dikunci 1 menit.", 'error');
+      } else {
+        showToast("Email atau password salah.", 'error');
+      }
     } else {
-      showToast("Berhasil masuk! Mendarat di katalog...", 'success');
+      setFailCount(0);
+      showToast("Berhasil masuk! Mendarat di basecamp...", 'success');
       setTimeout(() => window.location.href = "/", 1200);
     }
     
@@ -41,6 +60,21 @@ export default function LoginPage() {
       showToast("Isi Email dan Password dulu ya untuk daftar!", 'error');
       return;
     }
+
+    // Validasi kekuatan password
+    if (password.length < 8) {
+      showToast("Password minimal 8 karakter!", 'error');
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      showToast("Password harus mengandung minimal 1 huruf besar!", 'error');
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      showToast("Password harus mengandung minimal 1 angka!", 'error');
+      return;
+    }
+
     setIsLoading(true);
     
     const { data, error } = await supabase.auth.signUp({
@@ -49,7 +83,7 @@ export default function LoginPage() {
     });
 
     if (error) {
-      showToast(error.message, 'error');
+      showToast("Gagal mendaftar. Periksa kembali data Anda.", 'error');
     } else {
       showToast("Akun berhasil didaftarkan! Silakan klik Masuk Ekspedisi.", 'success');
     }
