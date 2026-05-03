@@ -186,7 +186,7 @@ export default function ProfilPage() {
       )}
 
       {/* Hidden file input */}
-      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+      <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="hidden" onChange={handleAvatarUpload} />
 
       {/* Ambient Glow */}
       <div className="fixed top-0 left-0 w-full h-[400px] pointer-events-none z-0">
