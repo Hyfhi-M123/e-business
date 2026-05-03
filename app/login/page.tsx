@@ -11,6 +11,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<{message: string, type: 'error' | 'success'} | null>(null);
+  const [failCount, setFailCount] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState(0);
 
   const showToast = (message: string, type: 'error' | 'success') => {
     setToast({message, type});
@@ -19,6 +21,14 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Rate limiting: blokir setelah 5x gagal
+    if (Date.now() < lockedUntil) {
+      const sisa = Math.ceil((lockedUntil - Date.now()) / 1000);
+      showToast(`Terlalu banyak percobaan. Coba lagi dalam ${sisa} detik.`, 'error');
+      return;
+    }
+
     setIsLoading(true);
     
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -27,10 +37,19 @@ export default function LoginPage() {
     });
 
     if (error) {
-      showToast(error.message, 'error');
+      const newCount = failCount + 1;
+      setFailCount(newCount);
+      if (newCount >= 5) {
+        setLockedUntil(Date.now() + 60000); // Lock 1 menit
+        setFailCount(0);
+        showToast("Terlalu banyak percobaan gagal. Akun dikunci 1 menit.", 'error');
+      } else {
+        showToast("Email atau password salah.", 'error');
+      }
     } else {
-      showToast("Berhasil masuk! Mendarat di katalog...", 'success');
-      setTimeout(() => window.location.href = "/katalog", 1200);
+      setFailCount(0);
+      showToast("Berhasil masuk! Mendarat di basecamp...", 'success');
+      setTimeout(() => window.location.href = "/", 1200);
     }
     
     setIsLoading(false);
@@ -41,6 +60,21 @@ export default function LoginPage() {
       showToast("Isi Email dan Password dulu ya untuk daftar!", 'error');
       return;
     }
+
+    // Validasi kekuatan password
+    if (password.length < 8) {
+      showToast("Password minimal 8 karakter!", 'error');
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      showToast("Password harus mengandung minimal 1 huruf besar!", 'error');
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      showToast("Password harus mengandung minimal 1 angka!", 'error');
+      return;
+    }
+
     setIsLoading(true);
     
     const { data, error } = await supabase.auth.signUp({
@@ -49,7 +83,7 @@ export default function LoginPage() {
     });
 
     if (error) {
-      showToast(error.message, 'error');
+      showToast("Gagal mendaftar. Periksa kembali data Anda.", 'error');
     } else {
       showToast("Akun berhasil didaftarkan! Silakan klik Masuk Ekspedisi.", 'success');
     }
@@ -72,7 +106,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex text-white font-sans overflow-hidden bg-neutral-950">
+    <main className="min-h-screen flex text-[#212529] dark:text-white font-sans overflow-hidden bg-[#F8F9FA] dark:bg-neutral-950">
       
       {/* Kolom Kiri: Form Login */}
       <div className="w-full md:w-1/2 flex flex-col justify-center px-8 md:px-20 relative z-10">
@@ -93,7 +127,7 @@ export default function LoginPage() {
         
         {/* Tombol Kembali (Reveal paling awal) */}
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
-          <Link href="/" className="absolute top-8 left-8 md:left-20 flex items-center gap-2 text-sm font-semibold text-neutral-400 hover:text-white transition-colors">
+          <Link href="/" className="absolute top-8 left-8 md:left-20 flex items-center gap-2 text-sm font-semibold text-[#6C757D] dark:text-neutral-400 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" /> Kembali
           </Link>
         </motion.div>
@@ -113,7 +147,7 @@ export default function LoginPage() {
               transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
               whileHover={{ rotate: 180, scale: 1.1 }} 
             >
-              <Mountain className="w-8 h-8 text-orange-500 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
+              <Mountain className="w-8 h-8 text-[#F77F00] dark:text-orange-500 drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
             </motion.div>
             <span className="text-2xl font-black uppercase tracking-tighter">TrailForge</span>
           </motion.div>
@@ -122,7 +156,7 @@ export default function LoginPage() {
             Masuk <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">Basecamp</span>
           </motion.h2>
           
-          <motion.p variants={itemVariants} className="text-neutral-400 font-medium mb-10 leading-relaxed">
+          <motion.p variants={itemVariants} className="text-[#6C757D] dark:text-neutral-400 font-medium mb-10 leading-relaxed">
             Akses logistik ekspedisimu, pantau keranjang pesanan, dan bersiaplah untuk petualangan selanjutnya.
           </motion.p>
 
@@ -151,16 +185,16 @@ export default function LoginPage() {
             
             {/* Input Email */}
             <motion.div variants={itemVariants} className="space-y-2 group">
-              <label className="text-xs font-bold uppercase tracking-widest text-neutral-400 group-focus-within:text-orange-500 transition-colors ml-1">Alamat Email</label>
+              <label className="text-xs font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-400 group-focus-within:text-[#F77F00] dark:text-orange-500 transition-colors ml-1">Alamat Email</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                  <Mail className="w-5 h-5 text-neutral-500 group-focus-within:text-orange-500 transition-colors" />
+                  <Mail className="w-5 h-5 text-[#6C757D] dark:text-neutral-500 group-focus-within:text-[#F77F00] dark:text-orange-500 transition-colors" />
                 </div>
                 <input 
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 text-white rounded-2xl py-4 flex items-center pl-14 pr-5 focus:outline-none focus:border-orange-500/50 focus:bg-white/10 focus:ring-4 focus:ring-orange-500/10 transition-all duration-300 placeholder:text-neutral-600 font-medium text-base shadow-inner [&:-webkit-autofill]:bg-transparent [&:-webkit-autofill]:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[transition:background-color_5000s_ease-in-out_0s]"
+                  className="w-full bg-[#E9ECEF] dark:bg-white/5 border border-[#DEE2E6] dark:border-white/10 text-[#212529] dark:text-white rounded-2xl py-4 flex items-center pl-14 pr-5 focus:outline-none focus:border-orange-500/50 focus:bg-white/10 focus:ring-4 focus:ring-[#F77F00] dark:ring-orange-500/10 transition-all duration-300 placeholder:text-[#ADB5BD] dark:text-neutral-600 font-medium text-base shadow-inner [&:-webkit-autofill]:bg-transparent [&:-webkit-autofill]:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[transition:background-color_5000s_ease-in-out_0s]"
                   placeholder="nomaden@hutan.com"
                   required
                 />
@@ -170,18 +204,18 @@ export default function LoginPage() {
             {/* Input Password */}
             <motion.div variants={itemVariants} className="space-y-2 group">
               <div className="flex justify-between items-center ml-1">
-                <label className="text-xs font-bold uppercase tracking-widest text-neutral-400 group-focus-within:text-orange-500 transition-colors">Kata Sandi</label>
-                <a href="#" className="text-xs font-bold text-neutral-500 hover:text-orange-400 transition-colors">Lupa Sandi?</a>
+                <label className="text-xs font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-400 group-focus-within:text-[#F77F00] dark:text-orange-500 transition-colors">Kata Sandi</label>
+                <a href="#" className="text-xs font-bold text-[#6C757D] dark:text-neutral-500 hover:text-orange-400 transition-colors">Lupa Sandi?</a>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                  <Lock className="w-5 h-5 text-neutral-500 group-focus-within:text-orange-500 transition-colors" />
+                  <Lock className="w-5 h-5 text-[#6C757D] dark:text-neutral-500 group-focus-within:text-[#F77F00] dark:text-orange-500 transition-colors" />
                 </div>
                 <input 
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)} 
-                  className="w-full bg-white/5 border border-white/10 text-white rounded-2xl py-4 flex items-center pl-14 pr-5 focus:outline-none focus:border-orange-500/50 focus:bg-white/10 focus:ring-4 focus:ring-orange-500/10 transition-all duration-300 placeholder:text-neutral-600 font-medium text-base shadow-inner [&:-webkit-autofill]:bg-transparent [&:-webkit-autofill]:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[transition:background-color_5000s_ease-in-out_0s]"
+                  className="w-full bg-[#E9ECEF] dark:bg-white/5 border border-[#DEE2E6] dark:border-white/10 text-[#212529] dark:text-white rounded-2xl py-4 flex items-center pl-14 pr-5 focus:outline-none focus:border-orange-500/50 focus:bg-white/10 focus:ring-4 focus:ring-[#F77F00] dark:ring-orange-500/10 transition-all duration-300 placeholder:text-[#ADB5BD] dark:text-neutral-600 font-medium text-base shadow-inner [&:-webkit-autofill]:bg-transparent [&:-webkit-autofill]:[-webkit-text-fill-color:white] [&:-webkit-autofill]:[transition:background-color_5000s_ease-in-out_0s]"
                   placeholder="••••••••"
                   required
                 />
@@ -195,7 +229,7 @@ export default function LoginPage() {
                 whileTap={!isLoading ? { scale: 0.98 } : {}}
                 disabled={isLoading}
                 type="submit"
-                className={`w-full ${isLoading ? 'bg-neutral-800 text-neutral-500' : 'bg-gradient-to-r from-orange-500 to-orange-600 text-white'} font-black uppercase tracking-widest py-4 rounded-xl transition-all duration-300 flex justify-center shadow-lg`}
+                className={`w-full ${isLoading ? 'bg-[#E9ECEF] dark:bg-neutral-800 text-[#6C757D] dark:text-neutral-500' : 'bg-gradient-to-r from-orange-500 to-orange-600 text-[#212529] dark:text-white'} font-black uppercase tracking-widest py-4 rounded-xl transition-all duration-300 flex justify-center shadow-lg`}
               >
                 {isLoading ? "Menjalin Koneksi..." : "Masuk Ekspedisi"}
               </motion.button>
@@ -206,7 +240,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleSignUp}
                 disabled={isLoading}
-                className="w-full bg-transparent border-2 border-white/10 text-neutral-300 hover:text-white hover:border-white/20 font-bold uppercase tracking-wider py-4 rounded-xl transition-all duration-300"
+                className="w-full bg-transparent border-2 border-[#DEE2E6] dark:border-white/10 text-[#495057] dark:text-neutral-300 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white hover:border-white/20 font-bold uppercase tracking-wider py-4 rounded-xl transition-all duration-300"
               >
                 Daftar Akun Baru
               </motion.button>
@@ -216,18 +250,31 @@ export default function LoginPage() {
           {/* Divider */}
           <motion.div variants={itemVariants} className="flex items-center gap-4 my-8">
             <div className="h-px bg-white/10 flex-1"></div>
-            <span className="text-xs font-bold uppercase tracking-widest text-neutral-500">Atau</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">Atau</span>
             <div className="h-px bg-white/10 flex-1"></div>
           </motion.div>
 
           {/* Tombol Google */}
           <motion.button 
             variants={itemVariants}
-            whileHover={{ scale: 1.01, backgroundColor: "rgba(255,255,255,0.1)" }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={!isLoading ? { scale: 1.01, backgroundColor: "rgba(255,255,255,0.1)" } : {}}
+            whileTap={!isLoading ? { scale: 0.98 } : {}}
             type="button"
-            onClick={() => alert('Fitur Google Login sedang dalam mode Mockup (Sesuai kesepakatan presentasi).')}
-            className="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl transition-colors shadow-inner"
+            disabled={isLoading}
+            onClick={async () => {
+              setIsLoading(true);
+              const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                  redirectTo: `${window.location.origin}/auth/callback`,
+                },
+              });
+              if (error) {
+                showToast(error.message, 'error');
+                setIsLoading(false);
+              }
+            }}
+            className="w-full flex items-center justify-center gap-3 bg-[#E9ECEF] dark:bg-white/5 border border-[#DEE2E6] dark:border-white/10 text-[#212529] dark:text-white font-bold py-4 rounded-xl transition-colors shadow-inner"
           >
             <svg viewBox="0 0 24 24" className="w-5 h-5" xmlns="http://www.w3.org/2000/svg">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -235,18 +282,18 @@ export default function LoginPage() {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            MASUK DENGAN GOOGLE
+            {isLoading ? "Menghubungkan..." : "MASUK DENGAN GOOGLE"}
           </motion.button>
 
         </motion.div>
       </div>
 
       {/* Kolom Kanan: Visual Branding dengan Parallax + Ken Burns */}
-      <div className="hidden md:block w-1/2 relative bg-neutral-900 overflow-hidden">
+      <div className="hidden md:block w-1/2 relative bg-white dark:bg-neutral-900 overflow-hidden">
         {/* Overlay Gradients */}
-        <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 to-transparent z-10 w-40" />
-        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-transparent to-transparent z-10" />
-        <div className="absolute inset-0 bg-neutral-950/20 z-10 mix-blend-multiply" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#F8F9FA] dark:from-neutral-950 to-transparent z-10 w-40" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#F8F9FA] dark:from-neutral-950 via-transparent to-transparent z-10" />
+        <div className="absolute inset-0 bg-[#F8F9FA] dark:bg-neutral-950/20 z-10 mix-blend-multiply" />
         
         {/* Efek image zoom & pan abadi (Infinite Ken Burns Style) */}
         <motion.img 
@@ -269,11 +316,11 @@ export default function LoginPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.8, ease: "easeOut" }}
           >
-            <div className="w-12 h-1 bg-orange-500 mb-6 rounded-full"></div>
-            <h3 className="text-4xl font-black uppercase tracking-tighter text-white mb-4 leading-none">
+            <div className="w-12 h-1 bg-[#F77F00] dark:bg-orange-500 mb-6 rounded-full"></div>
+            <h3 className="text-4xl font-black uppercase tracking-tighter text-[#212529] dark:text-white mb-4 leading-none">
               Selalu Siap <br/> Hadapi Badai.
             </h3>
-            <p className="text-neutral-400 text-sm font-medium leading-relaxed">
+            <p className="text-[#6C757D] dark:text-neutral-400 text-sm font-medium leading-relaxed">
               Bergabunglah dengan ribuan penjelajah lain untuk memastikan perjalananmu didukung gear teraman di kelasnya.
             </p>
           </motion.div>
