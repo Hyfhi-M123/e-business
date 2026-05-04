@@ -61,13 +61,13 @@ export default function Home() {
           <div className="w-10 h-10 border border-white/20 flex items-center justify-center rounded-full hover:bg-white hover:text-black transition-colors cursor-pointer">
             <Menu className="w-4 h-4" />
           </div>
-          <span className="text-xl font-black tracking-tighter uppercase flex items-center gap-2">TrailForge<span className="w-2 h-2 bg-[#F77F00] dark:bg-orange-500 rounded-full animate-pulse"></span></span>
+          <Link href="/" className="text-xl font-black tracking-tighter uppercase flex items-center gap-2 cursor-pointer">TrailForge<span className="w-2 h-2 bg-[#F77F00] dark:bg-orange-500 rounded-full animate-pulse"></span></Link>
         </div>
         
         <div className="hidden lg:flex items-center gap-10 text-[11px] font-black uppercase tracking-[0.2em] text-[#495057] dark:text-neutral-300">
-          <a href="#" className="hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors relative group">Katalog <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-[#F77F00] dark:bg-orange-500 transition-all group-hover:w-full"></span></a>
-          <a href="#" className="hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors relative group">Ekspedisi <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-[#F77F00] dark:bg-orange-500 transition-all group-hover:w-full"></span></a>
-          <a href="#" className="hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors relative group">Teknologi <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-[#F77F00] dark:bg-orange-500 transition-all group-hover:w-full"></span></a>
+          <Link href="/katalog" className="hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors relative group">Katalog <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-[#F77F00] dark:bg-orange-500 transition-all group-hover:w-full"></span></Link>
+          <Link href="#" className="hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors relative group">Ekspedisi <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-[#F77F00] dark:bg-orange-500 transition-all group-hover:w-full"></span></Link>
+          <Link href="#" className="hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors relative group">Teknologi <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-[#F77F00] dark:bg-orange-500 transition-all group-hover:w-full"></span></Link>
         </div>
 
         <div className="flex items-center gap-6">

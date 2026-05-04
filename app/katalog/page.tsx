@@ -12,18 +12,19 @@ import Link from "next/link";
 // DATA PRODUK LENGKAP (Nantinya dari Supabase)
 // ==========================================
 const ALL_PRODUCTS = [
-  { id: "101", name: "Vertex Summit Tent", category: "Tenda", price: 3450000, originalPrice: 4200000, tag: "Ultralight", rating: 4.9, reviews: 87, sold: 342, image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600&q=80" },
-  { id: "102", name: "Timberline X-Coat Arctic", category: "Pakaian", price: 1200000, originalPrice: 1800000, tag: "Thermal", rating: 4.8, reviews: 124, sold: 892, image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600&q=80" },
-  { id: "103", name: "AeroStep Mountain Boot", category: "Sepatu", price: 2150000, originalPrice: 2150000, tag: "GORE-TEX", rating: 4.7, reviews: 203, sold: 1540, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80" },
-  { id: "104", name: "Polaris Compass Pro", category: "Navigasi", price: 450000, originalPrice: 600000, tag: "Akurasi 99%", rating: 4.6, reviews: 56, sold: 230, image: "https://images.unsplash.com/photo-1504376830547-506dedee1643?w=600&q=80" },
-  { id: "105", name: "Everest Sleeping Bag", category: "Tenda", price: 1800000, originalPrice: 2200000, tag: "-15°C Rated", rating: 4.9, reviews: 167, sold: 678, image: "https://images.unsplash.com/photo-1445308394109-4ec2920981b1?w=600&q=80" },
-  { id: "106", name: "Titanium Cookset Elite", category: "Alat Masak", price: 850000, originalPrice: 850000, tag: "Tahan Karat", rating: 4.5, reviews: 89, sold: 445, image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80" },
-  { id: "107", name: "Storm Shell V2 Jacket", category: "Pakaian", price: 980000, originalPrice: 1400000, tag: "Windproof", rating: 4.6, reviews: 78, sold: 310, image: "https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=600&q=80" },
-  { id: "108", name: "Glacier Down Parka", category: "Pakaian", price: 1500000, originalPrice: 1500000, tag: "800-Fill", rating: 4.9, reviews: 201, sold: 920, image: "https://images.unsplash.com/photo-1532054950669-026859e2185c?w=600&q=80" },
-  { id: "109", name: "Summit Fleece Pro", category: "Pakaian", price: 650000, originalPrice: 750000, tag: "Midlayer", rating: 4.7, reviews: 145, sold: 780, image: "https://images.unsplash.com/photo-1495103033382-fe343886b671?w=600&q=80" },
-  { id: "110", name: "Trailblazer 55L Pack", category: "Tas", price: 2800000, originalPrice: 3500000, tag: "Ergonomic", rating: 4.8, reviews: 312, sold: 1100, image: "https://images.unsplash.com/photo-1622260614153-03223fb72052?w=600&q=80" },
-  { id: "111", name: "NightVision Headlamp", category: "Navigasi", price: 380000, originalPrice: 380000, tag: "1200 Lumens", rating: 4.4, reviews: 94, sold: 560, image: "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=600&q=80" },
-  { id: "112", name: "Carbon Trekking Poles", category: "Navigasi", price: 1250000, originalPrice: 1600000, tag: "Ultralight", rating: 4.8, reviews: 176, sold: 890, image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&q=80" },
+  { id: "101", name: "Vertex Summit Tent", category: "Tenda", gender: "Unisex", price: 3450000, originalPrice: 4200000, tag: "Ultralight", rating: 4.9, reviews: 87, sold: 342, image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600&q=80" },
+  { id: "102", name: "Timberline X-Coat Arctic", category: "Pakaian", gender: "Pria", price: 1200000, originalPrice: 1800000, tag: "Thermal", rating: 4.8, reviews: 124, sold: 892, image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600&q=80" },
+  { id: "103", name: "AeroStep Mountain Boot", category: "Sepatu", gender: "Pria", price: 2150000, originalPrice: 2150000, tag: "GORE-TEX", rating: 4.7, reviews: 203, sold: 1540, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80" },
+  { id: "104", name: "Polaris Compass Pro", category: "Navigasi", gender: "Unisex", price: 450000, originalPrice: 600000, tag: "Akurasi 99%", rating: 4.6, reviews: 56, sold: 230, image: "https://images.unsplash.com/photo-1504376830547-506dedee1643?w=600&q=80" },
+  { id: "105", name: "Everest Sleeping Bag", category: "Tenda", gender: "Unisex", price: 1800000, originalPrice: 2200000, tag: "-15°C Rated", rating: 4.9, reviews: 167, sold: 678, image: "https://images.unsplash.com/photo-1445308394109-4ec2920981b1?w=600&q=80" },
+  { id: "106", name: "Titanium Cookset Elite", category: "Alat Masak", gender: "Unisex", price: 850000, originalPrice: 850000, tag: "Tahan Karat", rating: 4.5, reviews: 89, sold: 445, image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80" },
+  { id: "107", name: "Storm Shell V2 Jacket", category: "Pakaian", gender: "Wanita", price: 980000, originalPrice: 1400000, tag: "Windproof", rating: 4.6, reviews: 78, sold: 310, image: "https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=600&q=80" },
+  { id: "108", name: "Glacier Down Parka", category: "Pakaian", gender: "Wanita", price: 1500000, originalPrice: 1500000, tag: "800-Fill", rating: 4.9, reviews: 201, sold: 920, image: "https://images.unsplash.com/photo-1532054950669-026859e2185c?w=600&q=80" },
+  { id: "109", name: "Summit Fleece Pro", category: "Pakaian", gender: "Pria", price: 650000, originalPrice: 750000, tag: "Midlayer", rating: 4.7, reviews: 145, sold: 780, image: "https://images.unsplash.com/photo-1495103033382-fe343886b671?w=600&q=80" },
+  { id: "110", name: "Trailblazer 55L Pack", category: "Tas", gender: "Unisex", price: 2800000, originalPrice: 3500000, tag: "Ergonomic", rating: 4.8, reviews: 312, sold: 1100, image: "https://images.unsplash.com/photo-1622260614153-03223fb72052?w=600&q=80" },
+  { id: "111", name: "NightVision Headlamp", category: "Navigasi", gender: "Unisex", price: 380000, originalPrice: 380000, tag: "1200 Lumens", rating: 4.4, reviews: 94, sold: 560, image: "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=600&q=80" },
+  { id: "112", name: "Carbon Trekking Poles", category: "Navigasi", gender: "Unisex", price: 1250000, originalPrice: 1600000, tag: "Ultralight", rating: 4.8, reviews: 176, sold: 890, image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&q=80" },
+  { id: "113", name: "Kids Explorer Set", category: "Tenda", gender: "Anak", price: 450000, originalPrice: 550000, tag: "Aman Anak", rating: 4.8, reviews: 42, sold: 120, image: "https://images.unsplash.com/photo-1510337269632-f3e997298642?w=600&q=80" },
 ];
 
 const CATEGORIES = ["Semua", "Pakaian", "Tenda", "Sepatu", "Navigasi", "Tas", "Alat Masak"];
@@ -53,6 +54,7 @@ export default function KatalogPage() {
   // State
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("Semua");
+  const [activeAudience, setActiveAudience] = useState("Semua");
   const [sortBy, setSortBy] = useState("popular");
   const [showSort, setShowSort] = useState(false);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000000]);
@@ -91,6 +93,11 @@ export default function KatalogPage() {
       items = items.filter(p => p.category === activeCategory);
     }
 
+    // Audience (Gender)
+    if (activeAudience !== "Semua") {
+      items = items.filter(p => p.gender === activeAudience || p.gender === "Unisex");
+    }
+
     // Price Range
     items = items.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
 
@@ -112,6 +119,7 @@ export default function KatalogPage() {
   // Active filters for tags
   const activeFilters: { label: string; onRemove: () => void }[] = [];
   if (activeCategory !== "Semua") activeFilters.push({ label: activeCategory, onRemove: () => setActiveCategory("Semua") });
+  if (activeAudience !== "Semua") activeFilters.push({ label: activeAudience, onRemove: () => setActiveAudience("Semua") });
   if (search.trim()) activeFilters.push({ label: `"${search}"`, onRemove: () => setSearch("") });
   if (priceRange[0] > 0 || priceRange[1] < 5000000) activeFilters.push({ label: `${formatRupiah(priceRange[0])} - ${formatRupiah(priceRange[1])}`, onRemove: () => setPriceRange([0, 5000000]) });
 
@@ -180,6 +188,33 @@ export default function KatalogPage() {
             )}
           </motion.div>
         </div>
+
+        {/* AUDIENCE SELECTION CARDS (Pria, Wanita, Anak) */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16"
+        >
+          {[
+            { id: "Pria", label: "Pria", img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&q=80" },
+            { id: "Wanita", label: "Wanita", img: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80" },
+            { id: "Anak", label: "Anak", img: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&q=80" }
+          ].map((item) => (
+            <motion.div
+              key={item.id}
+              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              onClick={() => { setActiveAudience(item.id); setVisibleCount(6); }}
+              className={`relative h-64 rounded-[32px] overflow-hidden cursor-pointer group border-4 transition-all duration-300 ${
+                activeAudience === item.id ? "border-orange-500 shadow-[0_0_30px_rgba(247,127,0,0.3)]" : "border-transparent"
+              }`}
+            >
+              <img src={item.img} alt={item.label} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <h3 className="text-4xl font-black italic uppercase tracking-tighter text-white drop-shadow-2xl">{item.label}</h3>
+              </div>
+            </motion.div>
+          ))}
+        </motion.div>
 
         {/* TOOLBAR: Filter + Sort + View Toggle */}
         <motion.div 
@@ -304,7 +339,7 @@ export default function KatalogPage() {
                 </motion.button>
               ))}
               <button 
-                onClick={() => { setActiveCategory("Semua"); setSearch(""); setPriceRange([0, 5000000]); }}
+                onClick={() => { setActiveCategory("Semua"); setActiveAudience("Semua"); setSearch(""); setPriceRange([0, 5000000]); }}
                 className="text-[10px] font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-500 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors underline"
               >
                 Hapus Semua
@@ -325,7 +360,7 @@ export default function KatalogPage() {
               <h3 className="text-2xl font-black uppercase tracking-tight mb-3">Tidak Ditemukan</h3>
               <p className="text-[#6C757D] dark:text-neutral-500 max-w-md mb-8">Tidak ada produk yang cocok dengan filter Anda. Coba ubah kategori atau kata kunci pencarian.</p>
               <button 
-                onClick={() => { setActiveCategory("Semua"); setSearch(""); setPriceRange([0, 5000000]); }}
+                onClick={() => { setActiveCategory("Semua"); setActiveAudience("Semua"); setSearch(""); setPriceRange([0, 5000000]); }}
                 className="px-8 py-3 bg-[#F77F00] dark:bg-orange-500 text-neutral-950 font-black uppercase tracking-widest text-sm hover:bg-[#E06F00] dark:hover:bg-orange-400 transition-colors"
               >
                 Reset Filter
