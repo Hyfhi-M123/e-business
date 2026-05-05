@@ -91,7 +91,7 @@ export default function LoginPage() {
     setIsLoading(false);
   };
 
-  // --- VARIANTS UNTUK EFEK ANIMASI WOW ---
+  // --- VARIANTS UNTUK EFEK ANIMASI---
   const containerVariants = {
     hidden: { opacity: 0 },
     show: {

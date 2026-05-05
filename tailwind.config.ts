@@ -24,6 +24,15 @@ const config: Config = {
           slate: "#16213e",
         }
       },
+      keyframes: {
+        gradient: {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+        },
+      },
+      animation: {
+        gradient: "gradient 4s ease infinite",
+      },
     },
   },
   plugins: [],
