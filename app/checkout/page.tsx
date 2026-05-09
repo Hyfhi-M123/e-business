@@ -301,13 +301,15 @@ export default function CheckoutPage() {
                   <span className="text-4xl font-black text-[#1B4332] tracking-tighter leading-none">{formatRupiah(total)}</span>
                 </div>
 
-                <motion.button 
-                  whileHover={{ scale: 1.02, backgroundColor: "#2d5a47" }} 
-                  whileTap={{ scale: 0.98 }} 
-                  className="w-full h-16 bg-[#1B4332] text-white rounded-[24px] flex items-center justify-center gap-4 font-black uppercase tracking-[0.15em] text-sm shadow-2xl shadow-[#1B4332]/20 transition-all duration-300"
-                >
-                  Bayar Sekarang <ArrowRight className="w-5 h-5" />
-                </motion.button>
+                <Link href="/pembayaran" className="block w-full">
+                  <motion.button 
+                    whileHover={{ scale: 1.02, backgroundColor: "#2d5a47" }} 
+                    whileTap={{ scale: 0.98 }} 
+                    className="w-full h-16 bg-[#1B4332] text-white rounded-[24px] flex items-center justify-center gap-4 font-black uppercase tracking-[0.15em] text-sm shadow-2xl shadow-[#1B4332]/20 transition-all duration-300"
+                  >
+                    Bayar Sekarang <ArrowRight className="w-5 h-5" />
+                  </motion.button>
+                </Link>
               </motion.div>
 
               <div className="bg-white rounded-[32px] p-8 border border-white flex flex-col gap-6 shadow-xl shadow-[#1B4332]/5">
