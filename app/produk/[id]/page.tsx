@@ -130,6 +130,7 @@ export default function ProfessionalPDP() {
   const [addedToCart, setAddedToCart] = useState(false);
   const [reviewSort, setReviewSort] = useState("helpful");
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [activeTab, setActiveTab] = useState("highlights");
 
   // Refs untuk scroll-triggered animations
   const reviewRef = useRef(null);
@@ -230,6 +231,70 @@ export default function ProfessionalPDP() {
                   <img src={img} alt={`Thumbnail ${i + 1}`} className="w-full h-full object-cover" />
                 </motion.button>
               ))}
+            </div>
+
+            {/* PRODUCT DETAILS TABS (Reference Style) */}
+            <div className="mt-16 flex flex-col">
+              {/* Tab Headers */}
+              <div className="flex items-center gap-12 border-b border-neutral-100 pb-6 mb-10">
+                {[
+                  { id: "highlights", label: "KEUNGGULAN" },
+                  { id: "desc", label: "DESKRIPSI" },
+                  { id: "specs", label: "SPESIFIKASI" }
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`relative text-xs font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? "text-[#F77F00]" : "text-neutral-300 hover:text-neutral-500"
+                      }`}
+                  >
+                    {tab.label}
+                    {activeTab === tab.id && (
+                      <motion.div layoutId="activeTab" className="absolute -bottom-[25px] left-0 right-0 h-1 bg-[#F77F00] rounded-full" />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab Content */}
+              <div className="min-h-[300px]">
+                <AnimatePresence mode="wait">
+                  {activeTab === "highlights" && (
+                    <motion.div
+                      key="highlights" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}
+                      className="flex flex-col gap-5"
+                    >
+                      {p.highlights.map((h, i) => (
+                        <div key={i} className="flex items-start gap-4 text-sm text-neutral-600 font-medium leading-relaxed">
+                          <Check className="w-4 h-4 text-[#F77F00] mt-1 flex-shrink-0" /> {h}
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
+
+                  {activeTab === "desc" && (
+                    <motion.div
+                      key="desc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}
+                    >
+                      <p className="text-sm text-neutral-500 leading-relaxed font-medium">{p.description}</p>
+                    </motion.div>
+                  )}
+
+                  {activeTab === "specs" && (
+                    <motion.div
+                      key="specs" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}
+                      className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4"
+                    >
+                      {Object.entries(p.specs).map(([key, val], i) => (
+                        <div key={i} className="flex flex-col py-2 border-b border-neutral-50">
+                          <span className="text-[9px] font-black text-neutral-300 uppercase tracking-widest mb-1">{key}</span>
+                          <span className="text-sm text-[#1B4332] font-bold">{val}</span>
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </motion.div>
 
@@ -415,62 +480,6 @@ export default function ProfessionalPDP() {
                   <span className="text-[9px] text-neutral-400 font-bold">{badge.sub}</span>
                 </div>
               ))}
-            </div>
-
-            <div className="flex flex-col">
-              <div className="border-b border-neutral-200">
-                <button onClick={() => toggleAccordion("highlights")} className="w-full flex justify-between items-center py-5 text-sm font-black uppercase tracking-widest text-[#1B4332] hover:text-[#40916C] transition-colors">
-                  Keunggulan Produk <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${openAccordion === "highlights" ? "rotate-180" : ""}`} />
-                </button>
-                <AnimatePresence>
-                  {openAccordion === "highlights" && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }} className="overflow-hidden">
-                      <ul className="pb-5 flex flex-col gap-3">
-                        {p.highlights.map((h, i) => (
-                          <li key={i} className="flex items-start gap-3 text-sm text-neutral-600 font-medium">
-                            <Check className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" /> {h}
-                          </li>
-                        ))}
-                      </ul>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <div className="border-b border-neutral-200">
-                <button onClick={() => toggleAccordion("desc")} className="w-full flex justify-between items-center py-5 text-sm font-black uppercase tracking-widest text-[#1B4332] hover:text-[#40916C] transition-colors">
-                  Deskripsi <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${openAccordion === "desc" ? "rotate-180" : ""}`} />
-                </button>
-                <AnimatePresence>
-                  {openAccordion === "desc" && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }} className="overflow-hidden">
-                      <p className="pb-5 text-sm text-neutral-500 leading-relaxed font-medium">{p.description}</p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <div className="border-b border-neutral-200">
-                <button onClick={() => toggleAccordion("specs")} className="w-full flex justify-between items-center py-5 text-sm font-black uppercase tracking-widest text-[#1B4332] hover:text-[#40916C] transition-colors">
-                  Spesifikasi Teknis <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${openAccordion === "specs" ? "rotate-180" : ""}`} />
-                </button>
-                <AnimatePresence>
-                  {openAccordion === "specs" && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }} className="overflow-hidden">
-                      <table className="w-full mb-5">
-                        <tbody>
-                          {Object.entries(p.specs).map(([key, val], i) => (
-                            <tr key={i} className="border-b border-neutral-50 last:border-0">
-                              <td className="py-3 text-[10px] font-black text-neutral-400 uppercase tracking-widest w-[40%]">{key}</td>
-                              <td className="py-3 text-sm text-neutral-700 font-bold">{val}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
             </div>
           </motion.div>
         </div>
