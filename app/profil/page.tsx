@@ -265,11 +265,10 @@ export default function ProfilPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${
-                  activeTab === tab.key
+                className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all duration-300 ${activeTab === tab.key
                     ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/20"
                     : "bg-white/50 dark:bg-white/5 border border-[#DEE2E6] dark:border-white/10 text-[#6C757D] dark:text-neutral-400 hover:text-[#212529] dark:hover:text-white hover:border-orange-500/30"
-                }`}
+                  }`}
               >
                 <tab.icon className="w-4 h-4" /> {tab.label}
               </button>
@@ -308,7 +307,7 @@ export default function ProfilPage() {
                       <span className="text-xs font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">Nama Lengkap</span>
                     </div>
                     {editMode ? (
-                      <input value={formData.full_name} onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                      <input value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                         className="flex-1 bg-transparent border-b border-orange-500/30 focus:border-orange-500 outline-none py-1 font-semibold transition-colors" />
                     ) : (
                       <span className="font-semibold">{displayName}</span>
@@ -332,7 +331,7 @@ export default function ProfilPage() {
                       <span className="text-xs font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">Telepon</span>
                     </div>
                     {editMode ? (
-                      <input value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} placeholder="08xxxxxxxxxx"
+                      <input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="08xxxxxxxxxx"
                         className="flex-1 bg-transparent border-b border-orange-500/30 focus:border-orange-500 outline-none py-1 font-semibold transition-colors placeholder:text-neutral-600" />
                     ) : (
                       <span className="font-semibold">{formData.phone || <span className="text-[#ADB5BD] dark:text-neutral-600 italic">Belum diisi</span>}</span>
@@ -346,7 +345,7 @@ export default function ProfilPage() {
                       <span className="text-xs font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">Tanggal Lahir</span>
                     </div>
                     {editMode ? (
-                      <input type="date" value={formData.birthday} onChange={(e) => setFormData({...formData, birthday: e.target.value})}
+                      <input type="date" value={formData.birthday} onChange={(e) => setFormData({ ...formData, birthday: e.target.value })}
                         className="flex-1 bg-transparent border-b border-orange-500/30 focus:border-orange-500 outline-none py-1 font-semibold transition-colors" />
                     ) : (
                       <span className="font-semibold">{formData.birthday || <span className="text-[#ADB5BD] dark:text-neutral-600 italic">Belum diisi</span>}</span>
@@ -399,17 +398,17 @@ export default function ProfilPage() {
                     <div className="space-y-4">
                       <div className="flex gap-2">
                         {["Rumah", "Kantor", "Lainnya"].map(l => (
-                          <button key={l} onClick={() => setAddrForm({...addrForm, label: l})}
+                          <button key={l} onClick={() => setAddrForm({ ...addrForm, label: l })}
                             className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${addrForm.label === l ? "bg-orange-500 text-white" : "bg-white/5 border border-white/10 text-neutral-400"}`}>
                             {l === "Rumah" ? <span className="flex items-center gap-1"><Home className="w-3 h-3" />{l}</span> : l === "Kantor" ? <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{l}</span> : l}
                           </button>
                         ))}
                       </div>
-                      <input value={addrForm.name} onChange={e => setAddrForm({...addrForm, name: e.target.value})} placeholder="Nama penerima"
+                      <input value={addrForm.name} onChange={e => setAddrForm({ ...addrForm, name: e.target.value })} placeholder="Nama penerima"
                         className="w-full bg-transparent border border-[#DEE2E6] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:border-orange-500 outline-none transition-colors" />
-                      <input value={addrForm.phone} onChange={e => setAddrForm({...addrForm, phone: e.target.value})} placeholder="Nomor telepon"
+                      <input value={addrForm.phone} onChange={e => setAddrForm({ ...addrForm, phone: e.target.value })} placeholder="Nomor telepon"
                         className="w-full bg-transparent border border-[#DEE2E6] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:border-orange-500 outline-none transition-colors" />
-                      <textarea value={addrForm.full} onChange={e => setAddrForm({...addrForm, full: e.target.value})} placeholder="Alamat lengkap (jalan, RT/RW, kelurahan, kecamatan, kota, kode pos)" rows={3}
+                      <textarea value={addrForm.full} onChange={e => setAddrForm({ ...addrForm, full: e.target.value })} placeholder="Alamat lengkap (jalan, RT/RW, kelurahan, kecamatan, kota, kode pos)" rows={3}
                         className="w-full bg-transparent border border-[#DEE2E6] dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:border-orange-500 outline-none transition-colors resize-none" />
                       {/* Map Picker */}
                       <div>
