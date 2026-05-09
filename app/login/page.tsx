@@ -91,6 +91,25 @@ export default function LoginPage() {
     setIsLoading(false);
   };
 
+  const handleResetPassword = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!email) {
+      showToast("Tolong isi Alamat Email Anda terlebih dahulu sebelum mereset sandi!", 'error');
+      return;
+    }
+    setIsLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    
+    if (error) {
+      showToast("Gagal mengirim tautan reset: " + error.message, 'error');
+    } else {
+      showToast("Tautan pemulihan sandi telah dikirim! Cek inbox email Anda.", 'success');
+    }
+    setIsLoading(false);
+  };
+
   // --- VARIANTS UNTUK EFEK ANIMASI---
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -205,7 +224,7 @@ export default function LoginPage() {
             <motion.div variants={itemVariants} className="space-y-2 group">
               <div className="flex justify-between items-center ml-1">
                 <label className="text-xs font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-400 group-focus-within:text-[#F77F00] dark:text-orange-500 transition-colors">Kata Sandi</label>
-                <a href="#" className="text-xs font-bold text-[#6C757D] dark:text-neutral-500 hover:text-orange-400 transition-colors">Lupa Sandi?</a>
+                <button type="button" onClick={handleResetPassword} className="text-xs font-bold text-[#6C757D] dark:text-neutral-500 hover:text-orange-400 transition-colors bg-transparent cursor-pointer">Lupa Sandi?</button>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">

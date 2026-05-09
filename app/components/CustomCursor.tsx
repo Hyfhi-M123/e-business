@@ -12,6 +12,8 @@ export default function CustomCursor() {
   useEffect(() => {
     // Fungsi ini membypass siklus render React dan memperbarui posisi elemen secara langsung di DOM (Kecepatan Maximum)
     const mouseMove = (e: MouseEvent) => {
+      setIsVisible(true); // Pastikan selalu terlihat saat mouse bergerak, walau browser sempat melempar event mouseleave palsu saat ganti halaman
+
       if (cursorRef.current) {
         // Offset disesuaikan agar ujung panah (tip) jatuh pas di posisi klik mouse
         const offsetX = isHovering ? 16 : 8; 

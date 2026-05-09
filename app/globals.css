@@ -12,6 +12,13 @@
 
 *, *::before, *::after {
   border-color: transparent;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+input, textarea, select {
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
 html {
@@ -61,4 +68,16 @@ body {
 .animate-gradient-x {
   animation: gradient-x 4s ease infinite;
   background-size: 200% 200%;
+}
+
+/* Chat message entrance animation (CSS-only, no JS blink) */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

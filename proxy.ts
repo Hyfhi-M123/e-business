@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Hanya contoh struktur jalan masuk middleware Next.js proteksi rute
   
   // 1. Definisikan rute yang wajib dilindungi (contoh: dashboard)

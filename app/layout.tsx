@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 import CustomCursor from "./components/CustomCursor";
+import ChatAssistant from "./components/ChatAssistant";
 
 import { Providers } from "./providers";
 import ThemeToggle from "./components/ThemeToggle";
@@ -18,10 +19,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" suppressHydrationWarning>
-      <body className="bg-[#F8F9FA] dark:bg-neutral-950 text-[#212529] dark:text-neutral-300 min-h-screen transition-colors duration-300">
+      <body className="bg-[#F8F9FA] dark:bg-neutral-950 text-[#212529] dark:text-neutral-300 min-h-screen transition-colors duration-300" suppressHydrationWarning>
         <Providers>
           <CustomCursor />
           <ThemeToggle />
+          <ChatAssistant />
           {children}
         </Providers>
       </body>
