@@ -3,6 +3,7 @@ import "./globals.css";
 
 import CustomCursor from "./components/CustomCursor";
 import ChatAssistant from "./components/ChatAssistant";
+import KillSwitchEnforcer from "./components/KillSwitchEnforcer";
 
 import { Providers } from "./providers";
 import ThemeToggle from "./components/ThemeToggle";
@@ -21,6 +22,7 @@ export default function RootLayout({
     <html lang="id" suppressHydrationWarning>
       <body className="bg-[#F8F9FA] dark:bg-neutral-950 text-[#212529] dark:text-neutral-300 min-h-screen transition-colors duration-300" suppressHydrationWarning>
         <Providers>
+          <KillSwitchEnforcer />
           <CustomCursor />
           <ThemeToggle />
           <ChatAssistant />

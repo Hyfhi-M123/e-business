@@ -1,0 +1,180 @@
+"use client";
+
+import { motion } from "framer-motion";
+import { ArrowUpRight, ArrowDownRight, Search, Calendar, Bell, DollarSign, ShoppingCart, Users, ChevronDown, MoreHorizontal } from "lucide-react";
+
+export default function AdminDashboard() {
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+
+  const itemVariant = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } }
+  };
+
+  return (
+    <main className="p-8 lg:p-10 max-w-[1600px] mx-auto w-full min-h-screen">
+      
+      {/* Top Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
+        <div>
+          <h1 className="text-2xl font-black text-[#212529] dark:text-white tracking-tight">Overview Dashboard</h1>
+          <p className="text-sm text-neutral-500 font-medium mt-1">Here's what's happening with your store today.</p>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="relative hidden md:block group">
+            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-[#F77F00] transition-colors" />
+            <input 
+              type="text" 
+              placeholder="Search anything..." 
+              className="bg-white dark:bg-[#111] border border-black/5 dark:border-white/5 shadow-[0_2px_10px_rgba(0,0,0,0.02)] rounded-2xl py-3 pl-12 pr-4 text-sm font-medium w-72 focus:ring-2 focus:ring-[#F77F00]/20 focus:border-[#F77F00] outline-none transition-all"
+            />
+          </div>
+          
+          <button className="flex items-center gap-3 bg-white dark:bg-[#111] border border-black/5 dark:border-white/5 shadow-[0_2px_10px_rgba(0,0,0,0.02)] rounded-2xl px-4 py-3 text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:border-black/10 transition-colors">
+            <Calendar className="w-4 h-4 text-neutral-400" />
+            <span>Jul 22 - Jul 29</span>
+            <ChevronDown className="w-4 h-4 text-neutral-400" />
+          </button>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <motion.div 
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+      >
+        {[
+          { title: "Total Revenue", value: "Rp 82.650K", trend: "+11.4%", isPositive: true, icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "hover:border-emerald-500/30" },
+          { title: "Total Orders", value: "1,645", trend: "+12.5%", isPositive: true, icon: ShoppingCart, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-500/10", border: "hover:border-blue-500/30" },
+          { title: "Active Customers", value: "1,462", trend: "-2.4%", isPositive: false, icon: Users, color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-500/10", border: "hover:border-rose-500/30" },
+        ].map((stat, i) => (
+          <motion.div 
+            variants={itemVariant} 
+            key={i} 
+            className={`bg-white dark:bg-[#111] rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] border border-black/5 dark:border-white/5 transition-colors duration-300 ${stat.border} group cursor-default`}
+          >
+            <div className="flex justify-between items-start mb-6">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform duration-300`}>
+                <stat.icon className="w-6 h-6" strokeWidth={2.5} />
+              </div>
+              <span className={`flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-full ${stat.isPositive ? 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/10' : 'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-500/10'}`}>
+                {stat.isPositive ? <ArrowUpRight className="w-3 h-3" strokeWidth={3} /> : <ArrowDownRight className="w-3 h-3" strokeWidth={3} />}
+                {stat.trend}
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-neutral-400 mb-1">{stat.title}</p>
+              <div className="flex items-end gap-2">
+                <h3 className="text-4xl font-black text-[#212529] dark:text-white tracking-tight leading-none">{stat.value}</h3>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 pb-10">
+        
+        {/* Premium Sales Analytic Chart */}
+        <motion.div variants={itemVariant} initial="hidden" animate="show" className="xl:col-span-2 bg-white dark:bg-[#111] rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/5 dark:border-white/5 relative overflow-hidden group">
+          
+          <div className="flex justify-between items-center mb-8 relative z-10">
+            <div>
+              <h2 className="text-xl font-black text-[#212529] dark:text-white">Sales Analytic</h2>
+              <p className="text-xs font-bold text-neutral-400 mt-1">Monitor your store's financial health</p>
+            </div>
+            <button className="flex items-center gap-2 bg-neutral-50 dark:bg-[#1a1a1a] px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 transition-colors border border-black/5 dark:border-white/5">
+              <span>Monthly</span>
+              <ChevronDown className="w-3 h-3" />
+            </button>
+          </div>
+          
+          <div className="flex flex-wrap gap-10 mb-12 relative z-10">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                <p className="text-xs font-bold text-neutral-500">Income</p>
+              </div>
+              <span className="text-2xl font-black text-[#212529] dark:text-white">Rp 23.262K</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-2 h-2 rounded-full bg-[#F77F00]"></div>
+                <p className="text-xs font-bold text-neutral-500">Expenses</p>
+              </div>
+              <span className="text-2xl font-black text-[#212529] dark:text-white">Rp 11.135K</span>
+            </div>
+          </div>
+
+          {/* Premium Animated Chart Placeholder */}
+          <div className="w-full h-64 relative border-b border-black/5 dark:border-white/5 flex items-end -mx-2 px-2">
+            {/* Grid lines */}
+            <div className="absolute inset-0 flex flex-col justify-between border-t border-black/5 dark:border-white/5">
+              <div className="w-full h-px bg-black/5 dark:bg-white/5" />
+              <div className="w-full h-px bg-black/5 dark:bg-white/5" />
+              <div className="w-full h-px bg-black/5 dark:bg-white/5" />
+              <div className="w-full h-px bg-black/5 dark:bg-white/5" />
+            </div>
+
+            {/* Income Gradient */}
+            <div className="absolute bottom-0 left-0 right-0 h-[80%] bg-gradient-to-t from-blue-500/20 to-transparent opacity-60" style={{ clipPath: "polygon(0 100%, 0 80%, 15% 40%, 30% 70%, 45% 20%, 60% 80%, 75% 50%, 90% 10%, 100% 40%, 100% 100%)" }} />
+            <svg className="w-full h-[80%] absolute bottom-0 left-0 right-0 preserve-3d overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 100">
+              <path d="M0,80 Q7.5,60 15,40 T30,70 T45,20 T60,80 T75,50 T90,10 T100,40" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" vectorEffect="non-scaling-stroke" className="drop-shadow-[0_4px_10px_rgba(59,130,246,0.5)]"/>
+            </svg>
+
+            {/* Labels */}
+            <div className="w-full flex justify-between text-[10px] font-bold text-neutral-400 absolute -bottom-6">
+              <span>Jul 22</span><span>Jul 23</span><span>Jul 24</span><span>Jul 25</span><span>Jul 26</span><span>Jul 27</span><span>Jul 28</span><span>Jul 29</span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Top Selling Products List */}
+        <motion.div variants={itemVariant} initial="hidden" animate="show" className="bg-white dark:bg-[#111] rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/5 dark:border-white/5 flex flex-col">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h2 className="text-xl font-black text-[#212529] dark:text-white">Top Selling</h2>
+              <p className="text-xs font-bold text-neutral-400 mt-1">Based on recent data</p>
+            </div>
+            <button className="w-8 h-8 rounded-full bg-neutral-50 dark:bg-[#1a1a1a] flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-[#222] transition-colors border border-black/5 dark:border-white/5">
+              <MoreHorizontal className="w-4 h-4 text-neutral-500" />
+            </button>
+          </div>
+          
+          <div className="flex-1 flex flex-col gap-4">
+            {[
+              { name: "Vertex Summit Tent", sold: "752 Pcs", trend: "+14%", img: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=200&q=80" },
+              { name: "AeroStep Boot", sold: "542 Pcs", trend: "+8%", img: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=200&q=80" },
+              { name: "Timberline X-Coat", sold: "320 Pcs", trend: "+5%", img: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=200&q=80" },
+              { name: "Polaris Compass", sold: "210 Pcs", trend: "+2%", img: "https://images.unsplash.com/photo-1512413914565-ebff0d9c4c23?w=200&q=80" },
+            ].map((prod, i) => (
+              <div key={i} className="flex items-center gap-4 p-3 -mx-3 rounded-2xl hover:bg-neutral-50 dark:hover:bg-[#1a1a1a] transition-all cursor-pointer group">
+                <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-neutral-100 flex-shrink-0">
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
+                  <img src={prod.img} alt={prod.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-sm font-bold text-[#212529] dark:text-white truncate group-hover:text-[#F77F00] transition-colors">{prod.name}</h4>
+                  <div className="flex items-center gap-3 mt-1">
+                    <p className="text-xs font-semibold text-neutral-500">{prod.sold}</p>
+                    <span className="text-[9px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded">{prod.trend}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <button className="w-full mt-6 py-3 rounded-xl border-2 border-dashed border-black/10 dark:border-white/10 text-xs font-bold text-[#F77F00] hover:bg-[#F77F00]/5 transition-colors">
+            View All Products
+          </button>
+        </motion.div>
+
+      </div>
+    </main>
+  );
+}
