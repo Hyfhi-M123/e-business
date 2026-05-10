@@ -3,7 +3,7 @@
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { 
   Filter, ChevronDown, ChevronRight, ShoppingBag, ArrowUpRight, Search, Menu, 
-  Star, Heart, X, Grid3X3, List, SlidersHorizontal, ChevronUp, Package
+  Star, Heart, X, Grid3X3, List, SlidersHorizontal, ChevronUp, Package, ShieldCheck
 } from "lucide-react";
 import { useState, useRef, useMemo, useEffect } from "react";
 import Link from "next/link";

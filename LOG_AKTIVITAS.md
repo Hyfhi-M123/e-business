@@ -55,3 +55,10 @@ Dokumen ini mencatat setiap langkah yang dilakukan oleh tim (Manusia & Antigravi
     - [x] **Anggota 2**: Standarisasi `tailwind.config.ts`, membuat kerangka rute Page-Centric (`app/katalog/page.tsx` & `app/login/page.tsx`).
     - [x] **Anggota 3**: Instalasi `@supabase/supabase-js`, pembuatan `utils/supabase/client.ts`, `.env.local.example`, serta rancangan `ERD_Database.md`.
 - **Catatan**: Seluruh fondasi dasar proyek untuk Minggu 2 telah terpasang di repository lokal. Siap untuk push.
+### [2026-05-11] - Sinkronisasi & Perbaikan Minor (Minggu 5)
+- **Pelaku**: Antigravity & User
+- **Tindakan**:
+    - [x] Sinkronisasi Repository: Menarik perubahan terbaru dari remote (`git pull`).
+    - [x] **Bug Fix (Katalog)**: Menambahkan import `ShieldCheck` yang hilang di `app/katalog/page.tsx` untuk mencegah error pada notifikasi guest.
+    - [x] **Review Kode**: Memastikan `AuthContext` dan `CartContext` sudah terintegrasi dengan benar.
+- **Catatan**: Katalog saat ini masih menggunakan data statis (`ALL_PRODUCTS`). Langkah selanjutnya adalah integrasi Supabase Database untuk produk sesuai rencana Sprint 3.
