@@ -15,9 +15,9 @@ export default function TentangKamiPage() {
         <div className="absolute inset-0 z-0 opacity-20 dark:opacity-40">
           <div className="absolute inset-0 bg-[linear-gradient(rgba(247,127,0,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(247,127,0,0.2)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
         </div>
-        
+
         <div className="max-w-6xl mx-auto relative z-10 flex flex-col md:flex-row items-center gap-12">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
@@ -27,8 +27,8 @@ export default function TentangKamiPage() {
               <Terminal className="w-3 h-3" /> DECLASSIFIED DOCUMENT
             </div>
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-black uppercase tracking-tighter leading-none mb-6">
-              Forged <br/>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F77F00] to-orange-400">For The</span> <br/>
+              Forged <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F77F00] to-orange-400">For The</span> <br />
               Unforgiving.
             </h1>
             <p className="text-sm md:text-base font-mono text-[#6C757D] dark:text-neutral-400 max-w-xl leading-relaxed">
@@ -36,20 +36,20 @@ export default function TentangKamiPage() {
             </p>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
             className="flex-1 w-full"
           >
             <div className="w-full aspect-square relative bg-[#050505] border border-white/10 dark:border-white/5 overflow-hidden flex items-center justify-center group rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-              
+
               {/* CRT Scanline overlay */}
               <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100%_4px] pointer-events-none z-20 mix-blend-overlay"></div>
 
               {/* Grid Background */}
               <div className="absolute inset-0 bg-[linear-gradient(rgba(247,127,0,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(247,127,0,0.05)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
-              
+
               {/* Axis Lines (Crosshairs) */}
               <div className="absolute inset-0 z-0">
                 <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-[#F77F00]/20"></div>
@@ -88,7 +88,7 @@ export default function TentangKamiPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <motion.div 
+            <motion.div
               whileHover={{ scale: 1.02 }}
               className="bg-white dark:bg-[#121212] border-2 border-black/10 dark:border-white/10 p-10 relative overflow-hidden group"
             >
@@ -100,7 +100,7 @@ export default function TentangKamiPage() {
               </p>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               whileHover={{ scale: 1.02 }}
               className="bg-[#212529] text-white dark:bg-white dark:text-black border-2 border-transparent p-10 relative overflow-hidden group"
             >
@@ -149,14 +149,14 @@ export default function TentangKamiPage() {
           <div className="absolute -bottom-20 -right-20 opacity-5">
             <Flame className="w-96 h-96" />
           </div>
-          
+
           <div className="relative z-10 flex flex-col md:flex-row gap-12 justify-between">
             <div className="max-w-lg">
               <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-4">Establish Commlink</h2>
               <p className="text-sm font-mono text-[#6C757D] dark:text-neutral-400 mb-8">
                 Saluran komunikasi kami selalu terbuka. Baik untuk negosiasi suplai logistik besar, pelaporan cacat material, atau pertanyaan intelijen mengenai rilis produk selanjutnya.
               </p>
-              
+
               <div className="space-y-6">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-[#F77F00] text-white flex items-center justify-center">

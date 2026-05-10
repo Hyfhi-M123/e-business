@@ -22,12 +22,18 @@ type CartContextType = {
   updateQuantity: (id: string, delta: number) => void;
   cartTotal: number;
   cartCount: number;
+  selectedItemIds: string[];
+  toggleSelect: (id: string) => void;
+  toggleSelectAll: (select: boolean) => void;
+  selectedCartTotal: number;
+  selectedCartCount: number;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -35,7 +41,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsMounted(true);
     const stored = localStorage.getItem("trailforge_cart");
     if (stored) {
-      setCartItems(JSON.parse(stored));
+      const items = JSON.parse(stored);
+      setCartItems(items);
+      setSelectedItemIds(items.map((i: any) => i.id));
     }
   }, []);
 
@@ -54,11 +62,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       return [...prev, { ...item, quantity: qty }];
     });
+    setSelectedItemIds(prev => prev.includes(item.id) ? prev : [...prev, item.id]);
     setIsCartOpen(true); // Membuka drawer saat barang ditambahkan
   };
 
   const removeFromCart = (id: string) => {
     setCartItems(prev => prev.filter(i => i.id !== id));
+    setSelectedItemIds(prev => prev.filter(i => i !== id));
   };
 
   const updateQuantity = (id: string, delta: number) => {
@@ -74,8 +84,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const cartTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
+  const selectedItems = cartItems.filter(i => selectedItemIds.includes(i.id));
+  const selectedCartTotal = selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const selectedCartCount = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  const toggleSelect = (id: string) => {
+    setSelectedItemIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = (select: boolean) => {
+    if (select) setSelectedItemIds(cartItems.map(i => i.id));
+    else setSelectedItemIds([]);
+  };
+
   return (
-    <CartContext.Provider value={{ cartItems, isCartOpen, setIsCartOpen, addToCart, removeFromCart, updateQuantity, cartTotal, cartCount }}>
+    <CartContext.Provider value={{ 
+      cartItems, isCartOpen, setIsCartOpen, addToCart, removeFromCart, updateQuantity, cartTotal, cartCount,
+      selectedItemIds, toggleSelect, toggleSelectAll, selectedCartTotal, selectedCartCount
+    }}>
       {children}
     </CartContext.Provider>
   );

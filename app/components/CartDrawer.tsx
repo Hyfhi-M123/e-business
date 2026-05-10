@@ -6,11 +6,11 @@ import Link from "next/link";
 import { useCart } from "../context/CartContext";
 
 export default function CartDrawer() {
-  const { cartItems, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, cartTotal, cartCount } = useCart();
+  const { cartItems, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, selectedCartTotal, selectedCartCount, selectedItemIds, toggleSelect, toggleSelectAll } = useCart();
 
   const FREE_SHIPPING_THRESHOLD = 2500000;
-  const progress = Math.min((cartTotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
-  const remainingForFreeShipping = Math.max(FREE_SHIPPING_THRESHOLD - cartTotal, 0);
+  const progress = Math.min((selectedCartTotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
+  const remainingForFreeShipping = Math.max(FREE_SHIPPING_THRESHOLD - selectedCartTotal, 0);
 
   function formatRupiah(n: number) {
     return "Rp " + n.toLocaleString("id-ID");
@@ -44,7 +44,7 @@ export default function CartDrawer() {
             <div className="flex items-center justify-between p-6 md:p-8 border-b border-black/10 dark:border-white/10 bg-white dark:bg-[#121212]">
               <div className="flex items-center gap-3">
                 <ShoppingBag className="w-5 h-5 text-[#F77F00] dark:text-orange-500" />
-                <h2 className="text-xl font-black uppercase tracking-tighter text-[#212529] dark:text-white">Keranjang <span className="text-[#6C757D] dark:text-neutral-500">({cartCount})</span></h2>
+                <h2 className="text-xl font-black uppercase tracking-tighter text-[#212529] dark:text-white">Keranjang <span className="text-[#6C757D] dark:text-neutral-500">({selectedCartCount})</span></h2>
               </div>
               <button 
                 onClick={() => setIsCartOpen(false)}
@@ -80,7 +80,19 @@ export default function CartDrawer() {
                   <p className="text-sm font-bold uppercase tracking-widest">Keranjang Kosong</p>
                 </div>
               ) : (
-                <AnimatePresence>
+                <>
+                  <div className="flex items-center gap-2 mb-[-10px]">
+                    <label className="flex items-center gap-2 cursor-pointer text-[10px] font-mono text-[#212529] dark:text-white/80 hover:text-black dark:hover:text-white transition-colors">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedItemIds.length === cartItems.length && cartItems.length > 0}
+                        onChange={(e) => toggleSelectAll(e.target.checked)}
+                        className="w-3.5 h-3.5 accent-[#F77F00] cursor-pointer"
+                      />
+                      PILIH SEMUA
+                    </label>
+                  </div>
+                  <AnimatePresence>
                   {cartItems.map((item) => (
                     <motion.div 
                       key={item.id}
@@ -90,6 +102,14 @@ export default function CartDrawer() {
                       exit={{ opacity: 0, x: 50 }}
                       className="flex gap-4 p-4 bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10"
                     >
+                      <div className="flex items-center">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedItemIds.includes(item.id)}
+                          onChange={() => toggleSelect(item.id)}
+                          className="w-4 h-4 accent-[#F77F00] cursor-pointer"
+                        />
+                      </div>
                       <img src={item.image} alt={item.name} className="w-20 h-24 object-cover bg-[#f8f9fa] dark:bg-[#0a0a0a]" />
                       
                       <div className="flex-1 flex flex-col justify-between">
@@ -118,6 +138,7 @@ export default function CartDrawer() {
                     </motion.div>
                   ))}
                 </AnimatePresence>
+                </>
               )}
             </div>
 
@@ -126,7 +147,7 @@ export default function CartDrawer() {
               <div className="p-6 md:p-8 bg-white dark:bg-[#121212] border-t border-black/10 dark:border-white/10">
                 <div className="flex justify-between items-center mb-6">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">Subtotal Sementara</span>
-                  <span className="text-2xl font-black text-[#212529] dark:text-white tracking-tighter">{formatRupiah(cartTotal)}</span>
+                  <span className="text-2xl font-black text-[#212529] dark:text-white tracking-tighter">{formatRupiah(selectedCartTotal)}</span>
                 </div>
 
                 <Link href="/keranjang" onClick={() => setIsCartOpen(false)} className="w-full py-4 bg-[#F77F00] dark:bg-orange-500 hover:bg-[#e06f00] dark:hover:bg-orange-400 text-neutral-950 font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 transition-colors mb-4">

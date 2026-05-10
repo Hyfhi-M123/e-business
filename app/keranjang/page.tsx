@@ -14,7 +14,7 @@ import "leaflet/dist/leaflet.css";
 export default function KeranjangPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { cartItems, removeFromCart, updateQuantity, cartTotal } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, cartTotal, selectedItemIds: contextSelectedIds, toggleSelect, toggleSelectAll } = useCart();
   
   const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([]);
   const isBuyNowMode = searchParams.get("mode") === "buynow";
@@ -30,11 +30,16 @@ export default function KeranjangPage() {
   useEffect(() => {
     if (isBuyNowMode) {
       const buyNowData = sessionStorage.getItem("trailforge_buynow");
-      if (buyNowData) setCheckoutItems(JSON.parse(buyNowData));
+      if (buyNowData) {
+        const parsed = JSON.parse(buyNowData);
+        setCheckoutItems(parsed);
+      }
     } else {
       setCheckoutItems(cartItems);
     }
   }, [isBuyNowMode, cartItems]);
+
+  const selectedItemIds = isBuyNowMode ? checkoutItems.map(i => i.id) : contextSelectedIds;
 
   const handleLocalRemove = (id: string) => {
     if (isBuyNowMode) {
@@ -56,7 +61,8 @@ export default function KeranjangPage() {
     }
   };
 
-  const checkoutTotal = checkoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const selectedCheckoutItems = checkoutItems.filter(i => selectedItemIds.includes(i.id));
+  const checkoutTotal = selectedCheckoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   // Leaflet Map Init
   const mapRef = useRef<HTMLDivElement>(null);
@@ -113,7 +119,7 @@ export default function KeranjangPage() {
     ? (isFreeShipping ? 0 : 50000) 
     : 150000;
 
-  const totalOriginalPrice = checkoutItems.reduce((sum, item) => sum + ((item.originalPrice || item.price) * item.quantity), 0);
+  const totalOriginalPrice = selectedCheckoutItems.reduce((sum, item) => sum + ((item.originalPrice || item.price) * item.quantity), 0);
   const totalProductDiscount = totalOriginalPrice - checkoutTotal;
 
   const promoDiscount = isPromoApplied ? checkoutTotal * 0.1 : 0;
@@ -137,7 +143,7 @@ export default function KeranjangPage() {
   const handleCheckout = async () => {
     setIsProcessing(true);
     
-    const items = checkoutItems.map(item => ({
+    const items = selectedCheckoutItems.map(item => ({
       id: item.id,
       price: isPromoApplied ? item.price * 0.9 : item.price,
       quantity: item.quantity,
@@ -307,7 +313,21 @@ export default function KeranjangPage() {
               <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white flex items-center gap-3">
                 <Package className="w-5 h-5 text-[#F77F00]" /> Daftar Pesanan
               </h2>
-              <span className="text-[10px] font-mono text-white/50">{checkoutItems.length} BARANG</span>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer text-[10px] font-mono text-white/80 hover:text-white transition-colors">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedItemIds.length === checkoutItems.length && checkoutItems.length > 0}
+                    onChange={(e) => {
+                      if (!isBuyNowMode) toggleSelectAll(e.target.checked);
+                    }}
+                    disabled={isBuyNowMode}
+                    className="w-3.5 h-3.5 accent-[#F77F00] cursor-pointer disabled:opacity-50"
+                  />
+                  PILIH SEMUA
+                </label>
+                <span className="text-[10px] font-mono text-[#F77F00]">{selectedItemIds.length}/{checkoutItems.length} BARANG</span>
+              </div>
             </div>
             
             <div className="p-6 md:p-8">
@@ -315,14 +335,29 @@ export default function KeranjangPage() {
               <div className="flex flex-col gap-6">
                 {checkoutItems.map((item) => {
                   const hasDiscount = item.originalPrice && item.originalPrice > item.price;
+                  const isSelected = selectedItemIds.includes(item.id);
                   return (
-                  <div key={item.id} className="flex flex-col md:flex-row gap-6 items-start relative group border border-black/5 dark:border-white/5 p-4 hover:border-black/20 dark:hover:border-white/20 transition-colors">
+                  <div key={item.id} className={`flex flex-col md:flex-row gap-6 items-start relative group border p-4 transition-colors ${isSelected ? 'border-[#F77F00]/50 bg-[#F77F00]/5 dark:bg-[#F77F00]/10' : 'border-black/5 dark:border-white/5 hover:border-black/20 dark:hover:border-white/20'}`}>
                     
-                    <div className="w-full md:w-32 h-40 bg-[#f8f9fa] dark:bg-[#0a0a0a] border border-black/10 dark:border-white/10 flex-shrink-0 relative">
-                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1581553680321-4fffae59fdda?w=400&q=80" }} />
-                      {hasDiscount && (
-                        <div className="absolute top-2 -left-2 bg-red-600 text-white text-[10px] font-black px-3 py-1 uppercase tracking-widest shadow-lg">SALE</div>
-                      )}
+                    <div className="flex gap-4 w-full md:w-auto">
+                      <div className="flex items-center pt-2 md:pt-16 shrink-0">
+                        <input 
+                          type="checkbox" 
+                          checked={isSelected}
+                          onChange={() => {
+                            if (!isBuyNowMode) toggleSelect(item.id);
+                          }}
+                          disabled={isBuyNowMode}
+                        className="w-5 h-5 accent-[#F77F00] cursor-pointer shadow-sm disabled:opacity-50"
+                        />
+                      </div>
+
+                      <div className="w-full md:w-32 h-40 bg-[#f8f9fa] dark:bg-[#0a0a0a] border border-black/10 dark:border-white/10 flex-shrink-0 relative">
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1581553680321-4fffae59fdda?w=400&q=80" }} />
+                        {hasDiscount && (
+                          <div className="absolute top-2 -left-2 bg-red-600 text-white text-[10px] font-black px-3 py-1 uppercase tracking-widest shadow-lg">SALE</div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex-1 flex flex-col justify-between h-full w-full">
@@ -544,7 +579,7 @@ export default function KeranjangPage() {
                 {/* Checkout CTA */}
                 <button 
                   onClick={handleCheckout}
-                  disabled={isProcessing}
+                  disabled={isProcessing || selectedItemIds.length === 0}
                   className="w-full py-6 bg-[#F77F00] text-black font-black uppercase tracking-widest text-base flex items-center justify-center gap-3 hover:bg-black hover:text-white transition-all shadow-[8px_8px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-2 hover:translate-y-2 border-2 border-black disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isProcessing ? (
