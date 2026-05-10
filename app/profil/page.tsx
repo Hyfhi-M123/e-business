@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowLeft, Mountain, User, Package, MapPin, LogOut, Mail, Phone, Calendar, Edit3, ChevronRight, Loader2, Camera, Trash2, Star, X, Home, Building2, CreditCard, Wallet } from "lucide-react";
+import { ArrowLeft, Mountain, User, Package, MapPin, LogOut, Mail, Phone, Calendar, Edit3, ChevronRight, Loader2, Camera, Trash2, Star, X, Home, Building2, CreditCard, Wallet, Check, Truck, AlertTriangle, Heart } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../utils/supabase/client";
@@ -21,14 +21,20 @@ interface Address {
   isDefault: boolean;
 }
 
-type TabKey = "profil" | "pesanan" | "alamat" | "pembayaran";
+type TabKey = "profil" | "pesanan" | "alamat" | "pembayaran" | "wishlist";
 
 const tabs = [
   { key: "profil" as TabKey, label: "Informasi Pribadi", icon: User },
   { key: "pesanan" as TabKey, label: "Riwayat Pesanan", icon: Package },
   { key: "alamat" as TabKey, label: "Alamat Tersimpan", icon: MapPin },
   { key: "pembayaran" as TabKey, label: "Pembayaran", icon: CreditCard },
+  { key: "wishlist" as TabKey, label: "Wishlist", icon: Heart },
 ];
+
+import { DUMMY_ORDERS } from "../lib/orders";
+import { ALL_PRODUCTS } from "../lib/products";
+
+const ORDER_TABS = ["Semua", "Belum Bayar", "Diproses", "Dikirim", "Selesai", "Dibatalkan"];
 
 export default function ProfilPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("profil");
@@ -46,8 +52,20 @@ export default function ProfilPage() {
   const [addrForm, setAddrForm] = useState({ label: "Rumah", name: "", phone: "", full: "", lat: 0, lng: 0 });
   const [toast, setToast] = useState<string | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
+  const [orderFilter, setOrderFilter] = useState("Semua");
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  // Read the ?tab= parameter from the URL on load
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab") as TabKey;
+      if (tabParam && tabs.map(t => t.key).includes(tabParam)) {
+        setActiveTab(tabParam);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const getUser = async () => {
@@ -62,7 +80,7 @@ export default function ProfilPage() {
         phone: user.user_metadata?.phone || "",
         birthday: user.user_metadata?.birthday || "",
       });
-      setAvatarUrl(user.user_metadata?.avatar_url || user.user_metadata?.picture || null);
+      setAvatarUrl(user.user_metadata?.avatar_url || null);
       setAddresses(user.user_metadata?.addresses || []);
       setLoading(false);
     };
@@ -103,7 +121,7 @@ export default function ProfilPage() {
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const dataUrl = ev.target?.result as string;
-      await supabase.auth.updateUser({ data: { avatar_url: dataUrl, picture: dataUrl } });
+      await supabase.auth.updateUser({ data: { avatar_url: dataUrl } });
       setAvatarUrl(dataUrl);
       setUploadingAvatar(false);
       showToast("Foto profil berhasil diperbarui!");
@@ -217,7 +235,7 @@ export default function ProfilPage() {
               <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                 <div className="w-24 h-24 rounded-2xl overflow-hidden border-2 border-[#F77F00]/30 dark:border-orange-500/30 shadow-lg shadow-orange-500/10 relative">
                   {avatarUrl ? (
-                    <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                    <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" onError={() => setAvatarUrl(null)} />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
                       <span className="text-3xl font-black text-white">{displayName.charAt(0).toUpperCase()}</span>
@@ -358,19 +376,109 @@ export default function ProfilPage() {
             {/* === TAB: Riwayat Pesanan === */}
             {activeTab === "pesanan" && (
               <div className="glass rounded-3xl p-8">
-                <h2 className="text-xl font-black uppercase tracking-tight mb-8">Riwayat Pesanan</h2>
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="w-20 h-20 rounded-2xl bg-orange-500/10 flex items-center justify-center mb-6">
-                    <Package className="w-10 h-10 text-[#F77F00] dark:text-orange-500" />
-                  </div>
-                  <h3 className="text-lg font-bold mb-2">Belum Ada Pesanan</h3>
-                  <p className="text-[#6C757D] dark:text-neutral-500 text-sm max-w-sm mb-6">Mulai petualanganmu dengan menjelajahi katalog gear terbaik kami.</p>
-                  <Link href="/katalog">
-                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                      className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-orange-500/20 flex items-center gap-2">
-                      Jelajahi Katalog <ChevronRight className="w-4 h-4" />
-                    </motion.button>
-                  </Link>
+                <h2 className="text-xl font-black uppercase tracking-tight mb-6">Pesanan Saya</h2>
+                
+                {/* Shopee-like Sub Tabs */}
+                <div className="flex overflow-x-auto gap-4 mb-8 border-b border-black/10 dark:border-white/10 pb-1 scrollbar-hide">
+                  {ORDER_TABS.map(tab => (
+                    <button 
+                      key={tab} 
+                      onClick={() => setOrderFilter(tab)}
+                      className={`whitespace-nowrap px-4 py-3 text-xs font-bold uppercase tracking-widest transition-all border-b-2 ${
+                        orderFilter === tab 
+                          ? "border-[#F77F00] text-[#F77F00]" 
+                          : "border-transparent text-[#6C757D] hover:text-[#212529] dark:hover:text-white"
+                      }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Orders List */}
+                <div className="space-y-6">
+                  {DUMMY_ORDERS.filter(o => orderFilter === "Semua" || o.status === orderFilter).length > 0 ? (
+                    DUMMY_ORDERS.filter(o => orderFilter === "Semua" || o.status === orderFilter).map(order => (
+                      <div key={order.id} className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                        {/* Header Store & Status */}
+                        <Link href={`/pesanan/${order.id}`} className="block">
+                          <div className="flex justify-between items-center p-4 border-b border-black/5 dark:border-white/5 bg-[#f8f9fa] dark:bg-[#1a1a1a] hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="w-4 h-4 text-[#F77F00]" />
+                              <span className="font-bold text-sm">{order.store}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {order.status === "Selesai" && <span className="hidden sm:flex text-xs font-bold text-emerald-600 items-center gap-1"><Check className="w-3 h-3"/> Pesanan Selesai</span>}
+                              {order.status === "Dikirim" && <span className="hidden sm:flex text-xs font-bold text-[#F77F00] items-center gap-1"><Truck className="w-3 h-3"/> Sedang Dikirim</span>}
+                              {order.status === "Belum Bayar" && <span className="hidden sm:flex text-xs font-bold text-red-500 items-center gap-1"><AlertTriangle className="w-3 h-3"/> Menunggu Pembayaran</span>}
+                              <span className="hidden sm:inline text-neutral-300 dark:text-neutral-700 mx-2">|</span>
+                              <span className="text-xs font-mono text-[#F77F00] sm:text-[#6C757D]">{order.status.toUpperCase()}</span>
+                            </div>
+                          </div>
+
+                          {/* Items */}
+                          <div className="p-4 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
+                            {order.items.map((item, idx) => (
+                              <div key={idx} className="flex gap-4 items-start mb-4 last:mb-0">
+                                <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-900 border border-black/10 dark:border-white/10 rounded-lg overflow-hidden flex-shrink-0">
+                                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="font-bold text-[#212529] dark:text-white line-clamp-1 mb-1">{item.name}</h4>
+                                  <p className="text-xs text-[#6C757D] mb-1">Variasi: {item.variant}</p>
+                                  <p className="text-xs font-mono text-[#6C757D]">x{item.qty}</p>
+                                </div>
+                                <div className="text-right">
+                                  <span className="font-bold text-sm text-[#F77F00]">Rp {item.price.toLocaleString('id-ID')}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </Link>
+
+                        {/* Footer & Actions */}
+                        <div className="p-4 bg-[#f8f9fa] dark:bg-[#1a1a1a] border-t border-black/5 dark:border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4">
+                          <div className="text-xs text-[#6C757D]">
+                            Total Pesanan: <span className="text-lg font-black text-[#212529] dark:text-white ml-2">Rp {order.total.toLocaleString('id-ID')}</span>
+                          </div>
+                          <div className="flex gap-3 w-full sm:w-auto">
+                            {order.status === "Belum Bayar" && (
+                              <button className="flex-1 sm:flex-none px-6 py-2 bg-[#F77F00] text-white font-bold text-xs uppercase tracking-widest rounded-lg hover:bg-[#e06f00] transition-colors">Bayar</button>
+                            )}
+                            {order.status === "Dikirim" && (
+                              <Link href={`/track/${order.id}`} className="flex-1 sm:flex-none">
+                                <button className="w-full px-6 py-2 bg-[#F77F00] text-white font-bold text-xs uppercase tracking-widest rounded-lg hover:bg-[#e06f00] transition-colors">Lacak</button>
+                              </Link>
+                            )}
+                            {order.status === "Selesai" && (
+                              <Link href={`/pesanan/${order.id}/nilai`} className="flex-1 sm:flex-none">
+                                <button className="w-full px-6 py-2 bg-[#F77F00] text-white font-bold text-xs uppercase tracking-widest rounded-lg hover:bg-[#e06f00] transition-colors">Nilai</button>
+                              </Link>
+                            )}
+                            {(order.status === "Selesai" || order.status === "Dibatalkan") && (
+                              <Link href="/katalog" className="flex-1 sm:flex-none">
+                                <button className="w-full px-6 py-2 border border-black/20 dark:border-white/20 text-[#212529] dark:text-white font-bold text-xs uppercase tracking-widest rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">Beli Lagi</button>
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-16 text-center bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 rounded-2xl">
+                      <div className="w-20 h-20 rounded-2xl bg-orange-500/10 flex items-center justify-center mb-6">
+                        <Package className="w-10 h-10 text-[#F77F00] dark:text-orange-500" />
+                      </div>
+                      <h3 className="text-lg font-bold mb-2">Belum Ada Pesanan</h3>
+                      <p className="text-[#6C757D] dark:text-neutral-500 text-sm max-w-sm mb-6">Tidak ada pesanan yang sesuai dengan status ini.</p>
+                      <Link href="/katalog">
+                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                          className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-orange-500/20 flex items-center gap-2">
+                          Mulai Belanja <ChevronRight className="w-4 h-4" />
+                        </motion.button>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -501,6 +609,53 @@ export default function ProfilPage() {
                       <p className="text-[10px] text-[#6C757D] dark:text-neutral-500">Pembayaran diproses saat checkout. Semua transaksi dienkripsi dan aman.</p>
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* === TAB: Wishlist === */}
+            {activeTab === "wishlist" && (
+              <div className="glass rounded-3xl p-8">
+                <h2 className="text-xl font-black uppercase tracking-tight mb-2">Wishlist</h2>
+                <p className="text-[#6C757D] dark:text-neutral-500 font-mono text-xs tracking-widest uppercase mb-8">Gear impian yang Anda simpan</p>
+
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                  {ALL_PRODUCTS.slice(0, 3).map((item) => (
+                    <div key={item.id} className="group relative border-2 border-black/10 dark:border-white/10 hover:border-[#F77F00] transition-colors bg-[#f8f9fa] dark:bg-[#0a0a0a] overflow-hidden flex flex-col rounded-2xl">
+                      {/* Discount Badge */}
+                      {item.discount > 0 && (
+                        <div className="absolute top-2 left-2 z-10 bg-red-600 text-white text-[9px] font-black tracking-widest px-2 py-1 uppercase rounded">
+                          SALE {item.discount}%
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2 z-10">
+                        <button className="w-8 h-8 rounded-full bg-white dark:bg-black/50 backdrop-blur-sm border border-black/10 dark:border-white/10 flex items-center justify-center text-red-500 hover:scale-110 transition-transform">
+                          <Heart className="w-4 h-4 fill-red-500" />
+                        </button>
+                      </div>
+                      
+                      <Link href={`/produk/${item.id}`} className="block h-40 md:h-56 overflow-hidden">
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" />
+                      </Link>
+                      
+                      <div className="p-4 flex-1 flex flex-col">
+                        <h3 className="font-bold text-sm tracking-tighter uppercase line-clamp-2 mb-2 group-hover:text-[#F77F00] transition-colors flex-1">{item.name}</h3>
+                        <div>
+                          {item.discount > 0 ? (
+                            <div className="flex flex-col gap-1">
+                              <span className="text-[#F77F00] font-black tracking-tighter text-sm">Rp {(item.price * (1 - item.discount/100)).toLocaleString('id-ID')}</span>
+                              <span className="text-neutral-400 text-[10px] line-through">Rp {item.price.toLocaleString('id-ID')}</span>
+                            </div>
+                          ) : (
+                            <span className="text-black dark:text-white font-black tracking-tighter text-sm">Rp {item.price.toLocaleString('id-ID')}</span>
+                          )}
+                        </div>
+                        <button className="w-full mt-4 py-2 bg-[#212529] dark:bg-white text-white dark:text-black text-[10px] font-black uppercase tracking-widest hover:bg-[#F77F00] dark:hover:bg-[#F77F00] hover:text-white transition-colors rounded-lg">
+                          + Keranjang
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

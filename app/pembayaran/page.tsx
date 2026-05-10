@@ -1,202 +1,227 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { 
-  ArrowLeft, 
-  Copy, 
-  Clock, 
-  CheckCircle2, 
-  CreditCard, 
-  ExternalLink, 
-  ShoppingBag,
-  ArrowRight,
-  Info,
-  Calendar,
-  ShieldCheck
-} from "lucide-react";
+import { ShieldCheck, Copy, ArrowRight, Lock, CheckCircle2, ChevronRight, Home, Smartphone, QrCode as QrCodeIcon, Wallet, Building2, CreditCard } from "lucide-react";
 import Link from "next/link";
-
-const formatRupiah = (number: number) => {
-  return "Rp " + number.toLocaleString("id-ID");
-};
-
-const Stepper = ({ currentStep }: { currentStep: number }) => {
-  const steps = ["Keranjang", "Checkout", "Pembayaran"];
-  return (
-    <div className="flex items-center gap-4">
-      {steps.map((step, i) => (
-        <div key={i} className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${i + 1 <= currentStep ? "bg-[#1B4332] text-white" : "bg-neutral-200 text-neutral-400"}`}>
-              {i + 1}
-            </div>
-            <span className={`text-[10px] font-black uppercase tracking-widest ${i + 1 <= currentStep ? "text-[#1B4332]" : "text-neutral-400"}`}>
-              {step}
-            </span>
-          </div>
-          {i < steps.length - 1 && <div className="w-8 h-px bg-neutral-200" />}
-        </div>
-      ))}
-    </div>
-  );
-};
+import Navbar from "../components/Navbar";
 
 export default function PembayaranPage() {
-  const [timeLeft, setTimeLeft] = useState(86399); // 24 hours in seconds
+  const searchParams = useSearchParams();
+  const [isMounted, setIsMounted] = useState(false);
+  const [method, setMethod] = useState<string | null>(null);
+  const [total, setTotal] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes in seconds
   const [copied, setCopied] = useState(false);
+  
+  // Payment Status Simulation
+  const [paymentStatus, setPaymentStatus] = useState<"pending" | "success">("pending");
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+    setIsMounted(true);
+    setMethod(searchParams.get("method"));
+    setTotal(searchParams.get("total"));
+    
+    // Simulate real-time payment success after 10-15 seconds
+    const successTimer = setTimeout(() => {
+      setPaymentStatus("success");
+    }, Math.floor(Math.random() * 5000) + 10000);
+    
+    return () => clearTimeout(successTimer);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (timeLeft > 0 && paymentStatus === "pending") {
+      const timerId = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      return () => clearTimeout(timerId);
+    }
+  }, [timeLeft, paymentStatus]);
 
   const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
   };
 
-  const handleCopy = (text: string) => {
+  const formatRupiah = (n: number | string | null) => {
+    if (!n) return "Rp 0";
+    return "Rp " + Number(n).toLocaleString("id-ID");
+  };
+
+  const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const virtualAccountNumber = "8801" + Math.floor(100000000 + Math.random() * 900000000);
+
+  if (!isMounted) return null;
+
   return (
-    <main className="min-h-screen bg-[#F0F4F2] text-[#212529] font-sans pb-32">
+    <main className="min-h-screen bg-[#f8f9fa] dark:bg-[#0a0a0a] text-[#212529] dark:text-white transition-colors duration-300 pb-20">
+      <Navbar />
       
-      {/* SHARED TRANSACTION HEADER */}
-      <nav className="fixed top-0 w-full z-[100] backdrop-blur-xl bg-white/90 border-b border-[#1B4332]/10 px-6 py-6 md:px-12 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/checkout">
-            <div className="w-10 h-10 rounded-full bg-neutral-50 flex items-center justify-center text-[#1B4332] hover:bg-[#1B4332] hover:text-white transition-all">
-              <ArrowLeft className="w-5 h-5" />
-            </div>
-          </Link>
-          <div className="flex flex-col">
-            <h1 className="text-xl font-black uppercase tracking-tighter text-[#1B4332] leading-none">Pembayaran</h1>
-            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mt-1">Order #TF-20240509-001</span>
-          </div>
-        </div>
+      {/* Brutalist Header Context */}
+      <div className="bg-[#212529] dark:bg-[#1a1a1a] border-b border-black/10 dark:border-white/10 pt-32 pb-16 relative overflow-hidden">
+        {/* Background Grid Pattern */}
+        <div className="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(255,255,255,1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,1)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
         
-        <div className="hidden lg:block">
-          <Stepper currentStep={3} />
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-[#40916C]/10 flex items-center justify-center text-[#40916C]">
-            <Calendar className="w-5 h-5" />
+        <div className="container mx-auto px-6 relative z-10 flex flex-col items-center text-center">
+          <div className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 text-[10px] font-black uppercase tracking-widest mb-6">
+            <Lock className="w-3 h-3" /> SSL SECURE 256-BIT
           </div>
+          <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter text-white mb-4">
+            {paymentStatus === "success" ? "PEMBAYARAN DITERIMA" : "SELESAIKAN PEMBAYARAN"}
+          </h1>
+          <p className="text-neutral-400 font-mono text-sm max-w-xl">
+            {paymentStatus === "success" 
+              ? "Sistem kami telah mengkonfirmasi penerimaan dana. Pesanan Anda akan segera diproses."
+              : "Sistem Payment Gateway kami mendeteksi pesanan baru. Segera selesaikan pembayaran agar pesanan dapat diproses."}
+          </p>
         </div>
-      </nav>
+      </div>
 
-      <div className="max-w-4xl mx-auto px-6 pt-44">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-8"
-        >
-          {/* 1. PAYMENT STATUS & TIMER */}
-          <div className="bg-white rounded-[40px] p-10 border border-white shadow-2xl shadow-[#1B4332]/5 text-center relative overflow-hidden">
-             {/* Gradient Background Decoration */}
-             <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#F0F4F2] rounded-full blur-3xl opacity-50" />
-             
-             <div className="relative z-10">
-               <div className="w-20 h-20 bg-[#F77F00]/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                 <Clock className="w-10 h-10 text-[#F77F00]" />
-               </div>
-               <h2 className="text-2xl font-black uppercase tracking-tighter text-[#1B4332] mb-2">Selesaikan Pembayaran</h2>
-               <p className="text-neutral-500 text-sm mb-6">Batas waktu pembayaran akan berakhir dalam:</p>
-               
-               <div className="flex justify-center gap-4">
-                 <div className="bg-[#1B4332] text-white px-8 py-4 rounded-3xl shadow-xl shadow-[#1B4332]/20">
-                   <span className="text-3xl font-black tracking-widest font-mono">{formatTime(timeLeft)}</span>
-                 </div>
-               </div>
-             </div>
-          </div>
-
-          {/* 2. PAYMENT DETAILS */}
-          <div className="bg-white rounded-[40px] p-10 border border-white shadow-2xl shadow-[#1B4332]/5 relative overflow-hidden">
-            <div className="flex items-center gap-4 mb-10">
-              <div className="w-12 h-12 bg-[#F0F4F2] rounded-2xl flex items-center justify-center text-[#1B4332]">
-                <CreditCard className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black uppercase tracking-tighter text-[#1B4332]">Transfer Bank BCA</h3>
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Virtual Account / Manual Verification</p>
+      <div className="container mx-auto px-6 max-w-3xl -mt-8 relative z-20">
+        
+        {/* Success State */}
+        {paymentStatus === "success" ? (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white dark:bg-[#121212] border border-emerald-500/50 shadow-2xl overflow-hidden p-10 text-center flex flex-col items-center"
+          >
+            <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center text-white mb-6 animate-[bounce_1s_ease-in-out]">
+              <CheckCircle2 className="w-12 h-12" />
+            </div>
+            <h2 className="text-3xl font-black uppercase tracking-tighter mb-2 text-emerald-500">LUNAS</h2>
+            <p className="text-[#6C757D] dark:text-neutral-400 font-mono text-sm mb-8">Dana sebesar <strong className="text-black dark:text-white">{formatRupiah(total)}</strong> telah diverifikasi.</p>
+            
+            <div className="w-full h-[1px] bg-black/10 dark:bg-white/10 mb-8"></div>
+            
+            <Link href="/" className="inline-flex items-center justify-center gap-3 w-full md:w-auto px-10 py-4 bg-black text-white dark:bg-white dark:text-black font-black text-xs uppercase tracking-widest hover:scale-[1.02] transition-transform">
+              <Home className="w-4 h-4" /> KEMBALI KE BERANDA
+            </Link>
+          </motion.div>
+        ) : (
+          
+          /* Pending State */
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 shadow-2xl overflow-hidden"
+          >
+            {/* Timer Header */}
+            <div className="bg-[#F77F00] p-6 text-white text-center">
+              <span className="text-[10px] font-black uppercase tracking-widest block mb-2 opacity-80">Batas Waktu Pembayaran</span>
+              <div className="text-5xl font-mono font-black tracking-widest">
+                {formatTime(timeLeft)}
               </div>
             </div>
 
-            <div className="space-y-8">
-              {/* Virtual Account Number */}
-              <div className="p-8 rounded-[32px] bg-[#F0F4F2]/50 border border-neutral-100">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-2">Nomor Rekening / VA</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl md:text-3xl font-black text-[#1B4332] tracking-tighter">8801 1234 5678 90</span>
-                  <button 
-                    onClick={() => handleCopy("88011234567890")}
-                    className="flex items-center gap-2 px-6 py-3 bg-white border border-neutral-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-[#1B4332] hover:bg-[#1B4332] hover:text-white transition-all shadow-sm"
-                  >
-                    {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    {copied ? "Berhasil" : "Salin"}
-                  </button>
-                </div>
+            {/* Total Block */}
+            <div className="p-8 border-b border-black/10 dark:border-white/10 flex flex-col items-center text-center">
+              <span className="text-xs font-black text-[#6C757D] uppercase tracking-widest mb-2">Total Tagihan</span>
+              <div className="text-3xl md:text-4xl font-black font-mono">
+                {formatRupiah(total)}
               </div>
-
-              {/* Total Amount */}
-              <div className="p-8 rounded-[32px] bg-[#F0F4F2]/50 border border-neutral-100">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 mb-2">Total yang Harus Dibayar</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl md:text-3xl font-black text-[#F77F00] tracking-tighter">{formatRupiah(4652500)}</span>
-                  <button 
-                    onClick={() => handleCopy("4652500")}
-                    className="flex items-center gap-2 px-6 py-3 bg-white border border-neutral-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-[#1B4332] hover:bg-[#1B4332] hover:text-white transition-all shadow-sm"
-                  >
-                    <Copy className="w-4 h-4" /> Salin
-                  </button>
-                </div>
-                <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-neutral-400 uppercase tracking-widest">
-                  <Info className="w-3.5 h-3.5 text-[#F77F00]" />
-                  <span>Transfer tepat sampai 3 digit terakhir untuk verifikasi otomatis.</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 3. INSTRUCTIONS & ACTIONS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white rounded-[32px] p-8 border border-white shadow-xl shadow-[#1B4332]/5 flex flex-col justify-between">
-              <div>
-                <h4 className="text-sm font-black uppercase tracking-tighter text-[#1B4332] mb-4">Butuh Bantuan?</h4>
-                <p className="text-[11px] text-neutral-500 leading-relaxed font-medium">Jika Anda mengalami kendala saat melakukan pembayaran, silakan hubungi tim dukungan kami melalui WhatsApp atau Email.</p>
-              </div>
-              <button className="mt-6 flex items-center justify-center gap-3 w-full py-4 border-2 border-[#F0F4F2] rounded-2xl text-[10px] font-black uppercase tracking-widest text-[#1B4332] hover:bg-neutral-50 transition-all">
-                Hubungi Support <ExternalLink className="w-4 h-4" />
+              <button 
+                onClick={() => copyToClipboard(total || "")}
+                className="mt-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#F77F00] hover:text-[#e06f00] transition-colors bg-[#F77F00]/10 px-3 py-1.5"
+              >
+                <Copy className="w-3 h-3" /> {copied ? "DISALIN" : "SALIN NOMINAL"}
               </button>
             </div>
 
-            <div className="bg-white rounded-[32px] p-8 border border-white shadow-xl shadow-[#1B4332]/5 flex flex-col justify-between">
-               <div>
-                <h4 className="text-sm font-black uppercase tracking-tighter text-[#1B4332] mb-4">Cek Status Pesanan</h4>
-                <p className="text-[11px] text-neutral-500 leading-relaxed font-medium">Setelah transfer berhasil, sistem kami akan melakukan verifikasi otomatis dalam 5-10 menit.</p>
-              </div>
-              <Link href="/dashboard" className="mt-6 flex items-center justify-center gap-3 w-full py-4 bg-[#1B4332] rounded-2xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-[#2d5a47] transition-all shadow-lg shadow-[#1B4332]/20">
-                Lihat Pesanan Saya <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
+            {/* Instruction Body based on Method */}
+            <div className="p-8 bg-[#fcfaf8] dark:bg-[#1a1a1a]">
+              
+              {/* QRIS Layout */}
+              {method === "qris" && (
+                <div className="flex flex-col items-center">
+                  <div className="w-full max-w-xs aspect-square bg-white border border-black/10 p-4 mb-6 shadow-sm relative group cursor-pointer">
+                    {/* Simulated QR Code (Placeholder) */}
+                    <div className="w-full h-full bg-[url('https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg')] bg-cover opacity-80 group-hover:opacity-100 transition-opacity"></div>
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg p-2 shadow-lg">
+                      <QrCodeIcon className="w-8 h-8 text-black" />
+                    </div>
+                  </div>
+                  <h3 className="font-black uppercase tracking-widest mb-2 text-center">Scan QRIS ini</h3>
+                  <p className="text-xs text-center font-mono text-[#6C757D] dark:text-neutral-400 mb-6">Gunakan aplikasi Gopay, OVO, ShopeePay, Dana, atau Mobile Banking pilihanmu.</p>
+                </div>
+              )}
 
-          {/* FOOTER INDICATOR */}
-          <div className="flex items-center justify-center gap-2 py-8">
-            <ShieldCheck className="w-4 h-4 text-[#40916C]" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#40916C]">Pembayaran Aman & Terenkripsi</span>
-          </div>
-        </motion.div>
+              {/* Transfer Bank / VA Layout */}
+              {method === "transfer" && (
+                <div className="flex flex-col items-center">
+                  <div className="w-16 h-16 bg-[#212529] text-white flex items-center justify-center rounded-2xl mb-4">
+                    <Building2 className="w-8 h-8" />
+                  </div>
+                  <h3 className="font-black uppercase tracking-widest mb-1 text-center">Nomor Virtual Account</h3>
+                  <p className="text-xs text-center font-mono text-[#6C757D] dark:text-neutral-400 mb-6">Bank BCA, Mandiri, BNI, BRI</p>
+                  
+                  <div className="w-full bg-white dark:bg-[#121212] border-2 border-dashed border-[#F77F00]/50 p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="text-2xl md:text-3xl font-mono font-black tracking-widest text-[#F77F00]">
+                      {virtualAccountNumber}
+                    </div>
+                    <button 
+                      onClick={() => copyToClipboard(virtualAccountNumber)}
+                      className="px-4 py-3 bg-[#F77F00] text-white font-black uppercase text-[10px] tracking-widest flex items-center gap-2 hover:bg-[#e06f00] transition-colors w-full md:w-auto justify-center"
+                    >
+                      <Copy className="w-4 h-4" /> {copied ? "DISALIN" : "SALIN NOMOR"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* E-Wallet Layout */}
+              {method === "ewallet" && (
+                <div className="flex flex-col items-center">
+                  <div className="w-16 h-16 bg-[#212529] text-white flex items-center justify-center rounded-2xl mb-4">
+                    <Smartphone className="w-8 h-8" />
+                  </div>
+                  <h3 className="font-black uppercase tracking-widest mb-4 text-center">Pembayaran Otomatis</h3>
+                  <p className="text-sm text-center font-mono text-[#6C757D] dark:text-neutral-400 mb-8 max-w-sm">
+                    Klik tombol di bawah ini untuk membuka aplikasi E-Wallet Anda dan menyelesaikan pembayaran.
+                  </p>
+                  <button className="w-full max-w-xs px-6 py-4 bg-[#F77F00] text-white font-black uppercase text-xs tracking-widest hover:bg-[#e06f00] transition-colors flex justify-center items-center gap-3">
+                    BUKA APLIKASI SEKARANG <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Credit Card Layout */}
+              {method === "cc" && (
+                <div className="flex flex-col items-center">
+                  <div className="w-16 h-16 bg-[#212529] text-white flex items-center justify-center rounded-2xl mb-4">
+                    <CreditCard className="w-8 h-8" />
+                  </div>
+                  <h3 className="font-black uppercase tracking-widest mb-4 text-center">Redirecting...</h3>
+                  <p className="text-sm text-center font-mono text-[#6C757D] dark:text-neutral-400 mb-8 max-w-sm">
+                    Anda sedang dialihkan ke sistem otorisasi bank Visa / Mastercard yang aman...
+                  </p>
+                  <div className="w-8 h-8 border-4 border-[#F77F00] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Footer / Cek Status */}
+            <div className="p-6 bg-white dark:bg-[#121212] border-t border-black/10 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <span className="text-[10px] font-mono text-[#6C757D] dark:text-neutral-500 uppercase tracking-widest">
+                ID Transaksi: TRF-{Math.floor(Math.random() * 100000000)}
+              </span>
+              <button 
+                className="text-xs font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-600 transition-colors flex items-center gap-2"
+              >
+                SAYA SUDAH BAYAR <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+            
+          </motion.div>
+        )}
+        
       </div>
     </main>
   );

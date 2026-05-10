@@ -5,27 +5,14 @@ import {
   Filter, ChevronDown, ChevronRight, ShoppingBag, ArrowUpRight, Search, Menu, 
   Star, Heart, X, Grid3X3, List, SlidersHorizontal, ChevronUp, Package
 } from "lucide-react";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import Link from "next/link";
-
-// ==========================================
-// DATA PRODUK LENGKAP (Nantinya dari Supabase)
-// ==========================================
-const ALL_PRODUCTS = [
-  { id: "101", name: "Vertex Summit Tent", category: "Tenda", gender: "Unisex", price: 3450000, originalPrice: 4200000, tag: "Ultralight", rating: 4.9, reviews: 87, sold: 342, image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600&q=80" },
-  { id: "102", name: "Timberline X-Coat Arctic", category: "Pakaian", gender: "Pria", price: 1200000, originalPrice: 1800000, tag: "Thermal", rating: 4.8, reviews: 124, sold: 892, image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600&q=80" },
-  { id: "103", name: "AeroStep Mountain Boot", category: "Sepatu", gender: "Pria", price: 2150000, originalPrice: 2150000, tag: "GORE-TEX", rating: 4.7, reviews: 203, sold: 1540, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80" },
-  { id: "104", name: "Polaris Compass Pro", category: "Navigasi", gender: "Unisex", price: 450000, originalPrice: 600000, tag: "Akurasi 99%", rating: 4.6, reviews: 56, sold: 230, image: "https://images.unsplash.com/photo-1504376830547-506dedee1643?w=600&q=80" },
-  { id: "105", name: "Everest Sleeping Bag", category: "Tenda", gender: "Unisex", price: 1800000, originalPrice: 2200000, tag: "-15°C Rated", rating: 4.9, reviews: 167, sold: 678, image: "https://images.unsplash.com/photo-1445308394109-4ec2920981b1?w=600&q=80" },
-  { id: "106", name: "Titanium Cookset Elite", category: "Alat Masak", gender: "Unisex", price: 850000, originalPrice: 850000, tag: "Tahan Karat", rating: 4.5, reviews: 89, sold: 445, image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80" },
-  { id: "107", name: "Storm Shell V2 Jacket", category: "Pakaian", gender: "Wanita", price: 980000, originalPrice: 1400000, tag: "Windproof", rating: 4.6, reviews: 78, sold: 310, image: "https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=600&q=80" },
-  { id: "108", name: "Glacier Down Parka", category: "Pakaian", gender: "Wanita", price: 1500000, originalPrice: 1500000, tag: "800-Fill", rating: 4.9, reviews: 201, sold: 920, image: "https://images.unsplash.com/photo-1532054950669-026859e2185c?w=600&q=80" },
-  { id: "109", name: "Summit Fleece Pro", category: "Pakaian", gender: "Pria", price: 650000, originalPrice: 750000, tag: "Midlayer", rating: 4.7, reviews: 145, sold: 780, image: "https://images.unsplash.com/photo-1495103033382-fe343886b671?w=600&q=80" },
-  { id: "110", name: "Trailblazer 55L Pack", category: "Tas", gender: "Unisex", price: 2800000, originalPrice: 3500000, tag: "Ergonomic", rating: 4.8, reviews: 312, sold: 1100, image: "https://images.unsplash.com/photo-1622260614153-03223fb72052?w=600&q=80" },
-  { id: "111", name: "NightVision Headlamp", category: "Navigasi", gender: "Unisex", price: 380000, originalPrice: 380000, tag: "1200 Lumens", rating: 4.4, reviews: 94, sold: 560, image: "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=600&q=80" },
-  { id: "112", name: "Carbon Trekking Poles", category: "Navigasi", gender: "Unisex", price: 1250000, originalPrice: 1600000, tag: "Ultralight", rating: 4.8, reviews: 176, sold: 890, image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&q=80" },
-  { id: "113", name: "Kids Explorer Set", category: "Tenda", gender: "Anak", price: 450000, originalPrice: 550000, tag: "Aman Anak", rating: 4.8, reviews: 42, sold: 120, image: "https://images.unsplash.com/photo-1510337269632-f3e997298642?w=600&q=80" },
-];
+import { useSearchParams } from "next/navigation";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
+import { ALL_PRODUCTS } from "../lib/products";
 
 const CATEGORIES = ["Semua", "Pakaian", "Tenda", "Sepatu", "Navigasi", "Tas", "Alat Masak"];
 const SORT_OPTIONS = [
@@ -47,10 +34,14 @@ const staggerContainer = {
 };
 const cardReveal = {
   hidden: { opacity: 0, y: 30, scale: 0.97 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } }
 };
 
 export default function KatalogPage() {
+  const { addToCart } = useCart();
+  const { user } = useAuth(); // Action Guard Listener
+  const searchParams = useSearchParams();
+  
   // State
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("Semua");
@@ -63,19 +54,46 @@ export default function KatalogPage() {
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [addedItems, setAddedItems] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(6);
+  
+  // Toast Alert State for Guests
+  const [guestAlert, setGuestAlert] = useState(false);
 
   const gridRef = useRef(null);
   const gridInView = useInView(gridRef, { once: true, margin: "-50px" });
+  
+  // Infinite Scroll Observer
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Ambil parameter dari URL secara dinamis (bereaksi terhadap perubahan rute Next.js)
+    const cat = searchParams.get("category");
+    const q = searchParams.get("search");
+    
+    if (cat && CATEGORIES.includes(cat)) {
+      setActiveCategory(cat);
+    }
+    if (q) {
+      setSearch(q);
+    }
+  }, [searchParams]);
+
+  const showGuestWarning = () => {
+    setGuestAlert(true);
+    setTimeout(() => setGuestAlert(false), 3000);
+  };
 
   // Toggle wishlist
   const toggleWishlist = (id: string) => {
+    if (!user) return showGuestWarning();
     setWishlist(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
   // Quick add to cart
-  const quickAdd = (id: string) => {
-    setAddedItems(prev => [...prev, id]);
-    setTimeout(() => setAddedItems(prev => prev.filter(x => x !== id)), 2000);
+  const quickAdd = (product: any) => {
+    if (!user) return showGuestWarning();
+    setAddedItems(prev => [...prev, product.id]);
+    addToCart(product);
+    setTimeout(() => setAddedItems(prev => prev.filter(x => x !== product.id)), 2000);
   };
 
   // Filter + Sort Logic
@@ -105,7 +123,7 @@ export default function KatalogPage() {
     switch (sortBy) {
       case "price-low": items.sort((a, b) => a.price - b.price); break;
       case "price-high": items.sort((a, b) => b.price - a.price); break;
-      case "rating": items.sort((a, b) => b.rating - a.rating); break;
+      case "rating": items.sort((a, b) => a.rating - b.rating); break;
       case "popular": items.sort((a, b) => b.sold - a.sold); break;
       default: break;
     }
@@ -116,6 +134,26 @@ export default function KatalogPage() {
   const visibleProducts = processed.slice(0, visibleCount);
   const hasMore = visibleCount < processed.length;
 
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          setTimeout(() => {
+            setVisibleCount(prev => prev + 6);
+          }, 300);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) observer.observe(currentRef);
+
+    return () => {
+      if (currentRef) observer.unobserve(currentRef);
+    };
+  }, [hasMore]);
+
   // Active filters for tags
   const activeFilters: { label: string; onRemove: () => void }[] = [];
   if (activeCategory !== "Semua") activeFilters.push({ label: activeCategory, onRemove: () => setActiveCategory("Semua") });
@@ -124,26 +162,10 @@ export default function KatalogPage() {
   if (priceRange[0] > 0 || priceRange[1] < 5000000) activeFilters.push({ label: `${formatRupiah(priceRange[0])} - ${formatRupiah(priceRange[1])}`, onRemove: () => setPriceRange([0, 5000000]) });
 
   return (
-    <main className="min-h-screen bg-[#F8F9FA] dark:bg-neutral-950 text-[#212529] dark:text-white font-sans pt-24 pb-20 selection:bg-[#F77F00] dark:bg-orange-500 selection:text-[#212529] dark:text-white">
+    <main className="flex flex-col min-h-screen bg-[#f8f9fa] dark:bg-[#0a0a0a] text-[#212529] dark:text-white font-sans pt-32 lg:pt-36 pb-20 selection:bg-[#F77F00] dark:selection:bg-orange-500 selection:text-[#212529] dark:selection:text-white">
       
       {/* NAVBAR */}
-      <nav className="fixed top-0 w-full z-50 flex items-center justify-between px-6 py-5 md:px-12 bg-[#F8F9FA] dark:bg-neutral-950 border-b border-[#1B4332]/10 dark:border-white/5">
-        <div className="flex items-center gap-6">
-          <div className="w-10 h-10 border border-white/20 flex items-center justify-center rounded-full hover:bg-white hover:text-black transition-colors cursor-pointer">
-            <Menu className="w-4 h-4" />
-          </div>
-          <Link href="/" className="text-xl font-black tracking-tighter uppercase flex items-center gap-2">
-            TrailForge<span className="w-2 h-2 bg-[#F77F00] dark:bg-orange-500 rounded-full animate-pulse"></span>
-          </Link>
-        </div>
-        <div className="flex items-center gap-5">
-          <Search className="w-5 h-5 text-[#212529] dark:text-white cursor-pointer hover:text-[#F77F00] dark:text-orange-500 transition-colors" />
-          <Link href="/produk/101" className="relative cursor-pointer group">
-            <ShoppingBag className="w-5 h-5 text-[#212529] dark:text-white group-hover:text-[#F77F00] dark:text-orange-500 transition-colors" />
-            <span className="absolute -top-1 -right-2 bg-[#F77F00] dark:bg-orange-500 text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">0</span>
-          </Link>
-        </div>
-      </nav>
+      <Navbar />
 
       <div className="px-6 md:px-12 max-w-[1400px] mx-auto">
 
@@ -158,59 +180,59 @@ export default function KatalogPage() {
         </motion.div>
 
         {/* HEADER */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-8">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-12 gap-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.85] mb-4">
-              Katalog<br/><span className="text-[#ADB5BD] dark:text-neutral-600">Ekspedisi.</span>
+              Katalog<br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F77F00] to-orange-400">Ekspedisi.</span>
             </h1>
-            <p className="text-[#6C757D] dark:text-neutral-400 max-w-md text-sm leading-relaxed">
-              {processed.length} produk peralatan adventure yang telah lolos uji di kondisi ekstrem.
+            <p className="text-[#6C757D] dark:text-neutral-500 max-w-md text-[10px] font-mono tracking-widest uppercase mt-6">
+              // {processed.length} TACTICAL GEAR FOUND
             </p>
           </motion.div>
 
           {/* SEARCH BAR */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
-            className="w-full lg:w-[400px] relative"
+            className="w-full lg:w-[400px] relative group"
           >
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#6C757D] dark:text-neutral-500" />
+            <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-[#212529] dark:text-white group-focus-within:text-[#F77F00] dark:group-focus-within:text-orange-500 transition-colors" />
             <input 
               type="text" 
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Cari produk, kategori, atau fitur..."
-              className="w-full bg-white dark:bg-neutral-900 border border-[#DEE2E6] dark:border-white/10 text-[#212529] dark:text-white pl-12 pr-4 py-4 text-sm font-medium placeholder:text-[#ADB5BD] dark:text-neutral-600 focus:outline-none focus:border-orange-500/50 focus:ring-2 focus:ring-[#F77F00] dark:ring-orange-500/10 transition-all"
+              placeholder="SEARCH GEAR..."
+              className="w-full bg-transparent border-b-2 border-black/10 dark:border-white/10 text-[#212529] dark:text-white pl-8 pr-8 py-3 text-[11px] font-black tracking-widest uppercase placeholder:text-neutral-500 focus:outline-none focus:border-[#F77F00] dark:focus:border-orange-500 transition-all duration-300"
             />
-            {search && (
-              <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2">
-                <X className="w-4 h-4 text-[#6C757D] dark:text-neutral-500 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors" />
-              </button>
-            )}
+            <AnimatePresence>
+              {search && (
+                <motion.button initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={() => setSearch("")} className="absolute right-0 top-1/2 -translate-y-1/2">
+                  <X className="w-4 h-4 text-neutral-500 hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors" />
+                </motion.button>
+              )}
+            </AnimatePresence>
           </motion.div>
         </div>
 
         {/* AUDIENCE SELECTION CARDS (Pria, Wanita, Anak) */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16"
+          className="grid grid-cols-1 md:grid-cols-3 gap-1 mb-16 bg-black/10 dark:bg-white/10 p-1"
         >
           {[
-            { id: "Pria", label: "Pria", img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&q=80" },
-            { id: "Wanita", label: "Wanita", img: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80" },
-            { id: "Anak", label: "Anak", img: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&q=80" }
+            { id: "Pria", label: "MENS", img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&q=80" },
+            { id: "Wanita", label: "WOMENS", img: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80" },
+            { id: "Anak", label: "YOUTH", img: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&q=80" }
           ].map((item) => (
             <motion.div
               key={item.id}
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
               onClick={() => { setActiveAudience(item.id); setVisibleCount(6); }}
-              className={`relative h-64 rounded-[32px] overflow-hidden cursor-pointer group border-4 transition-all duration-300 ${
-                activeAudience === item.id ? "border-orange-500 shadow-[0_0_30px_rgba(247,127,0,0.3)]" : "border-transparent"
+              className={`relative h-48 md:h-64 overflow-hidden cursor-pointer group transition-all duration-500 bg-black ${
+                activeAudience === item.id ? "ring-2 ring-[#F77F00] dark:ring-orange-500 ring-inset z-10" : "hover:opacity-90"
               }`}
             >
-              <img src={item.img} alt={item.label} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <img src={item.img} alt={item.label} className={`w-full h-full object-cover transition-all duration-700 ${activeAudience === item.id ? "scale-105 opacity-60" : "grayscale opacity-40 group-hover:grayscale-0 group-hover:scale-105 group-hover:opacity-60"}`} />
               <div className="absolute inset-0 flex items-center justify-center">
-                <h3 className="text-4xl font-black italic uppercase tracking-tighter text-white drop-shadow-2xl">{item.label}</h3>
+                <h3 className={`text-4xl md:text-5xl font-black uppercase tracking-tighter drop-shadow-2xl transition-colors duration-300 ${activeAudience === item.id ? "text-[#F77F00] dark:text-orange-500" : "text-white group-hover:text-[#F77F00] dark:group-hover:text-orange-500"}`}>{item.label}</h3>
               </div>
             </motion.div>
           ))}
@@ -219,19 +241,19 @@ export default function KatalogPage() {
         {/* TOOLBAR: Filter + Sort + View Toggle */}
         <motion.div 
           initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
-          className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8 pb-8 border-b border-[#1B4332]/10 dark:border-white/5"
+          className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8 pb-6 border-b border-black/10 dark:border-white/10"
         >
           {/* Category Filter Pills */}
           <div className="flex items-center gap-2 overflow-x-auto w-full lg:w-auto pb-2 lg:pb-0 scrollbar-hide">
-            <Filter className="w-4 h-4 text-[#6C757D] dark:text-neutral-500 flex-shrink-0" />
+            <Filter className="w-4 h-4 text-neutral-500 flex-shrink-0 mr-2" />
             {CATEGORIES.map(cat => (
               <button 
                 key={cat}
                 onClick={() => { setActiveCategory(cat); setVisibleCount(6); }}
-                className={`text-[11px] font-bold uppercase tracking-widest px-5 py-2.5 rounded-full transition-all whitespace-nowrap ${
+                className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 transition-all whitespace-nowrap border ${
                   activeCategory === cat 
-                    ? "bg-white text-neutral-950" 
-                    : "bg-white dark:bg-neutral-900 text-[#6C757D] dark:text-neutral-500 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white hover:bg-[#E9ECEF] dark:bg-neutral-800 border border-[#1B4332]/10 dark:border-white/5"
+                    ? "bg-[#212529] dark:bg-white text-white dark:text-[#212529] border-[#212529] dark:border-white" 
+                    : "bg-transparent text-neutral-500 border-black/10 dark:border-white/10 hover:border-[#F77F00] hover:text-[#F77F00] dark:hover:border-orange-500 dark:hover:text-orange-500"
                 }`}
               >
                 {cat}
@@ -246,31 +268,31 @@ export default function KatalogPage() {
             <div className="relative">
               <button 
                 onClick={() => { setShowPriceFilter(!showPriceFilter); setShowSort(false); }}
-                className="flex items-center gap-2 bg-white dark:bg-neutral-900 border border-[#1B4332]/10 dark:border-white/5 px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-400 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors"
+                className="flex items-center gap-2 bg-transparent border border-black/10 dark:border-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:border-[#F77F00] hover:text-[#F77F00] dark:hover:border-orange-500 dark:hover:text-orange-500 transition-colors"
               >
-                <SlidersHorizontal className="w-3.5 h-3.5" /> Harga <ChevronDown className={`w-3 h-3 transition-transform ${showPriceFilter ? "rotate-180" : ""}`} />
+                <SlidersHorizontal className="w-3 h-3" /> Harga <ChevronDown className={`w-3 h-3 transition-transform ${showPriceFilter ? "rotate-180" : ""}`} />
               </button>
               <AnimatePresence>
                 {showPriceFilter && (
                   <motion.div 
                     initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
-                    className="absolute right-0 top-12 bg-white dark:bg-neutral-900 border border-[#DEE2E6] dark:border-white/10 p-5 rounded-xl shadow-2xl z-40 min-w-[280px]"
+                    className="absolute right-0 top-10 bg-white dark:bg-[#0a0a0a] border border-black/10 dark:border-white/10 p-5 shadow-2xl z-40 min-w-[280px]"
                   >
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[#6C757D] dark:text-neutral-500 block mb-4">Rentang Harga</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-neutral-500 block mb-4">Rentang Harga</span>
                     <div className="flex items-center gap-3 mb-4">
                       <input 
                         type="number" value={priceRange[0]} step={100000}
                         onChange={e => setPriceRange([Number(e.target.value), priceRange[1]])}
-                        className="w-full bg-[#E9ECEF] dark:bg-neutral-800 border border-[#DEE2E6] dark:border-white/10 text-[#212529] dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:border-orange-500"
+                        className="w-full bg-black/5 dark:bg-white/5 border border-transparent focus:border-[#F77F00] dark:focus:border-orange-500 text-[#212529] dark:text-white px-3 py-2 text-[11px] font-mono font-bold focus:outline-none transition-colors"
                       />
-                      <span className="text-[#6C757D] dark:text-neutral-500 text-sm">—</span>
+                      <span className="text-neutral-500 text-sm">—</span>
                       <input 
                         type="number" value={priceRange[1]} step={100000}
                         onChange={e => setPriceRange([priceRange[0], Number(e.target.value)])}
-                        className="w-full bg-[#E9ECEF] dark:bg-neutral-800 border border-[#DEE2E6] dark:border-white/10 text-[#212529] dark:text-white px-3 py-2 text-sm font-mono focus:outline-none focus:border-orange-500"
+                        className="w-full bg-black/5 dark:bg-white/5 border border-transparent focus:border-[#F77F00] dark:focus:border-orange-500 text-[#212529] dark:text-white px-3 py-2 text-[11px] font-mono font-bold focus:outline-none transition-colors"
                       />
                     </div>
-                    <button onClick={() => setShowPriceFilter(false)} className="w-full bg-[#F77F00] dark:bg-orange-500 text-neutral-950 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-[#E06F00] dark:hover:bg-orange-400 transition-colors">
+                    <button onClick={() => setShowPriceFilter(false)} className="w-full bg-black dark:bg-white text-white dark:text-black hover:bg-[#F77F00] dark:hover:bg-orange-500 hover:text-white dark:hover:text-white py-2 text-[10px] font-black uppercase tracking-widest transition-colors">
                       Terapkan
                     </button>
                   </motion.div>
@@ -282,7 +304,7 @@ export default function KatalogPage() {
             <div className="relative">
               <button 
                 onClick={() => { setShowSort(!showSort); setShowPriceFilter(false); }}
-                className="flex items-center gap-2 bg-white dark:bg-neutral-900 border border-[#1B4332]/10 dark:border-white/5 px-4 py-2.5 text-[11px] font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-400 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white transition-colors"
+                className="flex items-center gap-2 bg-transparent border border-black/10 dark:border-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-neutral-500 hover:border-[#F77F00] hover:text-[#F77F00] dark:hover:border-orange-500 dark:hover:text-orange-500 transition-colors"
               >
                 Urutkan <ChevronDown className={`w-3 h-3 transition-transform ${showSort ? "rotate-180" : ""}`} />
               </button>
@@ -290,14 +312,14 @@ export default function KatalogPage() {
                 {showSort && (
                   <motion.div 
                     initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -5 }}
-                    className="absolute right-0 top-12 bg-white dark:bg-neutral-900 border border-[#DEE2E6] dark:border-white/10 rounded-xl shadow-2xl z-40 min-w-[200px] overflow-hidden"
+                    className="absolute right-0 top-10 bg-white dark:bg-[#0a0a0a] border border-black/10 dark:border-white/10 shadow-2xl z-40 min-w-[200px] overflow-hidden"
                   >
                     {SORT_OPTIONS.map(opt => (
                       <button 
                         key={opt.value}
                         onClick={() => { setSortBy(opt.value); setShowSort(false); }}
-                        className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
-                          sortBy === opt.value ? "bg-[#F77F00] dark:bg-[#F77F00]/10 dark:bg-orange-500/10 text-[#F77F00] dark:text-orange-500" : "text-[#6C757D] dark:text-neutral-400 hover:bg-[#E9ECEF] dark:bg-white/5 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white"
+                        className={`w-full text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                          sortBy === opt.value ? "bg-[#F77F00]/10 text-[#F77F00] dark:text-orange-500 border-l-2 border-[#F77F00] dark:border-orange-500" : "text-neutral-500 hover:bg-black/5 dark:hover:bg-white/5 border-l-2 border-transparent hover:text-black dark:hover:text-white"
                         }`}
                       >
                         {opt.label}
@@ -309,12 +331,12 @@ export default function KatalogPage() {
             </div>
 
             {/* View Toggle */}
-            <div className="hidden md:flex items-center bg-white dark:bg-neutral-900 border border-[#1B4332]/10 dark:border-white/5 overflow-hidden">
-              <button onClick={() => setViewMode("grid")} className={`p-2.5 transition-colors ${viewMode === "grid" ? "bg-white text-neutral-950" : "text-[#6C757D] dark:text-neutral-500 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white"}`}>
-                <Grid3X3 className="w-4 h-4" />
+            <div className="hidden md:flex items-center border border-black/10 dark:border-white/10 overflow-hidden">
+              <button onClick={() => setViewMode("grid")} className={`p-2 transition-colors ${viewMode === "grid" ? "bg-[#212529] dark:bg-white text-white dark:text-[#212529]" : "text-neutral-500 hover:text-black dark:hover:text-white"}`}>
+                <Grid3X3 className="w-3.5 h-3.5" />
               </button>
-              <button onClick={() => setViewMode("list")} className={`p-2.5 transition-colors ${viewMode === "list" ? "bg-white text-neutral-950" : "text-[#6C757D] dark:text-neutral-500 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white"}`}>
-                <List className="w-4 h-4" />
+              <button onClick={() => setViewMode("list")} className={`p-2 transition-colors ${viewMode === "list" ? "bg-[#212529] dark:bg-white text-white dark:text-[#212529]" : "text-neutral-500 hover:text-black dark:hover:text-white"}`}>
+                <List className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -333,7 +355,7 @@ export default function KatalogPage() {
                   key={i} layout
                   initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
                   onClick={f.onRemove}
-                  className="flex items-center gap-2 bg-[#F77F00] dark:bg-[#F77F00]/10 dark:bg-orange-500/10 text-[#F77F00] dark:text-orange-500 border border-orange-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-[#F77F00] dark:bg-orange-500/20 transition-colors"
+                  className="flex items-center gap-2 bg-[#F77F00]/10 dark:bg-orange-500/10 text-[#F77F00] dark:text-orange-500 border border-[#F77F00]/20 dark:border-orange-500/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-[#F77F00]/20 dark:hover:bg-orange-500/20 transition-colors"
                 >
                   {f.label} <X className="w-3 h-3" />
                 </motion.button>
@@ -371,7 +393,7 @@ export default function KatalogPage() {
               variants={staggerContainer} initial="hidden" animate={gridInView ? "visible" : "hidden"}
               className={viewMode === "grid" 
                 ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" 
-                : "flex flex-col gap-4"
+                : "flex flex-col gap-6"
               }
             >
               <AnimatePresence mode="popLayout">
@@ -385,70 +407,74 @@ export default function KatalogPage() {
                     <motion.div
                       key={product.id} layout variants={cardReveal}
                       exit={{ opacity: 0, scale: 0.9 }}
-                      className="group cursor-pointer bg-white dark:bg-neutral-900/50 border border-[#1B4332]/10 dark:border-white/5 overflow-hidden hover:border-orange-500/20 transition-colors"
+                      className="group flex flex-col cursor-pointer bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 overflow-hidden hover:border-[#F77F00] dark:hover:border-orange-500 hover:shadow-2xl transition-all relative h-full"
                     >
                       {/* Image */}
-                      <Link href={`/produk/${product.id}`} className="relative block aspect-[3/4] overflow-hidden bg-white dark:bg-neutral-900">
-                        <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/70 via-transparent to-transparent" />
+                      <Link href={`/produk/${product.id}`} className="relative block aspect-[3/4] w-full overflow-hidden bg-black/5 dark:bg-white/5">
+                        <img src={product.image} alt={product.name} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         
                         {/* Badge Diskon */}
                         {discount > 0 && (
-                          <div className="absolute top-4 left-4 z-10 px-2.5 py-1 bg-red-600 text-[#212529] dark:text-white text-[10px] font-black uppercase tracking-widest">
+                          <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-[#F77F00] dark:bg-orange-500 text-neutral-950 text-[10px] font-black uppercase tracking-widest">
                             -{discount}%
                           </div>
                         )}
                         
                         {/* Tag */}
-                        <div className="absolute top-4 right-4 z-10 px-2.5 py-1 bg-[#F8F9FA] dark:bg-neutral-950/70 backdrop-blur-md border border-[#DEE2E6] dark:border-white/10 text-[9px] font-black uppercase tracking-widest text-neutral-200">
+                        <div className="absolute top-4 right-4 z-10 px-3 py-1 bg-white/90 dark:bg-black/90 backdrop-blur-md border border-black/10 dark:border-white/10 text-[9px] font-black uppercase tracking-widest text-neutral-950 dark:text-white">
                           {product.tag}
                         </div>
 
-                        {/* Hover Overlay */}
+                        {/* Hover Overlay Buttons */}
                         <div className="absolute bottom-4 left-4 right-4 z-10 flex gap-2 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
                           <motion.button 
-                            whileTap={{ scale: 0.9 }}
-                            onClick={(e) => { e.preventDefault(); quickAdd(product.id); }}
-                            className={`flex-1 py-3 font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-colors ${
-                              isAdded ? "bg-green-600 text-[#212529] dark:text-white" : "bg-white text-neutral-950 hover:bg-[#F77F00] dark:bg-orange-500"
+                            whileTap={{ scale: 0.95 }}
+                            onClick={(e) => { e.preventDefault(); quickAdd(product); }}
+                            className={`flex-1 py-3 font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-colors border ${
+                              isAdded ? "bg-emerald-500 border-emerald-500 text-neutral-950" : "bg-black/50 dark:bg-black/50 backdrop-blur-md border-white/20 text-white hover:bg-[#F77F00] hover:border-[#F77F00] hover:text-black dark:hover:bg-orange-500 dark:hover:border-orange-500"
                             }`}
                           >
-                            {isAdded ? "✓ Ditambahkan" : <><ShoppingBag className="w-3.5 h-3.5" /> Quick Add</>}
+                            {isAdded ? "✓ ADDED" : <><ShoppingBag className="w-3.5 h-3.5" /> QUICK ADD</>}
                           </motion.button>
                           <motion.button
-                            whileTap={{ scale: 0.8 }}
+                            whileTap={{ scale: 0.9 }}
                             onClick={(e) => { e.preventDefault(); toggleWishlist(product.id); }}
-                            className={`w-12 h-12 flex items-center justify-center border transition-colors ${
-                              isWished ? "bg-red-500 border-red-500 text-[#212529] dark:text-white" : "bg-[#F8F9FA] dark:bg-neutral-950/50 backdrop-blur-md border-white/20 text-[#212529] dark:text-white hover:border-red-500"
+                            className={`w-11 h-11 flex items-center justify-center border transition-colors ${
+                              isWished ? "bg-red-500 border-red-500 text-white" : "bg-black/50 dark:bg-black/50 backdrop-blur-md border-white/20 text-white hover:border-red-500 hover:text-red-500"
                             }`}
                           >
-                            <Heart className={`w-4 h-4 ${isWished ? "fill-white" : ""}`} />
+                            <Heart className={`w-4 h-4 ${isWished ? "fill-current" : ""}`} />
                           </motion.button>
                         </div>
                       </Link>
 
                       {/* Info */}
-                      <div className="p-5">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="flex gap-0.5">
-                            {[1,2,3,4,5].map(i => (
-                              <Star key={i} className={`w-3 h-3 ${i <= Math.round(product.rating) ? "fill-[#F77F00] dark:fill-orange-500 text-[#F77F00] dark:text-orange-500" : "fill-[#DEE2E6] dark:fill-neutral-700 text-[#DEE2E6] dark:text-neutral-700"}`} />
-                            ))}
+                      <div className="p-5 flex flex-col flex-1 justify-between">
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex gap-0.5">
+                              {[1,2,3,4,5].map(i => (
+                                <Star key={i} className={`w-3 h-3 ${i <= Math.round(product.rating) ? "fill-[#F77F00] dark:fill-orange-500 text-[#F77F00] dark:text-orange-500" : "fill-neutral-300 dark:fill-neutral-800 text-neutral-300 dark:text-neutral-800"}`} />
+                              ))}
+                            </div>
+                            <span className="text-[9px] text-neutral-500 font-mono tracking-widest">{product.sold} TERJUAL</span>
                           </div>
-                          <span className="text-[10px] text-[#6C757D] dark:text-neutral-500 font-bold">{product.rating} ({product.reviews})</span>
+                          
+                          <Link href={`/produk/${product.id}`}>
+                            <h3 className="text-sm font-black uppercase tracking-tight mb-4 group-hover:text-[#F77F00] dark:group-hover:text-orange-500 transition-colors leading-snug">
+                              {product.name}
+                            </h3>
+                          </Link>
                         </div>
                         
-                        <Link href={`/produk/${product.id}`}>
-                          <h3 className="text-sm font-bold uppercase tracking-tight mb-3 group-hover:text-[#F77F00] dark:text-orange-500 transition-colors leading-tight">
-                            {product.name}
-                          </h3>
-                        </Link>
-                        
-                        <div className="flex items-end gap-2">
-                          <span className="text-lg font-black text-[#212529] dark:text-white tracking-tight">{formatRupiah(product.price)}</span>
-                          {discount > 0 && <span className="text-xs text-[#6C757D] dark:text-neutral-500 line-through">{formatRupiah(product.originalPrice)}</span>}
+                        <div className="flex items-end justify-between">
+                          <div className="flex flex-col">
+                            {discount > 0 && <span className="text-[10px] text-neutral-500 line-through mb-0.5">{formatRupiah(product.originalPrice)}</span>}
+                            <span className="text-lg font-black text-[#212529] dark:text-white tracking-tighter">{formatRupiah(product.price)}</span>
+                          </div>
+                          <ArrowUpRight className="w-5 h-5 text-neutral-400 group-hover:text-[#F77F00] dark:group-hover:text-orange-500 transition-colors" />
                         </div>
-                        <span className="text-[10px] text-[#ADB5BD] dark:text-neutral-600 font-mono mt-1 block">{product.sold} terjual</span>
                       </div>
                     </motion.div>
                   ) : (
@@ -456,12 +482,12 @@ export default function KatalogPage() {
                     <motion.div
                       key={product.id} layout variants={cardReveal}
                       exit={{ opacity: 0, x: -20 }}
-                      className="group flex bg-white dark:bg-neutral-900/50 border border-[#1B4332]/10 dark:border-white/5 overflow-hidden hover:border-orange-500/20 transition-colors"
+                      className="group flex flex-col md:flex-row bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 overflow-hidden hover:border-[#F77F00] dark:hover:border-orange-500 hover:shadow-2xl transition-all h-auto md:h-56"
                     >
-                      <Link href={`/produk/${product.id}`} className="relative w-48 md:w-64 flex-shrink-0 overflow-hidden bg-white dark:bg-neutral-900">
-                        <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-80 group-hover:opacity-100" />
+                      <Link href={`/produk/${product.id}`} className="relative w-full md:w-56 h-64 md:h-full flex-shrink-0 overflow-hidden bg-black/5 dark:bg-white/5">
+                        <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
                         {discount > 0 && (
-                          <div className="absolute top-3 left-3 z-10 px-2 py-1 bg-red-600 text-[#212529] dark:text-white text-[9px] font-black uppercase tracking-widest">
+                          <div className="absolute top-3 left-3 z-10 px-3 py-1 bg-[#F77F00] dark:bg-orange-500 text-neutral-950 text-[10px] font-black uppercase tracking-widest">
                             -{discount}%
                           </div>
                         )}
@@ -469,44 +495,44 @@ export default function KatalogPage() {
                       
                       <div className="flex-1 p-6 flex flex-col justify-between">
                         <div>
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center justify-between mb-3">
                             <span className="text-[10px] font-black text-[#F77F00] dark:text-orange-500 uppercase tracking-widest">{product.category}</span>
-                            <span className="text-[9px] font-mono text-[#ADB5BD] dark:text-neutral-600 uppercase tracking-widest">{product.tag}</span>
+                            <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest border border-black/10 dark:border-white/10 px-2 py-0.5">{product.tag}</span>
                           </div>
                           <Link href={`/produk/${product.id}`}>
-                            <h3 className="text-xl font-bold uppercase tracking-tight mb-2 group-hover:text-[#F77F00] dark:text-orange-500 transition-colors">{product.name}</h3>
+                            <h3 className="text-xl font-black uppercase tracking-tighter mb-2 group-hover:text-[#F77F00] dark:group-hover:text-orange-500 transition-colors">{product.name}</h3>
                           </Link>
-                          <div className="flex items-center gap-2 mb-3">
+                          <div className="flex items-center gap-3 mb-3">
                             <div className="flex gap-0.5">
                               {[1,2,3,4,5].map(i => (
-                                <Star key={i} className={`w-3 h-3 ${i <= Math.round(product.rating) ? "fill-[#F77F00] dark:fill-orange-500 text-[#F77F00] dark:text-orange-500" : "fill-[#DEE2E6] dark:fill-neutral-700 text-[#DEE2E6] dark:text-neutral-700"}`} />
+                                <Star key={i} className={`w-3 h-3 ${i <= Math.round(product.rating) ? "fill-[#F77F00] dark:fill-orange-500 text-[#F77F00] dark:text-orange-500" : "fill-neutral-300 dark:fill-neutral-800 text-neutral-300 dark:text-neutral-800"}`} />
                               ))}
                             </div>
-                            <span className="text-[10px] text-[#6C757D] dark:text-neutral-500 font-bold">{product.rating} ({product.reviews}) • {product.sold} terjual</span>
+                            <span className="text-[10px] text-neutral-500 font-mono tracking-widest">{product.rating} ({product.reviews}) • {product.sold} TERJUAL</span>
                           </div>
                         </div>
                         
-                        <div className="flex items-end justify-between">
-                          <div className="flex items-end gap-2">
-                            <span className="text-2xl font-black text-[#212529] dark:text-white tracking-tight">{formatRupiah(product.price)}</span>
-                            {discount > 0 && <span className="text-sm text-[#6C757D] dark:text-neutral-500 line-through">{formatRupiah(product.originalPrice)}</span>}
+                        <div className="flex items-end justify-between mt-4 md:mt-0">
+                          <div className="flex flex-col">
+                            {discount > 0 && <span className="text-[10px] text-neutral-500 line-through mb-0.5">{formatRupiah(product.originalPrice)}</span>}
+                            <span className="text-2xl font-black text-[#212529] dark:text-white tracking-tighter">{formatRupiah(product.price)}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <motion.button
-                              whileTap={{ scale: 0.9 }}
+                              whileTap={{ scale: 0.95 }}
                               onClick={() => toggleWishlist(product.id)}
-                              className={`w-10 h-10 flex items-center justify-center border transition-colors ${isWished ? "bg-red-500 border-red-500 text-[#212529] dark:text-white" : "border-[#DEE2E6] dark:border-white/10 text-[#6C757D] dark:text-neutral-500 hover:text-[#1B4332] dark:hover:text-[#212529] dark:text-white"}`}
+                              className={`w-10 h-10 flex items-center justify-center border transition-colors ${isWished ? "bg-red-500 border-red-500 text-white" : "border-black/20 dark:border-white/20 text-neutral-500 hover:border-red-500 hover:text-red-500"}`}
                             >
-                              <Heart className={`w-4 h-4 ${isWished ? "fill-white" : ""}`} />
+                              <Heart className={`w-4 h-4 ${isWished ? "fill-current" : ""}`} />
                             </motion.button>
                             <motion.button
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => quickAdd(product.id)}
-                              className={`px-6 py-2.5 font-black uppercase tracking-widest text-[10px] flex items-center gap-2 transition-colors ${
-                                isAdded ? "bg-green-600 text-[#212529] dark:text-white" : "bg-[#F77F00] dark:bg-orange-500 text-neutral-950 hover:bg-[#E06F00] dark:hover:bg-orange-400"
+                              whileTap={{ scale: 0.95 }}
+                              onClick={(e) => { e.preventDefault(); quickAdd(product); }}
+                              className={`px-6 py-2.5 font-black uppercase tracking-widest text-[10px] flex items-center gap-2 transition-colors border ${
+                                isAdded ? "bg-emerald-500 border-emerald-500 text-neutral-950" : "bg-black dark:bg-white border-black dark:border-white text-white dark:text-black hover:bg-transparent hover:text-black dark:hover:bg-transparent dark:hover:text-white"
                               }`}
                             >
-                              {isAdded ? "✓ Added" : <><ShoppingBag className="w-3.5 h-3.5" /> Add to Cart</>}
+                              {isAdded ? "✓ ADDED" : <><ShoppingBag className="w-3.5 h-3.5" /> QUICK ADD</>}
                             </motion.button>
                           </div>
                         </div>
@@ -519,22 +545,17 @@ export default function KatalogPage() {
           )}
         </div>
 
-        {/* LOAD MORE / PAGINATION */}
+        {/* INFINITE SCROLL TRIGGER */}
         {hasMore && (
           <motion.div 
+            ref={loadMoreRef}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-            className="flex flex-col items-center mt-16 gap-4"
+            className="flex flex-col items-center justify-center mt-16 mb-8 gap-4 h-24"
           >
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">
-              Menampilkan {visibleCount} dari {processed.length} produk
+            <div className="w-5 h-5 border-2 border-transparent border-t-[#F77F00] dark:border-t-orange-500 border-l-[#F77F00] dark:border-l-orange-500 rounded-full animate-spin"></div>
+            <span className="text-[9px] font-mono uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">
+              MENGAMBIL DATA... ({visibleCount} / {processed.length})
             </span>
-            <motion.button
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              onClick={() => setVisibleCount(prev => prev + 6)}
-              className="px-10 py-4 border border-[#DEE2E6] dark:border-white/10 text-sm font-black uppercase tracking-widest hover:bg-white hover:text-neutral-950 transition-all duration-300 flex items-center gap-3"
-            >
-              Muat Lebih Banyak <ChevronDown className="w-4 h-4" />
-            </motion.button>
           </motion.div>
         )}
 
@@ -548,6 +569,29 @@ export default function KatalogPage() {
         </motion.button>
 
       </div>
+      
+      <Footer />
+
+      {/* Guest Alert Toast */}
+      <AnimatePresence>
+        {guestAlert && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] bg-red-600 text-white px-6 py-4 rounded-full shadow-2xl flex items-center gap-4"
+          >
+            <ShieldCheck className="w-6 h-6" />
+            <div>
+              <p className="text-sm font-black uppercase tracking-widest leading-none mb-1">Akses Terbatas</p>
+              <p className="text-[10px] font-mono opacity-80">Silakan login untuk menambahkan ke keranjang.</p>
+            </div>
+            <Link href="/login" className="ml-4 px-4 py-2 bg-white text-red-600 text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-neutral-100 transition-colors">
+              Login
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }

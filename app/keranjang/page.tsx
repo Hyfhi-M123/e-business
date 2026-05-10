@@ -1,292 +1,569 @@
 "use client";
 
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  ShoppingBag, Trash2, Plus, Minus, ArrowLeft, ChevronRight,
-  ShieldCheck, Truck, RotateCcw, CreditCard, ArrowRight, ShoppingCart, Check,
-  MapPin, ShoppingBasket
-} from "lucide-react";
+import { useCart, CartItem } from "../context/CartContext";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import { Trash2, ShieldCheck, MapPin, CreditCard, Truck, Tag, Lock, ArrowRight, ChevronLeft, Package, Plus, Minus, Map, Crosshair, AlertTriangle, Fingerprint, ShoppingBag, QrCode, Wallet, Building2 } from "lucide-react";
 import Link from "next/link";
-import { useState, useMemo } from "react";
-
-// Mock Data Keranjang
-const INITIAL_CART = [
-  {
-    id: "101",
-    name: "Vertex Summit Tent",
-    category: "Tenda",
-    price: 3450000,
-    image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=400&q=80",
-    color: "Forest Green",
-    size: "4P",
-    quantity: 1
-  },
-  {
-    id: "102",
-    name: "Timberline X-Coat Arctic",
-    category: "Pakaian",
-    price: 1200000,
-    image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&q=80",
-    color: "Matte Black",
-    size: "L",
-    quantity: 1
-  }
-];
-
-const Stepper = ({ currentStep }: { currentStep: number }) => {
-  const steps = ["Keranjang", "Checkout", "Pembayaran"];
-  return (
-    <div className="flex items-center gap-4">
-      {steps.map((step, i) => (
-        <div key={i} className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${i + 1 <= currentStep ? "bg-[#1B4332] text-white" : "bg-neutral-200 text-neutral-400"}`}>
-              {i + 1}
-            </div>
-            <span className={`text-[10px] font-black uppercase tracking-widest ${i + 1 <= currentStep ? "text-[#1B4332]" : "text-neutral-400"}`}>
-              {step}
-            </span>
-          </div>
-          {i < steps.length - 1 && <div className="w-8 h-px bg-neutral-200" />}
-        </div>
-      ))}
-    </div>
-  );
-};
+import { useRouter, useSearchParams } from "next/navigation";
+import Script from "next/script";
+import "leaflet/dist/leaflet.css";
 
 export default function KeranjangPage() {
-  const [items, setItems] = useState(INITIAL_CART);
-  const [selectedIds, setSelectedIds] = useState<string[]>(INITIAL_CART.map(i => i.id));
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { cartItems, removeFromCart, updateQuantity, cartTotal } = useCart();
+  
+  const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([]);
+  const isBuyNowMode = searchParams.get("mode") === "buynow";
 
-  const toggleSelect = (id: string) => {
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.length === items.length) {
-      setSelectedIds([]);
+  const [shippingMethod, setShippingMethod] = useState("standard");
+  const [paymentMethod, setPaymentMethod] = useState("qris");
+  const [promoCode, setPromoCode] = useState("");
+  const [isPromoApplied, setIsPromoApplied] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isInsured, setIsInsured] = useState(false);
+  const [isWaitingPayment, setIsWaitingPayment] = useState(false);
+  const [paymentData, setPaymentData] = useState<any>(null);
+  useEffect(() => {
+    if (isBuyNowMode) {
+      const buyNowData = sessionStorage.getItem("trailforge_buynow");
+      if (buyNowData) setCheckoutItems(JSON.parse(buyNowData));
     } else {
-      setSelectedIds(items.map(i => i.id));
+      setCheckoutItems(cartItems);
+    }
+  }, [isBuyNowMode, cartItems]);
+
+  const handleLocalRemove = (id: string) => {
+    if (isBuyNowMode) {
+      setCheckoutItems(prev => prev.filter(i => i.id !== id));
+      // In buy now mode, removing the only item means empty cart
+    } else {
+      removeFromCart(id);
     }
   };
 
-  const updateQuantity = (id: string, delta: number) => {
-    setItems(prev => prev.map(item =>
-      item.id === id
-        ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-        : item
-    ));
+  const handleLocalUpdateQuantity = (id: string, delta: number) => {
+    if (isBuyNowMode) {
+      setCheckoutItems(prev => prev.map(i => {
+        if (i.id === id) return { ...i, quantity: Math.max(1, i.quantity + delta) };
+        return i;
+      }));
+    } else {
+      updateQuantity(id, delta);
+    }
   };
 
-  const removeItem = (id: string) => {
-    setItems(prev => prev.filter(item => item.id !== id));
-    setSelectedIds(prev => prev.filter(i => i !== id));
+  const checkoutTotal = checkoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  // Leaflet Map Init
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<any>(null);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (mapInstance.current) {
+      mapInstance.current.remove();
+      mapInstance.current = null;
+    }
+    const initMap = async () => {
+      const L = (await import("leaflet")).default;
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+      });
+
+      if ((mapRef.current as any)?._leaflet_id) return;
+      
+      const lat = -6.2278;
+      const lng = 106.8080; // SCBD Coordinates
+
+      const map = L.map(mapRef.current!, { zoomControl: false, dragging: false, scrollWheelZoom: false }).setView([lat, lng], 15);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap',
+      }).addTo(map);
+
+      L.marker([lat, lng]).addTo(map);
+      mapInstance.current = map;
+      
+      // Mencegah map menjadi abu-abu atau hitam karena telat memuat dimensi
+      setTimeout(() => {
+        if (mapInstance.current) {
+          mapInstance.current.invalidateSize();
+        }
+      }, 500);
+    };
+    initMap();
+    return () => {
+      if (mapInstance.current) {
+        mapInstance.current.remove();
+        mapInstance.current = null;
+      }
+    };
+  }, []);
+
+  const FREE_SHIPPING_THRESHOLD = 2500000;
+  const isFreeShipping = checkoutTotal >= FREE_SHIPPING_THRESHOLD;
+  
+  const shippingCost = shippingMethod === "standard" 
+    ? (isFreeShipping ? 0 : 50000) 
+    : 150000;
+
+  const totalOriginalPrice = checkoutItems.reduce((sum, item) => sum + ((item.originalPrice || item.price) * item.quantity), 0);
+  const totalProductDiscount = totalOriginalPrice - checkoutTotal;
+
+  const promoDiscount = isPromoApplied ? checkoutTotal * 0.1 : 0;
+  const insuranceCost = isInsured ? 15000 : 0;
+  const finalTotal = checkoutTotal + shippingCost - promoDiscount + insuranceCost;
+
+  function formatRupiah(n: number) {
+    return "Rp " + n.toLocaleString("id-ID");
+  }
+
+  const handleApplyPromo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (promoCode.toUpperCase() === "TRAILFORGE10") {
+      setIsPromoApplied(true);
+    } else {
+      alert("Kode promo tidak valid. Coba 'TRAILFORGE10'");
+      setIsPromoApplied(false);
+    }
   };
 
-  const selectedItems = useMemo(() => items.filter(item => selectedIds.includes(item.id)), [items, selectedIds]);
-  const subtotal = useMemo(() => selectedItems.reduce((acc, item) => acc + (item.price * item.quantity), 0), [selectedItems]);
-  const shipping = subtotal > 2000000 || subtotal === 0 ? 0 : 50000;
-  const total = subtotal + shipping;
+  const handleCheckout = async () => {
+    setIsProcessing(true);
+    
+    const items = checkoutItems.map(item => ({
+      id: item.id,
+      price: isPromoApplied ? item.price * 0.9 : item.price,
+      quantity: item.quantity,
+      name: item.name
+    }));
 
-  const formatRupiah = (n: number) => "Rp " + n.toLocaleString("id-ID");
+    // Tambahkan biaya ongkir dan asuransi sebagai item terpisah
+    if (shippingCost > 0) items.push({ id: "SHIPPING", price: shippingCost, quantity: 1, name: "Biaya Pengiriman" });
+    if (insuranceCost > 0) items.push({ id: "INSURANCE", price: insuranceCost, quantity: 1, name: "Asuransi Pengiriman" });
 
-  if (items.length === 0) {
+    try {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          order_id: "TRF-" + Math.floor(Math.random() * 100000000),
+          gross_amount: finalTotal,
+          items: items,
+          payment_type: paymentMethod, // Filter opsi Midtrans Snap
+          customer_details: {
+            first_name: "Alex",
+            last_name: "Mercer",
+            email: "alex.mercer@example.com",
+            phone: "081234567890"
+          }
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.token) {
+        // Panggil popup Midtrans Snap
+        (window as any).snap.pay(data.token, {
+          onSuccess: function(result: any) {
+            router.push(`/pembayaran?method=${paymentMethod}&total=${finalTotal}&status=success`);
+          },
+          onPending: function(result: any) {
+            router.push(`/pembayaran?method=${paymentMethod}&total=${finalTotal}&status=pending`);
+          },
+          onError: function(result: any) {
+            alert("Pembayaran gagal!");
+            setIsProcessing(false);
+          },
+          onClose: function() {
+            setIsProcessing(false);
+          }
+        });
+      } else {
+        console.warn("Midtrans Error:", data.error || data);
+        alert("Gagal memproses pembayaran. Coba lagi.");
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan jaringan. Mengalihkan ke Simulasi Pembayaran...");
+      router.push(`/pembayaran?method=${paymentMethod}&total=${finalTotal}`);
+    }
+  };
+
+  if (checkoutItems.length === 0) {
     return (
-      <main className="min-h-screen bg-[#F0F4F2] flex flex-col items-center justify-center p-6 text-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-          className="bg-white p-12 rounded-[40px] shadow-2xl shadow-[#1B4332]/5 flex flex-col items-center max-w-md w-full border border-white"
-        >
-          <div className="w-24 h-24 bg-[#F0F4F2] rounded-full flex items-center justify-center mb-8">
-            <ShoppingCart className="w-10 h-10 text-neutral-300" />
+      <main className="flex flex-col min-h-screen bg-[#f8f9fa] dark:bg-[#0a0a0a] text-[#212529] dark:text-white transition-colors duration-300">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 text-center">
+          <div className="w-32 h-32 border border-black/10 dark:border-white/10 flex items-center justify-center mb-10 rotate-45">
+            <div className="-rotate-45 text-[#6C757D] dark:text-neutral-500 font-mono text-xs tracking-widest">KOSONG</div>
           </div>
-          <h1 className="text-3xl font-black uppercase tracking-tighter text-[#1B4332] mb-4">Keranjang Kosong</h1>
-          <p className="text-neutral-500 mb-8 leading-relaxed">Peralatan petualangan Anda masih kosong. Mari mulai perjalanan!</p>
-          <Link href="/katalog" className="w-full h-14 bg-[#1B4332] text-white rounded-2xl flex items-center justify-center font-black uppercase tracking-widest hover:bg-[#2d5a47] transition-all shadow-xl shadow-[#1B4332]/20">
-            Mulai Belanja
+          <h1 className="text-5xl md:text-6xl font-black uppercase tracking-tighter mb-6">Belum Ada Pesanan</h1>
+          <p className="text-[#6C757D] dark:text-neutral-400 font-mono text-base tracking-widest uppercase mb-12 max-w-lg">Silakan kembali berbelanja untuk menambahkan produk.</p>
+          <Link href="/katalog" className="px-10 py-5 bg-[#F77F00] dark:bg-orange-500 text-neutral-950 font-black uppercase tracking-widest text-xs hover:bg-[#e06f00] dark:hover:bg-orange-400 transition-colors flex items-center gap-4">
+            <ChevronLeft className="w-5 h-5" /> KEMBALI BELANJA
           </Link>
-        </motion.div>
+        </div>
+        <Footer />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#F0F4F2] text-[#212529] font-sans pb-32">
-
-      {/* SHARED TRANSACTION HEADER */}
-      <nav className="fixed top-0 w-full z-[100] backdrop-blur-xl bg-white/90 border-b border-[#1B4332]/10 px-6 py-6 md:px-12 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/">
-            <div className="w-10 h-10 rounded-full bg-neutral-50 flex items-center justify-center text-[#1B4332] hover:bg-[#1B4332] hover:text-white transition-all">
-              <ArrowLeft className="w-5 h-5" />
-            </div>
-          </Link>
-          <div className="flex flex-col">
-            <h1 className="text-xl font-black uppercase tracking-tighter text-[#1B4332] leading-none">Keranjang</h1>
-            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mt-1">Order Manifest v2.4</span>
-          </div>
-        </div>
-
-        <div className="hidden lg:block">
-          <Stepper currentStep={1} />
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-[#F77F00]/10 flex items-center justify-center text-[#F77F00]">
-            <ShoppingBag className="w-5 h-5" />
-          </div>
-        </div>
-      </nav>
-
-      <div className="max-w-7xl mx-auto px-6 pt-44">
-        <div className="flex flex-col lg:flex-row gap-12">
-
-          {/* KOLOM KIRI: DAFTAR ITEM */}
-          <div className="flex-1 space-y-6">
-
-            {/* Header Control */}
-            <div className="flex items-center justify-between bg-white px-8 py-5 rounded-[24px] border border-[#1B4332]/5 shadow-xl shadow-[#1B4332]/5">
-              <label className="flex items-center gap-4 cursor-pointer group">
-                <div 
-                  onClick={toggleSelectAll}
-                  className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shadow-sm ${selectedIds.length === items.length ? "bg-[#1B4332] border-[#1B4332]" : "bg-white border-neutral-300 group-hover:border-[#1B4332]"}`}
-                >
-                  {selectedIds.length === items.length && <Check className="w-4 h-4 text-white" />}
-                </div>
-                <span className="text-[11px] font-black uppercase tracking-widest text-[#1B4332]">Pilih Semua ({items.length})</span>
-              </label>
+    <main className="flex flex-col min-h-screen bg-[#f8f9fa] dark:bg-[#0a0a0a] text-[#212529] dark:text-white font-sans selection:bg-[#F77F00] selection:text-white transition-colors duration-300">
+      <Navbar />
+      <Script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || ""} strategy="lazyOnload" />
+      
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-16 pt-36 flex flex-col xl:flex-row gap-10 xl:gap-20">
+        
+        {/* ================================================== */}
+        {/* KIRI: ALAMAT, PENGIRIMAN, PEMBAYARAN */}
+        {/* ================================================== */}
+        <div className="flex-1 flex flex-col gap-8">
+          
+          {/* Header & Progress Tracker */}
+          <div className="mb-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-[#212529] text-white dark:bg-white dark:text-black flex items-center justify-center">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter">Secure Checkout</h1>
+                <p className="text-[#F77F00] font-mono text-xs tracking-widest uppercase flex items-center gap-2 mt-1">
+                  <span className="w-2 h-2 rounded-full bg-[#F77F00] animate-pulse"></span> Koneksi Pembayaran Aman Terenkripsi
+                </p>
+              </div>
             </div>
 
-            <AnimatePresence mode="popLayout">
-              {items.map((item) => (
-                <motion.div
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="bg-white rounded-[32px] p-6 border border-white shadow-xl shadow-[#1B4332]/5 flex flex-col md:flex-row items-center gap-6 group hover:border-[#1B4332]/10 transition-all"
-                >
-                  {/* Checkbox */}
-                  <div 
-                    onClick={() => toggleSelect(item.id)}
-                    className={`w-6 h-6 rounded-lg border-2 flex-shrink-0 cursor-pointer flex items-center justify-center transition-all shadow-sm ${selectedIds.includes(item.id) ? "bg-[#1B4332] border-[#1B4332]" : "bg-white border-neutral-300 hover:border-[#1B4332]"}`}
-                  >
-                    {selectedIds.includes(item.id) && <Check className="w-4 h-4 text-white" />}
-                  </div>
+            {/* Stepper Standar */}
+            <div className="flex items-center w-full mt-10">
+              <div className="flex flex-col items-center gap-2 flex-1">
+                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white"><ShoppingBag className="w-4 h-4"/></div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">1. Keranjang</span>
+              </div>
+              <div className="h-[2px] flex-1 bg-emerald-500/50"></div>
+              <div className="flex flex-col items-center gap-2 flex-1">
+                <div className="w-8 h-8 rounded-full bg-[#F77F00] flex items-center justify-center text-white animate-pulse"><ShieldCheck className="w-4 h-4"/></div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#F77F00]">2. Checkout</span>
+              </div>
+              <div className="h-[2px] flex-1 bg-black/10 dark:bg-white/10"></div>
+              <div className="flex flex-col items-center gap-2 flex-1">
+                <div className="w-8 h-8 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center text-[#6C757D]"><CreditCard className="w-4 h-4"/></div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#6C757D]">3. Pembayaran</span>
+              </div>
+            </div>
+          </div>
 
-                  {/* Image */}
-                  <div className="w-32 h-32 rounded-2xl overflow-hidden bg-neutral-50 border border-neutral-100 flex-shrink-0">
-                    <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+          {/* 1. Alamat Pengiriman */}
+          <section className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 overflow-hidden relative shadow-sm">
+            <div className="bg-[#212529] dark:bg-[#1a1a1a] px-6 py-4 flex justify-between items-center border-b border-white/10">
+              <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white flex items-center gap-3">
+                <MapPin className="w-5 h-5 text-[#F77F00]" /> Alamat Pengiriman
+              </h2>
+              <span className="text-[10px] font-mono text-[#F77F00] border border-[#F77F00]/50 px-2 py-1">LOKASI TERDETEKSI</span>
+            </div>
+            
+            <div className="flex flex-col md:flex-row">
+              {/* Real Leaflet Map */}
+              <div className="w-full md:w-64 min-h-[240px] bg-[#f8f9fa] dark:bg-[#121212] relative overflow-hidden flex-shrink-0 border-r border-black/10 dark:border-white/10 z-0">
+                 <div ref={mapRef} className="w-full h-full absolute inset-0 z-0"></div>
+                 {/* Overlay to enforce techwear styling and prevent interaction */}
+                 <div className="absolute inset-0 bg-[#F77F00]/20 pointer-events-none z-10 border-[4px] border-[#F77F00]/20"></div>
+              </div>
+              
+              <div className="p-6 md:p-8 flex-1 flex flex-col justify-center">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-black uppercase text-xl">Alex Mercer</h3>
+                    <span className="text-neutral-500 font-mono text-sm block mt-1">No. HP: (+62) 812-3456-7890</span>
                   </div>
-
-                  {/* Info */}
-                  <div className="flex-1 text-center md:text-left">
-                    <span className="text-[9px] font-black text-[#F77F00] uppercase tracking-widest mb-1 block">{item.category}</span>
-                    <h3 className="text-lg font-black text-[#1B4332] uppercase tracking-tighter leading-tight mb-2">{item.name}</h3>
-                    <div className="flex flex-wrap justify-center md:justify-start gap-3">
-                      <span className="px-3 py-1 bg-[#F0F4F2] rounded-full text-[9px] font-bold text-[#1B4332] uppercase">{item.color}</span>
-                      <span className="px-3 py-1 bg-[#F0F4F2] rounded-full text-[9px] font-bold text-[#1B4332] uppercase">Size {item.size}</span>
-                    </div>
-                  </div>
-
-                  {/* Quantity & Price */}
-                  <div className="flex flex-col items-center md:items-end gap-4 w-full md:w-auto">
-                    <div className="flex items-center gap-3 bg-[#F0F4F2] p-1 rounded-xl border border-[#1B4332]/5">
-                      <button onClick={() => updateQuantity(item.id, -1)} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-[#1B4332] hover:bg-[#1B4332] hover:text-white transition-all"><Minus className="w-3 h-3" /></button>
-                      <span className="w-8 text-center font-black text-sm">{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.id, 1)} className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center text-[#1B4332] hover:bg-[#1B4332] hover:text-white transition-all"><Plus className="w-3 h-3" /></button>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest mb-1">Subtotal</p>
-                      <p className="text-xl font-black text-[#1B4332] tracking-tighter">{formatRupiah(item.price * item.quantity)}</p>
-                    </div>
-                  </div>
-
-                  {/* Trash */}
-                  <button onClick={() => removeItem(item.id)} className="p-3 text-neutral-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all">
-                    <Trash2 className="w-5 h-5" />
+                  <button className="text-xs font-black uppercase tracking-widest text-[#F77F00] hover:text-[#e06f00] border-b-2 border-[#F77F00] transition-colors pb-1">
+                    Ubah Alamat
                   </button>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
+                </div>
+                
+                <div className="bg-[#f8f9fa] dark:bg-[#1a1a1a] p-4 border border-black/5 dark:border-white/5">
+                  <span className="inline-block px-2 py-1 bg-black text-white dark:bg-white dark:text-black text-[10px] font-black uppercase tracking-widest mb-3">RUMAH</span>
+                  <p className="text-sm text-[#6C757D] dark:text-neutral-400 leading-relaxed font-mono">
+                    Jl. Jendral Sudirman No. 45, Tower A, Lantai 12<br/>
+                    Sudirman Central Business District (SCBD)<br/>
+                    Kebayoran Baru, Jakarta Selatan, 12190
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
 
-          {/* KOLOM KANAN: RINGKASAN */}
-          <div className="w-full lg:w-[400px]">
-            <div className="sticky top-28 space-y-6">
+          {/* 2. Daftar Pesanan */}
+          <section className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 shadow-sm">
+            <div className="bg-[#212529] dark:bg-[#1a1a1a] px-6 py-4 flex justify-between items-center border-b border-white/10">
+              <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white flex items-center gap-3">
+                <Package className="w-5 h-5 text-[#F77F00]" /> Daftar Pesanan
+              </h2>
+              <span className="text-[10px] font-mono text-white/50">{checkoutItems.length} BARANG</span>
+            </div>
+            
+            <div className="p-6 md:p-8">
+              {/* Items List */}
+              <div className="flex flex-col gap-6">
+                {checkoutItems.map((item) => {
+                  const hasDiscount = item.originalPrice && item.originalPrice > item.price;
+                  return (
+                  <div key={item.id} className="flex flex-col md:flex-row gap-6 items-start relative group border border-black/5 dark:border-white/5 p-4 hover:border-black/20 dark:hover:border-white/20 transition-colors">
+                    
+                    <div className="w-full md:w-32 h-40 bg-[#f8f9fa] dark:bg-[#0a0a0a] border border-black/10 dark:border-white/10 flex-shrink-0 relative">
+                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1581553680321-4fffae59fdda?w=400&q=80" }} />
+                      {hasDiscount && (
+                        <div className="absolute top-2 -left-2 bg-red-600 text-white text-[10px] font-black px-3 py-1 uppercase tracking-widest shadow-lg">SALE</div>
+                      )}
+                    </div>
 
-              <div className="bg-white rounded-[40px] p-10 border border-white shadow-2xl shadow-[#1B4332]/10 relative overflow-hidden">
-                {/* Accent line */}
-                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#1B4332] via-[#F77F00] to-[#1B4332]" />
-
-                <h2 className="text-xl font-black uppercase tracking-tighter text-[#1B4332] mb-10 flex items-center gap-3">
-                  <ShoppingBasket className="w-6 h-6 text-[#F77F00]" /> Ringkasan
-                </h2>
-
-                <div className="space-y-4 mb-10">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Total Produk</span>
-                    <span className="text-sm font-black text-[#1B4332]">{selectedIds.length} Item</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Estimasi Pengiriman</span>
-                    <span className={`text-sm font-black ${shipping === 0 ? "text-[#40916C]" : "text-[#1B4332]"}`}>{shipping === 0 ? "GRATIS" : formatRupiah(shipping)}</span>
-                  </div>
-                  <div className="h-px bg-neutral-100 my-4" />
-                  <div className="flex justify-between items-end">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Total Pembayaran</span>
-                      <span className="text-3xl font-black text-[#1B4332] tracking-tighter mt-1">{formatRupiah(total)}</span>
+                    <div className="flex-1 flex flex-col justify-between h-full w-full">
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="text-xl font-black uppercase tracking-tight line-clamp-2">{item.name}</h3>
+                          <button onClick={() => handleLocalRemove(item.id)} className="text-[#6C757D] hover:text-red-600 transition-colors bg-[#f8f9fa] dark:bg-[#1a1a1a] p-2 rounded-full" title="Hapus Barang">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                        
+                        {/* Normal Meta Data */}
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          <span className="bg-black/5 dark:bg-white/5 px-2 py-1 text-[9px] font-mono text-[#6C757D] uppercase">Varian: Default</span>
+                          <span className="bg-black/5 dark:bg-white/5 px-2 py-1 text-[9px] font-mono text-[#6C757D] uppercase">Berat: 1.2 KG</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col sm:flex-row sm:items-end justify-between mt-4 border-t border-black/5 dark:border-white/5 pt-4">
+                        <div className="mb-4 sm:mb-0">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-[#6C757D] block mb-1">Harga Satuan</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xl font-black text-[#212529] dark:text-white">{formatRupiah(item.price)}</span>
+                            {hasDiscount && <span className="text-xs text-red-600 line-through">{formatRupiah(item.originalPrice!)}</span>}
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col items-start sm:items-end gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-[#6C757D]">Jumlah Barang</span>
+                          <div className="flex items-center border-2 border-[#212529] dark:border-white">
+                            <button onClick={() => handleLocalUpdateQuantity(item.id, -1)} className="w-10 h-10 flex items-center justify-center text-[#212529] dark:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors font-black text-lg">-</button>
+                            <span className="w-12 h-10 flex items-center justify-center text-base font-black text-[#212529] dark:text-white bg-black/5 dark:bg-white/5">{item.quantity}</span>
+                            <button onClick={() => handleLocalUpdateQuantity(item.id, 1)} className="w-10 h-10 flex items-center justify-center text-[#212529] dark:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors font-black text-lg">+</button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                )})}
+              </div>
+            </div>
+            
+            {/* Opsi Pengiriman */}
+            <div className="bg-[#f8f9fa] dark:bg-[#1a1a1a] border-t border-black/10 dark:border-white/10 p-6 md:p-8">
+              <span className="text-xs font-black tracking-widest uppercase text-[#6C757D] block mb-4 flex items-center gap-2">
+                <Truck className="w-4 h-4" /> Pilih Ekspedisi Pengiriman
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <label className={`relative p-5 border-2 cursor-pointer transition-all overflow-hidden ${shippingMethod === "standard" ? "border-[#F77F00] bg-white dark:bg-[#121212] shadow-md" : "border-black/10 dark:border-white/10 bg-transparent opacity-70 hover:opacity-100"}`}>
+                  <input type="radio" name="shipping" checked={shippingMethod === "standard"} onChange={() => setShippingMethod("standard")} className="absolute opacity-0" />
+                  {shippingMethod === "standard" && <div className="absolute top-0 right-0 w-8 h-8 bg-[#F77F00] flex items-center justify-center rounded-bl-lg"><ShieldCheck className="w-4 h-4 text-white" /></div>}
+                  <h4 className="text-lg font-black uppercase tracking-tighter mb-1 text-[#212529] dark:text-white">Reguler</h4>
+                  <p className="text-[10px] font-mono text-[#6C757D] mb-4">Estimasi Tiba: 3-5 Hari Kerja</p>
+                  <span className={`text-xl font-black ${isFreeShipping ? "text-emerald-600" : "text-[#F77F00]"}`}>{isFreeShipping ? "GRATIS ONGKIR" : "Rp 50.000"}</span>
+                </label>
+
+                <label className={`relative p-5 border-2 cursor-pointer transition-all overflow-hidden ${shippingMethod === "express" ? "border-[#F77F00] bg-white dark:bg-[#121212] shadow-md" : "border-black/10 dark:border-white/10 bg-transparent opacity-70 hover:opacity-100"}`}>
+                  <input type="radio" name="shipping" checked={shippingMethod === "express"} onChange={() => setShippingMethod("express")} className="absolute opacity-0" />
+                  {shippingMethod === "express" && <div className="absolute top-0 right-0 w-8 h-8 bg-[#F77F00] flex items-center justify-center rounded-bl-lg"><ShieldCheck className="w-4 h-4 text-white" /></div>}
+                  <h4 className="text-lg font-black uppercase tracking-tighter mb-1 text-[#212529] dark:text-white">Express</h4>
+                  <p className="text-[10px] font-mono text-[#6C757D] mb-4">Estimasi Tiba: 1-2 Hari Kerja</p>
+                  <span className="text-xl font-black text-[#F77F00]">Rp 150.000</span>
+                </label>
+
+              </div>
+            </div>
+          </section>
+
+          {/* 3. Pembayaran */}
+          <section className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 shadow-sm">
+             <div className="bg-[#212529] dark:bg-[#1a1a1a] px-6 py-4 border-b border-white/10">
+              <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white flex items-center gap-3">
+                <CreditCard className="w-5 h-5 text-[#F77F00]" /> Metode Pembayaran
+              </h2>
+            </div>
+            <div className="p-6 md:p-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                
+                <label className={`relative flex flex-col items-center justify-center p-6 border-2 cursor-pointer transition-all duration-300 text-center gap-4 overflow-hidden ${paymentMethod === "qris" ? "border-[#F77F00] border-[3px] bg-white dark:bg-[#121212] shadow-[0_0_15px_rgba(247,127,0,0.15)] scale-[1.02]" : "border-black/10 dark:border-white/10 bg-[#f8f9fa] dark:bg-[#1a1a1a] opacity-70 hover:opacity-100 hover:border-black/30 dark:hover:border-white/30"}`}>
+                  {paymentMethod === "qris" && <div className="absolute top-0 right-0 w-6 h-6 bg-[#F77F00] flex items-center justify-center rounded-bl-lg"><ShieldCheck className="w-3 h-3 text-white" /></div>}
+                  <input type="radio" name="payment" className="hidden" checked={paymentMethod === "qris"} onChange={() => setPaymentMethod("qris")} />
+                  <div className={`w-12 h-12 flex items-center justify-center border-2 transition-colors ${paymentMethod === "qris" ? "border-[#F77F00] text-[#F77F00] bg-[#F77F00]/10" : "border-current"}`}><QrCode className="w-6 h-6" /></div>
+                  <span className={`text-xs font-black uppercase tracking-widest transition-colors ${paymentMethod === "qris" ? "text-[#F77F00]" : ""}`}>QRIS</span>
+                </label>
+
+                <label className={`relative flex flex-col items-center justify-center p-6 border-2 cursor-pointer transition-all duration-300 text-center gap-4 overflow-hidden ${paymentMethod === "ewallet" ? "border-[#F77F00] border-[3px] bg-white dark:bg-[#121212] shadow-[0_0_15px_rgba(247,127,0,0.15)] scale-[1.02]" : "border-black/10 dark:border-white/10 bg-[#f8f9fa] dark:bg-[#1a1a1a] opacity-70 hover:opacity-100 hover:border-black/30 dark:hover:border-white/30"}`}>
+                  {paymentMethod === "ewallet" && <div className="absolute top-0 right-0 w-6 h-6 bg-[#F77F00] flex items-center justify-center rounded-bl-lg"><ShieldCheck className="w-3 h-3 text-white" /></div>}
+                  <input type="radio" name="payment" className="hidden" checked={paymentMethod === "ewallet"} onChange={() => setPaymentMethod("ewallet")} />
+                  <div className={`w-12 h-12 flex items-center justify-center border-2 transition-colors ${paymentMethod === "ewallet" ? "border-[#F77F00] text-[#F77F00] bg-[#F77F00]/10" : "border-current"}`}><Wallet className="w-6 h-6" /></div>
+                  <span className={`text-xs font-black uppercase tracking-widest transition-colors ${paymentMethod === "ewallet" ? "text-[#F77F00]" : ""}`}>E-Wallet</span>
+                </label>
+                
+                <label className={`relative flex flex-col items-center justify-center p-6 border-2 cursor-pointer transition-all duration-300 text-center gap-4 overflow-hidden ${paymentMethod === "transfer" ? "border-[#F77F00] border-[3px] bg-white dark:bg-[#121212] shadow-[0_0_15px_rgba(247,127,0,0.15)] scale-[1.02]" : "border-black/10 dark:border-white/10 bg-[#f8f9fa] dark:bg-[#1a1a1a] opacity-70 hover:opacity-100 hover:border-black/30 dark:hover:border-white/30"}`}>
+                  {paymentMethod === "transfer" && <div className="absolute top-0 right-0 w-6 h-6 bg-[#F77F00] flex items-center justify-center rounded-bl-lg"><ShieldCheck className="w-3 h-3 text-white" /></div>}
+                  <input type="radio" name="payment" className="hidden" checked={paymentMethod === "transfer"} onChange={() => setPaymentMethod("transfer")} />
+                  <div className={`w-12 h-12 flex items-center justify-center border-2 transition-colors ${paymentMethod === "transfer" ? "border-[#F77F00] text-[#F77F00] bg-[#F77F00]/10" : "border-current"}`}><Building2 className="w-6 h-6" /></div>
+                  <span className={`text-xs font-black uppercase tracking-widest transition-colors ${paymentMethod === "transfer" ? "text-[#F77F00]" : ""}`}>Transfer Bank</span>
+                </label>
+
+                <label className={`relative flex flex-col items-center justify-center p-6 border-2 cursor-pointer transition-all duration-300 text-center gap-4 overflow-hidden ${paymentMethod === "cc" ? "border-[#F77F00] border-[3px] bg-white dark:bg-[#121212] shadow-[0_0_15px_rgba(247,127,0,0.15)] scale-[1.02]" : "border-black/10 dark:border-white/10 bg-[#f8f9fa] dark:bg-[#1a1a1a] opacity-70 hover:opacity-100 hover:border-black/30 dark:hover:border-white/30"}`}>
+                  {paymentMethod === "cc" && <div className="absolute top-0 right-0 w-6 h-6 bg-[#F77F00] flex items-center justify-center rounded-bl-lg"><ShieldCheck className="w-3 h-3 text-white" /></div>}
+                  <input type="radio" name="payment" className="hidden" checked={paymentMethod === "cc"} onChange={() => setPaymentMethod("cc")} />
+                  <div className={`w-12 h-12 flex items-center justify-center border-2 transition-colors ${paymentMethod === "cc" ? "border-[#F77F00] text-[#F77F00] bg-[#F77F00]/10" : "border-current"}`}><CreditCard className="w-6 h-6" /></div>
+                  <span className={`text-xs font-black uppercase tracking-widest transition-colors ${paymentMethod === "cc" ? "text-[#F77F00]" : ""}`}>Kartu Kredit</span>
+                </label>
+
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        {/* ================================================== */}
+        {/* KANAN: THERMAL RECEIPT SUMMARY */}
+        {/* ================================================== */}
+        <div className="w-full xl:w-[450px]">
+          <div className="sticky top-36">
+            
+            {/* The Receipt Design */}
+            <div className="bg-[#fcfaf8] dark:bg-[#e6e2db] text-[#1a1a1a] shadow-2xl relative">
+              {/* Jagged top edge */}
+              <div className="h-4 w-full bg-[radial-gradient(circle,transparent,transparent_4px,#fcfaf8_4px,#fcfaf8_6px,transparent_6px)] dark:bg-[radial-gradient(circle,transparent,transparent_4px,#e6e2db_4px,#e6e2db_6px,transparent_6px)] bg-[length:12px_12px] bg-repeat-x absolute -top-2 left-0 z-10" style={{ clipPath: 'polygon(0 50%, 100% 50%, 100% 100%, 0% 100%)' }}></div>
+              
+              <div className="p-8 md:p-10 border-b-2 border-dashed border-black/30">
+                <div className="text-center mb-8">
+                  {/* Fake Barcode */}
+                  <div className="w-full h-16 flex mb-4 justify-center gap-1 opacity-70">
+                    {[...Array(30)].map((_, i) => (
+                      <div key={i} className="bg-black h-full" style={{ width: `${Math.random() * 4 + 1}px` }}></div>
+                    ))}
+                  </div>
+                  <h2 className="text-2xl font-black uppercase tracking-tighter">Ringkasan Belanja</h2>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-black/60">ID Pesanan: #{Math.floor(Math.random() * 9000000) + 1000000}</p>
                 </div>
 
-                <Link href="/checkout" className="block w-full">
-                  <motion.button
-                    whileHover={{ scale: 1.02, backgroundColor: "#2d5a47" }} whileTap={{ scale: 0.98 }}
-                    disabled={selectedIds.length === 0}
-                    className={`w-full h-16 text-white rounded-[24px] flex items-center justify-center gap-4 font-black uppercase tracking-[0.15em] text-sm shadow-2xl transition-all ${selectedIds.length === 0 ? "bg-neutral-200 cursor-not-allowed shadow-none" : "bg-[#1B4332] shadow-[#1B4332]/20"}`}
-                  >
-                    Lanjut Ke Checkout <ArrowRight className="w-5 h-5" />
-                  </motion.button>
-                </Link>
-
-                {/* Promo */}
-                <div className="mt-8 pt-8 border-t border-neutral-50">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400 mb-3 flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-[#F77F00]" /> Punya Voucher?
-                  </p>
-                  <div className="flex gap-2">
+                {/* Promo Code */}
+                <form onSubmit={handleApplyPromo} className="flex gap-2 mb-8">
+                  <div className="relative flex-1">
                     <input 
                       type="text" 
-                      placeholder="KODE PROMO" 
-                      className="flex-1 bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-[10px] font-black uppercase tracking-widest focus:border-[#1B4332] outline-none transition-all"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value)}
+                      placeholder="PUNYA KODE PROMO?" 
+                      className="w-full bg-white border-2 border-black p-3 text-sm font-bold uppercase tracking-widest focus:outline-none focus:border-[#F77F00]"
                     />
-                    <button className="px-4 py-3 bg-[#1B4332] text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-[#2d5a47] transition-all">Gunakan</button>
                   </div>
+                  <button type="submit" className="px-6 bg-black text-white text-xs font-black uppercase tracking-widest hover:bg-[#F77F00] transition-colors">Pakai</button>
+                </form>
+
+                {/* Kalkulasi Biaya (Receipt style) */}
+                <div className="flex flex-col gap-3 font-mono text-xs uppercase text-black/80">
+                  <div className="flex justify-between border-b border-dotted border-black/20 pb-2">
+                    <span>SUBTOTAL PRODUK</span>
+                    <span className={totalProductDiscount > 0 ? "line-through opacity-50" : "font-bold"}>{formatRupiah(totalOriginalPrice)}</span>
+                  </div>
+                  
+                  {totalProductDiscount > 0 && (
+                    <div className="flex justify-between border-b border-dotted border-black/20 pb-2 text-emerald-700">
+                      <span>DISKON PRODUK</span>
+                      <span>-{formatRupiah(totalProductDiscount)}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between border-b border-dotted border-black/20 pb-2 mt-2">
+                    <span>ONGKOS KIRIM ({shippingMethod.substring(0,3)})</span>
+                    {shippingMethod === "standard" && isFreeShipping ? (
+                      <span className="text-emerald-700 font-bold">GRATIS</span>
+                    ) : (
+                      <span className="font-bold">{formatRupiah(shippingCost)}</span>
+                    )}
+                  </div>
+                  
+                  {isPromoApplied && (
+                    <div className="flex justify-between border-b border-dotted border-black/20 pb-2 mt-2 text-[#F77F00]">
+                      <span>POTONGAN VOUCHER</span>
+                      <span>-{formatRupiah(promoDiscount)}</span>
+                    </div>
+                  )}
+                  
+                  {isInsured && (
+                    <div className="flex justify-between border-b border-dotted border-black/20 pb-2 mt-2 text-black/80">
+                      <span>ASURANSI PENGIRIMAN</span>
+                      <span>+Rp 15.000</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Guarantees */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white p-6 rounded-[24px] border border-white shadow-sm flex flex-col items-center text-center">
-                  <ShieldCheck className="w-6 h-6 text-[#40916C] mb-3" />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-[#1B4332]">100% Ori</span>
+              {/* Total & Checkout Button Section */}
+              <div className="p-8 md:p-10 bg-[#f4f0ea] dark:bg-[#dfdad2]">
+                <div className="flex justify-between items-end mb-8">
+                  <span className="text-sm font-black uppercase tracking-tighter text-black/60">Total Pembayaran</span>
+                  <span className="text-4xl font-black text-black tracking-tighter leading-none">{formatRupiah(finalTotal)}</span>
                 </div>
-                <div className="bg-white p-6 rounded-[24px] border border-white shadow-sm flex flex-col items-center text-center">
-                  <RotateCcw className="w-6 h-6 text-[#F77F00] mb-3" />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-[#1B4332]">Easy Return</span>
-                </div>
-              </div>
 
+                {/* Total Hemat Box */}
+                {(totalProductDiscount > 0 || isPromoApplied || isFreeShipping) && (
+                  <div className="bg-black text-white p-4 mb-8 flex justify-between items-center transform -rotate-1 shadow-lg border-2 border-[#F77F00]">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-[#F77F00]">TOTAL HEMATMU:</span>
+                    <span className="text-base font-black">
+                      {formatRupiah(totalProductDiscount + promoDiscount + (isFreeShipping && shippingMethod === "standard" ? 50000 : 0))}
+                    </span>
+                  </div>
+                )}
+
+                {/* Order Bump: Asuransi in Receipt style */}
+                <label className="flex items-start gap-3 mb-8 cursor-pointer group">
+                  <div className={`w-5 h-5 flex items-center justify-center border-2 border-black mt-0.5 ${isInsured ? "bg-black text-white" : "bg-transparent"}`}>
+                    {isInsured && <div className="w-2.5 h-2.5 bg-white"></div>}
+                  </div>
+                  <input type="checkbox" checked={isInsured} onChange={() => setIsInsured(!isInsured)} className="hidden" />
+                  <div className="flex-1">
+                    <span className="text-xs font-black uppercase tracking-tighter block text-black">Pakai Asuransi Pengiriman (+Rp 15.000)</span>
+                    <p className="text-[9px] font-mono text-black/60 leading-relaxed mt-1">Dapatkan garansi ganti rugi 100% penuh jika barang rusak atau hilang selama di tangan kurir pengiriman.</p>
+                  </div>
+                </label>
+
+                {/* Checkout CTA */}
+                <button 
+                  onClick={handleCheckout}
+                  disabled={isProcessing}
+                  className="w-full py-6 bg-[#F77F00] text-black font-black uppercase tracking-widest text-base flex items-center justify-center gap-3 hover:bg-black hover:text-white transition-all shadow-[8px_8px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-2 hover:translate-y-2 border-2 border-black disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? (
+                    <><span className="w-5 h-5 border-[3px] border-black border-t-transparent rounded-full animate-spin"></span> MEMPROSES...</>
+                  ) : (
+                    "BUAT PESANAN"
+                  )}
+                </button>
+              </div>
+              
+              {/* Jagged bottom edge */}
+              <div className="h-4 w-full bg-[radial-gradient(circle,transparent,transparent_4px,#f4f0ea_4px,#f4f0ea_6px,transparent_6px)] dark:bg-[radial-gradient(circle,transparent,transparent_4px,#dfdad2_4px,#dfdad2_6px,transparent_6px)] bg-[length:12px_12px] bg-repeat-x absolute -bottom-2 left-0 z-10" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 50%)' }}></div>
             </div>
-          </div>
 
+          </div>
         </div>
+
       </div>
+      <Footer />
     </main>
   );
 }

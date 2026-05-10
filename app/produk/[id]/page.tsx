@@ -8,16 +8,17 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import Navbar from "../../components/Navbar";
+import Footer from "../../components/Footer";
+import { useAuth } from "../../context/AuthContext";
+import { useCart } from "../../context/CartContext";
+import { ALL_PRODUCTS } from "../../lib/products";
 
 // Variasi animasi global
 const fadeUp = {
   hidden: { opacity: 0, y: 40, filter: "blur(8px)" },
   visible: (delay: number = 0) => ({ opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] } })
-};
-const fadeRight = {
-  hidden: { opacity: 0, x: 60 },
-  visible: (delay: number = 0) => ({ opacity: 1, x: 0, transition: { duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] } })
 };
 const staggerContainer = {
   hidden: {},
@@ -63,7 +64,7 @@ const productData = {
   colors: [
     { name: "Midnight Black", hex: "#1a1a1a" },
     { name: "Alpine White", hex: "#e8e8e8" },
-    { name: "Ember Orange", hex: "#ea580c" }
+    { name: "Ember Orange", hex: "#F77F00" }
   ],
   images: [
     "https://images.unsplash.com/photo-1551028719-00167b16eac5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
@@ -108,7 +109,7 @@ function RatingStars({ rating, size = "sm" }: { rating: number; size?: "sm" | "m
   return (
     <div className="flex gap-0.5">
       {[1, 2, 3, 4, 5].map(i => (
-        <Star key={i} className={`${s} ${i <= Math.round(rating) ? "fill-[#F77F00] text-[#F77F00]" : "fill-neutral-200 text-neutral-200"}`} />
+        <Star key={i} className={`${s} ${i <= Math.round(rating) ? "fill-[#F77F00] text-[#F77F00]" : "fill-neutral-300 dark:fill-neutral-700 text-neutral-300 dark:text-neutral-700"}`} />
       ))}
     </div>
   );
@@ -116,11 +117,29 @@ function RatingStars({ rating, size = "sm" }: { rating: number; size?: "sm" | "m
 
 export default function ProfessionalPDP() {
   const pathname = usePathname();
-  const idProduk = pathname.split('/').pop() || "123";
-  const p = productData;
+  const router = useRouter();
+  const idProduk = pathname.split('/').pop() || "102";
+  
+  // Cari produk dari database dummy berdasarkan ID
+  const foundProduct = ALL_PRODUCTS.find(item => item.id === idProduk);
+  
+  // Merge data dasar dari ALL_PRODUCTS dengan detail lengkap dari mock data
+  const p = foundProduct ? {
+    ...productData,
+    name: foundProduct.name,
+    category: foundProduct.category,
+    price: foundProduct.price,
+    originalPrice: foundProduct.originalPrice,
+    rating: foundProduct.rating,
+    reviewCount: foundProduct.reviews,
+    soldCount: foundProduct.sold,
+    images: [foundProduct.image, ...productData.images.slice(1)]
+  } : productData;
+
+  const { addToCart } = useCart();
 
   // State UI
-  const [activeSize, setActiveSize] = useState("L");
+  const [activeSize, setActiveSize] = useState("M");
   const [activeColor, setActiveColor] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [wishlisted, setWishlisted] = useState(false);
@@ -130,7 +149,9 @@ export default function ProfessionalPDP() {
   const [addedToCart, setAddedToCart] = useState(false);
   const [reviewSort, setReviewSort] = useState("helpful");
   const [showAllReviews, setShowAllReviews] = useState(false);
-  const [activeTab, setActiveTab] = useState("highlights");
+  
+  const { user } = useAuth(); // Action Guard Listener
+  const [guestAlert, setGuestAlert] = useState(false);
 
   // Refs untuk scroll-triggered animations
   const reviewRef = useRef(null);
@@ -138,11 +159,54 @@ export default function ProfessionalPDP() {
   const reviewInView = useInView(reviewRef, { once: true, margin: "-100px" });
   const relatedInView = useInView(relatedRef, { once: true, margin: "-100px" });
 
-  const discount = Math.round((1 - p.price / p.originalPrice) * 100);
+  const sizeSurcharge = activeSize === "L" ? 50000 : activeSize === "XL" ? 100000 : 0;
+  const currentPrice = p.price + sizeSurcharge;
+  const currentOriginalPrice = p.originalPrice + sizeSurcharge;
+
+  const discount = Math.round((1 - currentPrice / currentOriginalPrice) * 100);
+
+  const showGuestWarning = () => {
+    setGuestAlert(true);
+    setTimeout(() => setGuestAlert(false), 3000);
+  };
+
+  const executeAddToCart = () => {
+    addToCart({
+      id: idProduk,
+      name: `${p.name} - ${activeSize} - ${p.colors[activeColor].name}`,
+      price: currentPrice,
+      originalPrice: currentOriginalPrice,
+      image: p.images[0],
+      category: p.category,
+      quantity: quantity
+    });
+  };
 
   const handleAddToCart = () => {
+    if (!user) return showGuestWarning();
+    executeAddToCart();
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2500);
+  };
+
+  const handleBuyNow = () => {
+    if (!user) return showGuestWarning();
+    const buyNowItem = {
+      id: idProduk,
+      name: `${p.name} - ${activeSize} - ${p.colors[activeColor].name}`,
+      price: currentPrice,
+      originalPrice: currentOriginalPrice,
+      image: p.images[0],
+      category: p.category,
+      quantity: quantity
+    };
+    sessionStorage.setItem("trailforge_buynow", JSON.stringify([buyNowItem]));
+    router.push('/keranjang?mode=buynow');
+  };
+
+  const handleWishlist = () => {
+    if (!user) return showGuestWarning();
+    setWishlisted(!wishlisted);
   };
 
   const toggleAccordion = (key: string) => {
@@ -150,34 +214,21 @@ export default function ProfessionalPDP() {
   };
 
   return (
-    <main className="min-h-screen bg-[#F8F9FA] text-[#212529] font-sans selection:bg-[#F77F00] selection:text-white pb-32">
-
-      {/* NAVBAR */}
-      <nav className="fixed top-0 w-full z-50 flex items-center justify-between px-6 py-4 md:px-12 backdrop-blur-xl bg-white/80 border-b border-[#1B4332]/10">
-        <Link href="/katalog" className="flex items-center gap-2 text-sm font-bold text-neutral-500 hover:text-[#1B4332] transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Kembali
-        </Link>
-        <div className="flex items-center gap-4">
-          <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-neutral-100 transition-colors">
-            <Search className="w-5 h-5 text-[#212529]" />
-          </button>
-          <Link href="/keranjang" className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-neutral-100 transition-colors relative">
-            <ShoppingBag className="w-5 h-5 text-[#212529]" />
-            <span className="absolute top-1 right-1 bg-[#F77F00] text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">0</span>
-          </Link>
-        </div>
-      </nav>
+    <main className="flex flex-col min-h-screen bg-[#f8f9fa] dark:bg-[#0a0a0a] text-[#212529] dark:text-white font-sans selection:bg-[#F77F00] selection:text-white transition-colors duration-300">
+      
+      {/* NAVBAR GLOBAL */}
+      <Navbar />
 
       {/* KONTEN UTAMA */}
-      <div className="max-w-[1400px] mx-auto px-6 md:px-12 mt-20">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-12 pt-32 pb-24">
 
         {/* Breadcrumb */}
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-4 mt-2">
-          <Link href="/" className="hover:text-[#1B4332] transition-colors">Home</Link>
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-500 mb-8 mt-2">
+          <Link href="/" className="hover:text-[#F77F00] transition-colors">Home</Link>
           <ChevronRight className="w-3 h-3" />
-          <Link href="/katalog" className="hover:text-[#1B4332] transition-colors">{p.category}</Link>
+          <Link href="/katalog" className="hover:text-[#F77F00] transition-colors">{p.category}</Link>
           <ChevronRight className="w-3 h-3" />
-          <span className="text-[#212529]">{p.name}</span>
+          <span className="text-[#212529] dark:text-white">{p.name}</span>
         </motion.div>
 
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 relative items-start">
@@ -187,7 +238,7 @@ export default function ProfessionalPDP() {
             variants={staggerContainer} initial="hidden" animate="visible"
             className="w-full lg:w-[50%] flex flex-col gap-3"
           >
-            <div className="relative aspect-square bg-neutral-200 overflow-hidden rounded-[32px] shadow-2xl group border border-neutral-100">
+            <div className="relative aspect-square bg-[#e9ecef] dark:bg-[#121212] overflow-hidden border border-black/10 dark:border-white/10 group">
               <AnimatePresence mode="wait">
                 <motion.img
                   key={activeImage}
@@ -202,7 +253,7 @@ export default function ProfessionalPDP() {
 
               <motion.div
                 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }}
-                className="absolute top-5 left-5 z-10 px-3 py-1.5 bg-[#F77F00] text-white text-[10px] font-black uppercase tracking-widest shadow-lg"
+                className="absolute top-5 left-5 z-10 px-3 py-1.5 bg-[#F77F00] text-white text-[10px] font-black uppercase tracking-widest"
               >
                 Best Seller
               </motion.div>
@@ -210,7 +261,7 @@ export default function ProfessionalPDP() {
               {p.stock <= 30 && (
                 <motion.div
                   initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.7 }}
-                  className="absolute top-5 right-5 z-10 px-3 py-1.5 bg-white/90 text-[#1B4332] text-[10px] font-black uppercase tracking-widest backdrop-blur-sm shadow-lg border border-neutral-100"
+                  className="absolute top-5 right-5 z-10 px-3 py-1.5 bg-black/80 dark:bg-white/90 text-white dark:text-black text-[10px] font-black uppercase tracking-widest backdrop-blur-sm"
                 >
                   Stok Terbatas: {p.stock}
                 </motion.div>
@@ -222,10 +273,10 @@ export default function ProfessionalPDP() {
                 <motion.button
                   key={i}
                   variants={staggerItem}
-                  whileHover={{ scale: 1.05, y: -4 }}
-                  whileTap={{ scale: 0.95 }}
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setActiveImage(i)}
-                  className={`relative aspect-square overflow-hidden transition-all rounded-xl ${activeImage === i ? "ring-2 ring-[#1B4332] ring-offset-2 ring-offset-[#F8F9FA]" : "opacity-60 hover:opacity-100"
+                  className={`relative aspect-square overflow-hidden border transition-all ${activeImage === i ? "border-[#F77F00]" : "border-black/10 dark:border-white/10 opacity-60 hover:opacity-100"
                     }`}
                 >
                   <img src={img} alt={`Thumbnail ${i + 1}`} className="w-full h-full object-cover" />
@@ -233,135 +284,135 @@ export default function ProfessionalPDP() {
               ))}
             </div>
 
-            {/* PRODUCT DETAILS TABS (Reference Style) */}
-            <div className="mt-16 flex flex-col">
-              {/* Tab Headers */}
-              <div className="flex items-center gap-12 border-b border-neutral-100 pb-6 mb-10">
-                {[
-                  { id: "highlights", label: "KEUNGGULAN" },
-                  { id: "desc", label: "DESKRIPSI" },
-                  { id: "specs", label: "SPESIFIKASI" }
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`relative text-xs font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? "text-[#F77F00]" : "text-neutral-300 hover:text-neutral-500"
-                      }`}
-                  >
-                    {tab.label}
-                    {activeTab === tab.id && (
-                      <motion.div layoutId="activeTab" className="absolute -bottom-[25px] left-0 right-0 h-1 bg-[#F77F00] rounded-full" />
-                    )}
-                  </button>
-                ))}
+            {/* TAB SECTION (DIPINDAH KE KOLOM KIRI) */}
+            <div className="flex flex-col mt-8 border border-black/10 dark:border-white/10 bg-white dark:bg-[#121212] p-6">
+              {/* TAB HEADERS */}
+              <div className="flex border-b border-black/10 dark:border-white/10 mb-4">
+                <button 
+                  onClick={() => setOpenAccordion("highlights")} 
+                  className={`flex-1 pb-4 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${openAccordion === "highlights" ? "text-[#F77F00] border-b-2 border-[#F77F00]" : "text-[#6C757D] dark:text-neutral-500 hover:text-[#212529] dark:hover:text-white"}`}
+                >
+                  Keunggulan
+                </button>
+                <button 
+                  onClick={() => setOpenAccordion("desc")} 
+                  className={`flex-1 pb-4 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${openAccordion === "desc" ? "text-[#F77F00] border-b-2 border-[#F77F00]" : "text-[#6C757D] dark:text-neutral-500 hover:text-[#212529] dark:hover:text-white"}`}
+                >
+                  Deskripsi
+                </button>
+                <button 
+                  onClick={() => setOpenAccordion("specs")} 
+                  className={`flex-1 pb-4 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${openAccordion === "specs" ? "text-[#F77F00] border-b-2 border-[#F77F00]" : "text-[#6C757D] dark:text-neutral-500 hover:text-[#212529] dark:hover:text-white"}`}
+                >
+                  Spesifikasi
+                </button>
               </div>
 
-              {/* Tab Content */}
-              <div className="min-h-[300px]">
+              {/* TAB CONTENT */}
+              <div className="pt-2">
                 <AnimatePresence mode="wait">
-                  {activeTab === "highlights" && (
-                    <motion.div
-                      key="highlights" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}
-                      className="flex flex-col gap-5"
-                    >
-                      {p.highlights.map((h, i) => (
-                        <div key={i} className="flex items-start gap-4 text-sm text-neutral-600 font-medium leading-relaxed">
-                          <Check className="w-4 h-4 text-[#F77F00] mt-1 flex-shrink-0" /> {h}
-                        </div>
-                      ))}
+                  {openAccordion === "highlights" && (
+                    <motion.div key="highlights" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
+                      <ul className="flex flex-col gap-4">
+                        {p.highlights.map((h, i) => (
+                          <li key={i} className="flex items-start gap-3 text-sm text-[#6C757D] dark:text-neutral-400 font-medium">
+                            <Check className="w-4 h-4 text-[#F77F00] mt-0.5 flex-shrink-0" /> {h}
+                          </li>
+                        ))}
+                      </ul>
                     </motion.div>
                   )}
 
-                  {activeTab === "desc" && (
-                    <motion.div
-                      key="desc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}
-                    >
-                      <p className="text-sm text-neutral-500 leading-relaxed font-medium">{p.description}</p>
+                  {openAccordion === "desc" && (
+                    <motion.div key="desc" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
+                      <p className="text-sm text-[#6C757D] dark:text-neutral-400 leading-relaxed font-mono">{p.description}</p>
                     </motion.div>
                   )}
 
-                  {activeTab === "specs" && (
-                    <motion.div
-                      key="specs" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}
-                      className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4"
-                    >
-                      {Object.entries(p.specs).map(([key, val], i) => (
-                        <div key={i} className="flex flex-col py-2 border-b border-neutral-50">
-                          <span className="text-[9px] font-black text-neutral-300 uppercase tracking-widest mb-1">{key}</span>
-                          <span className="text-sm text-[#1B4332] font-bold">{val}</span>
-                        </div>
-                      ))}
+                  {openAccordion === "specs" && (
+                    <motion.div key="specs" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
+                      <table className="w-full">
+                        <tbody>
+                          {Object.entries(p.specs).map(([key, val], i) => (
+                            <tr key={i} className="border-b border-black/5 dark:border-white/5 last:border-0">
+                              <td className="py-4 text-[10px] font-black text-[#6C757D] dark:text-neutral-500 uppercase tracking-widest w-[40%]">{key}</td>
+                              <td className="py-4 text-sm text-[#212529] dark:text-white font-mono">{val}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
             </div>
+
           </motion.div>
 
           {/* KOLOM KANAN: DETAIL PRODUK */}
           <motion.div
             initial="hidden" animate="visible"
             variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.1, delayChildren: 0.3 } } }}
-            className="w-full lg:w-[50%] lg:sticky lg:top-24 flex flex-col pt-4 lg:pt-0"
+            className="w-full lg:w-[50%] lg:sticky lg:top-32 flex flex-col pt-4 lg:pt-0"
           >
             <motion.div variants={fadeUp} custom={0} className="flex items-center justify-between mb-4">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#40916C]">{p.category}</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#F77F00]">{p.category}</span>
             </motion.div>
 
-            <motion.h1 variants={fadeUp} custom={0} className="text-2xl md:text-3xl font-black uppercase tracking-tighter mb-2 leading-[1.05] text-[#1B4332]">
+            <motion.h1 variants={fadeUp} custom={0} className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-4 leading-[1.05] text-[#212529] dark:text-white">
               {p.name}
             </motion.h1>
 
-            <motion.div variants={fadeUp} custom={0} className="flex items-center gap-4 mb-4">
+            <motion.div variants={fadeUp} custom={0} className="flex items-center gap-4 mb-6">
               <div className="flex items-center gap-2">
                 <RatingStars rating={p.rating} size="sm" />
-                <span className="text-xs font-bold text-neutral-700">{p.rating}</span>
+                <span className="text-xs font-bold text-[#212529] dark:text-white">{p.rating}</span>
               </div>
-              <span className="text-[10px] text-neutral-400">({p.reviewCount} ulasan)</span>
-              <span className="text-xs text-neutral-300">•</span>
-              <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">{p.soldCount} terjual</span>
+              <span className="text-[10px] text-[#6C757D] dark:text-neutral-500">({p.reviewCount} ulasan)</span>
+              <span className="text-xs text-black/20 dark:text-white/20">•</span>
+              <span className="text-[10px] text-[#6C757D] dark:text-neutral-500 font-bold uppercase tracking-widest">{p.soldCount} terjual</span>
             </motion.div>
 
-            <motion.div variants={fadeUp} custom={0} className="flex items-end gap-3 mb-6 pb-6 border-b border-neutral-200">
-              <span className="text-2xl font-black text-[#1B4332] tracking-tight">{formatRupiah(p.price)}</span>
-              <span className="text-base font-medium text-neutral-400 line-through">{formatRupiah(p.originalPrice)}</span>
+            <motion.div variants={fadeUp} custom={0} className="flex items-end gap-4 mb-8 pb-8 border-b border-black/10 dark:border-white/10">
+              <span className="text-3xl font-black text-[#212529] dark:text-white tracking-tight">{formatRupiah(currentPrice)}</span>
+              <span className="text-base font-medium text-[#6C757D] dark:text-neutral-500 line-through">{formatRupiah(currentOriginalPrice)}</span>
               <motion.span
-                animate={{ scale: [1, 1.1, 1] }}
+                animate={{ scale: [1, 1.05, 1] }}
                 transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                className="text-xs font-black text-white bg-red-500 px-1.5 py-0.5 rounded"
-              >-{discount}%</motion.span>
+                className="text-[10px] font-black text-white bg-red-600 px-2 py-1 uppercase tracking-widest"
+              >-{discount}% OFF</motion.span>
             </motion.div>
 
-            <div className="mb-5">
+            <div className="mb-6">
               <div className="flex justify-between items-end mb-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Warna: <span className="text-[#212529]">{p.colors[activeColor].name}</span></span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">Warna: <span className="text-[#212529] dark:text-white">{p.colors[activeColor].name}</span></span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 {p.colors.map((c, i) => (
                   <button
-                    key={i} onClick={() => setActiveColor(i)}
-                    className={`w-8 h-8 rounded-full transition-all flex items-center justify-center border-2 ${activeColor === i ? "border-[#1B4332] scale-110 shadow-md" : "border-transparent hover:scale-110"
+                    key={i} onClick={() => { setActiveColor(i); setActiveImage(i % p.images.length); }}
+                    className={`w-10 h-10 transition-all flex items-center justify-center border-2 ${activeColor === i ? "border-[#F77F00] scale-110" : "border-transparent hover:scale-110"
                       }`}
                     style={{ backgroundColor: c.hex }}
                   >
-                    {activeColor === i && <Check className="w-3 h-3 text-white drop-shadow-md" />}
+                    {activeColor === i && <Check className="w-4 h-4 text-white drop-shadow-md" />}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="mb-5">
+            <div className="mb-6">
               <div className="flex justify-between items-end mb-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Ukuran</span>
-                <button className="text-[9px] uppercase tracking-widest text-[#40916C] font-bold hover:underline">Panduan Ukuran</button>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">Ukuran</span>
+                <button className="text-[9px] uppercase tracking-widest text-[#F77F00] font-bold hover:underline">Panduan Ukuran</button>
               </div>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 gap-3">
                 {["S", "M", "L", "XL"].map(size => (
                   <button
                     key={size} onClick={() => setActiveSize(size)}
-                    className={`h-10 transition-all text-xs rounded-lg ${activeSize === size
-                      ? "bg-[#1B4332] text-white font-black shadow-lg shadow-[#1B4332]/20"
-                      : "bg-white border border-neutral-200 text-neutral-600 hover:border-[#40916C] font-medium"
+                    className={`h-12 transition-all text-xs font-black uppercase tracking-widest border ${activeSize === size
+                      ? "bg-[#212529] dark:bg-white text-white dark:text-black border-[#212529] dark:border-white"
+                      : "bg-transparent border-black/20 dark:border-white/20 text-[#212529] dark:text-white hover:border-[#F77F00]"
                       }`}
                   >
                     {size}
@@ -370,24 +421,24 @@ export default function ProfessionalPDP() {
               </div>
             </div>
 
-            <div className="mb-6">
-              <span className="text-[10px] font-black uppercase tracking-widest text-neutral-400 block mb-3">Jumlah</span>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-0 w-fit border border-neutral-200 rounded-xl overflow-hidden bg-white shadow-sm">
+            <div className="mb-8">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#6C757D] dark:text-neutral-500 block mb-3">Jumlah</span>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center w-fit border border-black/20 dark:border-white/20 bg-transparent">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-10 h-10 flex items-center justify-center hover:bg-neutral-50 transition-colors text-neutral-400 hover:text-[#1B4332]"
+                    className="w-12 h-12 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-[#212529] dark:text-white"
                   >
-                    <Minus className="w-3.5 h-3.5" />
+                    <Minus className="w-4 h-4" />
                   </button>
-                  <div className="w-12 h-10 flex items-center justify-center text-base font-black border-x border-neutral-100 text-[#1B4332]">
+                  <div className="w-14 h-12 flex items-center justify-center text-base font-black border-x border-black/20 dark:border-white/20 text-[#212529] dark:text-white">
                     {quantity}
                   </div>
                   <button
                     onClick={() => setQuantity(Math.min(p.stock, quantity + 1))}
-                    className="w-10 h-10 flex items-center justify-center hover:bg-neutral-50 transition-colors text-neutral-400 hover:text-[#1B4332]"
+                    className="w-12 h-12 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-[#212529] dark:text-white"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4" />
                   </button>
                 </div>
 
@@ -399,41 +450,44 @@ export default function ProfessionalPDP() {
                     exit={{ opacity: 0, y: -5 }}
                     className="flex flex-col"
                   >
-                    <span className="text-[9px] font-black uppercase tracking-widest text-neutral-400">Total</span>
-                    <span className="text-lg font-black text-[#1B4332] tracking-tight">{formatRupiah(p.price * quantity)}</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">Total</span>
+                    <span className="text-xl font-black text-[#212529] dark:text-white tracking-tight">{formatRupiah(currentPrice * quantity)}</span>
                   </motion.div>
                 </AnimatePresence>
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 mb-8">
+            <div className="flex flex-col gap-4 mb-10">
               <motion.button
                 whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
                 onClick={handleAddToCart}
-                className={`w-full h-14 font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all rounded-xl shadow-xl shadow-[#1B4332]/10 ${addedToCart
+                className={`w-full h-16 font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${addedToCart
                   ? "bg-green-600 text-white"
-                  : "bg-[#1B4332] text-white hover:bg-[#2d5a47]"
+                  : "bg-[#F77F00] text-black hover:bg-orange-600 hover:text-white"
                   }`}
               >
                 {addedToCart ? <><Check className="w-5 h-5" /> Ditambahkan!</> : <><ShoppingBag className="w-5 h-5" /> Tambah Ke Keranjang</>}
               </motion.button>
-              <button className="w-full h-14 bg-white border-2 border-[#1B4332] font-black uppercase tracking-widest text-[#1B4332] hover:bg-[#1B4332]/5 transition-colors rounded-xl">
+              <button 
+                onClick={handleBuyNow}
+                className="w-full h-16 bg-transparent border-2 border-[#212529] dark:border-white font-black uppercase tracking-widest text-[#212529] dark:text-white hover:bg-[#212529] hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors"
+              >
                 Beli Sekarang
               </button>
 
-              <div className="flex gap-3 mt-2">
+              <div className="flex gap-4 mt-2">
                 <button
-                  onClick={() => setWishlisted(!wishlisted)}
-                  className={`flex-1 h-12 flex items-center justify-center gap-2 rounded-xl border transition-all font-bold text-xs uppercase tracking-widest ${wishlisted ? "bg-red-50 border-red-200 text-red-600" : "bg-white border-neutral-200 text-neutral-600 hover:border-[#1B4332]"}`}
+                  onClick={handleWishlist}
+                  className={`flex-1 h-14 flex items-center justify-center gap-2 border transition-all font-bold text-xs uppercase tracking-widest ${wishlisted ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400" : "bg-transparent border-black/20 dark:border-white/20 text-[#212529] dark:text-white hover:border-[#F77F00]"}`}
                 >
-                  <Heart className={`w-4 h-4 ${wishlisted ? "fill-red-600" : ""}`} />
+                  <Heart className={`w-4 h-4 ${wishlisted ? "fill-current" : ""}`} />
                   {wishlisted ? "Disimpan" : "Wishlist"}
                 </button>
 
                 <div className="flex-1 relative">
                   <button
                     onClick={() => setShowShareMenu(!showShareMenu)}
-                    className="w-full h-12 flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:border-[#1B4332] transition-all font-bold text-xs uppercase tracking-widest"
+                    className="w-full h-14 flex items-center justify-center gap-2 border border-black/20 dark:border-white/20 bg-transparent text-[#212529] dark:text-white hover:border-[#F77F00] transition-all font-bold text-xs uppercase tracking-widest"
                   >
                     <Share2 className="w-4 h-4" /> Bagikan
                   </button>
@@ -441,14 +495,14 @@ export default function ProfessionalPDP() {
                   <AnimatePresence>
                     {showShareMenu && (
                       <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                        className="absolute bottom-full left-0 right-0 mb-3 z-50 bg-white border border-neutral-200 rounded-2xl p-4 shadow-2xl min-w-[220px]"
+                         initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                         animate={{ opacity: 1, scale: 1, y: 0 }}
+                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                         className="absolute bottom-full left-0 right-0 mb-3 z-50 bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 p-4 shadow-2xl min-w-[220px]"
                       >
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="text-xs font-black uppercase tracking-widest text-neutral-400">Bagikan</span>
-                          <button onClick={() => setShowShareMenu(false)}><X className="w-4 h-4 text-neutral-400" /></button>
+                        <div className="flex justify-between items-center mb-4">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">Bagikan</span>
+                          <button onClick={() => setShowShareMenu(false)}><X className="w-4 h-4 text-neutral-500" /></button>
                         </div>
                         <div className="flex flex-col gap-1">
                           {[
@@ -456,7 +510,7 @@ export default function ProfessionalPDP() {
                             { icon: <Globe className="w-4 h-4" />, label: "Facebook" },
                             { icon: <MessageSquare className="w-4 h-4" />, label: "WhatsApp" },
                           ].map((item, i) => (
-                            <button key={i} onClick={() => setShowShareMenu(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-neutral-50 transition-colors text-sm font-medium text-neutral-600 hover:text-[#1B4332]">
+                            <button key={i} onClick={() => setShowShareMenu(false)} className="flex items-center gap-3 px-3 py-3 hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-xs font-bold text-[#212529] dark:text-white uppercase tracking-widest">
                               {item.icon} {item.label}
                             </button>
                           ))}
@@ -468,45 +522,47 @@ export default function ProfessionalPDP() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 mb-8 pt-6 border-t border-neutral-200">
+            <div className="grid grid-cols-3 gap-4 mb-10 pt-8 border-t border-black/10 dark:border-white/10">
               {[
-                { icon: <Truck className="w-5 h-5" />, title: "Gratis Ongkir", sub: "Min. 500rb" },
-                { icon: <RotateCcw className="w-5 h-5" />, title: "30 Hari Retur", sub: "Mudah" },
-                { icon: <Award className="w-5 h-5" />, title: "100% Original", sub: "Garansi" }
+                { icon: <Truck className="w-6 h-6" />, title: "Gratis Ongkir", sub: "Min. 500rb" },
+                { icon: <RotateCcw className="w-6 h-6" />, title: "30 Hari Retur", sub: "Mudah" },
+                { icon: <Award className="w-6 h-6" />, title: "100% Original", sub: "Garansi" }
               ].map((badge, i) => (
-                <div key={i} className="flex flex-col items-center text-center gap-2 py-4 bg-white rounded-2xl border border-neutral-100 shadow-sm">
+                <div key={i} className="flex flex-col items-center text-center gap-3 py-6 bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10">
                   <span className="text-[#F77F00]">{badge.icon}</span>
-                  <span className="text-[10px] font-black uppercase tracking-widest leading-tight text-[#1B4332]">{badge.title}</span>
-                  <span className="text-[9px] text-neutral-400 font-bold">{badge.sub}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest leading-tight text-[#212529] dark:text-white">{badge.title}</span>
+                  <span className="text-[9px] text-[#6C757D] dark:text-neutral-500 font-bold">{badge.sub}</span>
                 </div>
               ))}
             </div>
+
+
           </motion.div>
         </div>
 
         {/* SECTION: ULASAN */}
-        <section ref={reviewRef} className="mt-24 pt-16 border-t border-neutral-200">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
+        <section ref={reviewRef} className="mt-32 pt-16 border-t border-black/10 dark:border-white/10">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-16">
             <div>
-              <h2 className="text-3xl font-black uppercase tracking-tighter text-[#1B4332] mb-2">Ulasan Pelanggan</h2>
+              <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-[#212529] dark:text-white mb-4">Ulasan Lapangan</h2>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <RatingStars rating={p.rating} size="md" />
-                  <span className="text-2xl font-black text-[#1B4332]">{p.rating}</span>
+                  <span className="text-2xl font-black text-[#212529] dark:text-white">{p.rating}</span>
                 </div>
-                <span className="text-sm text-neutral-400 font-bold">dari {p.reviewCount} ulasan</span>
+                <span className="text-sm text-[#6C757D] dark:text-neutral-500 font-bold">dari {p.reviewCount} ulasan</span>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-xs text-neutral-400 font-black uppercase tracking-widest">Urutkan:</span>
+              <span className="text-[10px] text-[#6C757D] dark:text-neutral-500 font-black uppercase tracking-widest">Filter:</span>
               {["helpful", "newest"].map(opt => (
                 <button
                   key={opt} onClick={() => setReviewSort(opt)}
-                  className={`text-xs font-black uppercase tracking-widest px-5 py-2.5 rounded-xl border-2 transition-all ${reviewSort === opt ? "bg-[#1B4332] text-white border-[#1B4332] shadow-lg shadow-[#1B4332]/20" : "border-neutral-200 text-neutral-400 hover:border-[#40916C]"
+                  className={`text-[10px] font-black uppercase tracking-widest px-6 py-3 border transition-all ${reviewSort === opt ? "bg-[#212529] dark:bg-white text-white dark:text-black border-[#212529] dark:border-white" : "border-black/20 dark:border-white/20 text-[#6C757D] dark:text-neutral-400 hover:border-[#F77F00]"
                     }`}
                 >
-                  {opt === "helpful" ? "Terpopuler" : "Terbaru"}
+                  {opt === "helpful" ? "Top Intel" : "Terbaru"}
                 </button>
               ))}
             </div>
@@ -519,29 +575,29 @@ export default function ProfessionalPDP() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={reviewInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ duration: 0.6, delay: idx * 0.15 }}
-                className="bg-white border border-neutral-100 rounded-3xl p-8 shadow-sm hover:shadow-xl hover:shadow-[#1B4332]/5 transition-all group"
+                className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 p-8 hover:border-[#F77F00] transition-all group"
               >
-                <div className="flex justify-between items-start mb-6">
+                <div className="flex justify-between items-start mb-8">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#1B4332] to-[#40916C] flex items-center justify-center text-sm font-black text-white shadow-lg">
+                    <div className="w-12 h-12 bg-[#212529] dark:bg-white flex items-center justify-center text-sm font-black text-white dark:text-black">
                       {rev.avatar}
                     </div>
                     <div>
-                      <span className="text-base font-black text-[#1B4332] block">{rev.name}</span>
-                      <span className="text-[10px] text-neutral-400 font-black uppercase tracking-widest">Ukuran: {rev.size} • {rev.date}</span>
+                      <span className="text-base font-black text-[#212529] dark:text-white block uppercase tracking-widest">{rev.name}</span>
+                      <span className="text-[10px] text-[#6C757D] dark:text-neutral-500 font-black uppercase tracking-widest">Ukuran: {rev.size} • {rev.date}</span>
                     </div>
                   </div>
                   <RatingStars rating={rev.rating} />
                 </div>
-                <p className="text-sm text-neutral-600 leading-relaxed font-medium mb-6 italic">"{rev.text}"</p>
-                <div className="flex items-center justify-between mt-auto pt-6 border-t border-neutral-50">
+                <p className="text-sm text-[#212529] dark:text-white leading-relaxed font-mono mb-8">"{rev.text}"</p>
+                <div className="flex items-center justify-between mt-auto pt-6 border-t border-black/10 dark:border-white/10">
                   {rev.hasPhoto && (
-                    <div className="flex items-center gap-2 text-[10px] text-[#40916C] font-black uppercase tracking-widest">
-                      <ImageIcon className="w-3.5 h-3.5" /> Foto Pembeli
+                    <div className="flex items-center gap-2 text-[10px] text-[#F77F00] font-black uppercase tracking-widest">
+                      <ImageIcon className="w-4 h-4" /> Ada Visual
                     </div>
                   )}
-                  <button className="flex items-center gap-2 text-xs text-neutral-400 hover:text-[#F77F00] transition-colors font-black uppercase tracking-widest">
-                    <ThumbsUp className="w-3.5 h-3.5" /> {rev.helpful} Terbantu
+                  <button className="flex items-center gap-2 text-[10px] text-[#6C757D] dark:text-neutral-500 hover:text-[#F77F00] transition-colors font-black uppercase tracking-widest">
+                    <ThumbsUp className="w-4 h-4" /> {rev.helpful} Terbantu
                   </button>
                 </div>
               </motion.div>
@@ -550,23 +606,23 @@ export default function ProfessionalPDP() {
 
           {!showAllReviews && p.reviews.length > 2 && (
             <div className="mt-12 flex justify-center">
-              <button onClick={() => setShowAllReviews(true)} className="px-10 py-4 bg-white border-2 border-neutral-200 text-sm font-black uppercase tracking-widest text-[#1B4332] hover:border-[#1B4332] hover:bg-neutral-50 transition-all rounded-2xl">
-                Lihat Semua {p.reviewCount} Ulasan
+              <button onClick={() => setShowAllReviews(true)} className="px-12 py-5 bg-transparent border-2 border-[#212529] dark:border-white text-xs font-black uppercase tracking-widest text-[#212529] dark:text-white hover:bg-[#212529] hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
+                Dekripsi Semua Ulasan
               </button>
             </div>
           )}
         </section>
 
         {/* SECTION: TERKAIT */}
-        <section ref={relatedRef} className="mt-24 pt-16 border-t border-neutral-200">
+        <section ref={relatedRef} className="mt-32 pt-16 border-t border-black/10 dark:border-white/10">
           <div className="flex justify-between items-end mb-12">
-            <h2 className="text-3xl font-black uppercase tracking-tighter text-[#1B4332]">Pilihan Lainnya</h2>
-            <Link href="/katalog" className="text-[10px] font-black text-[#40916C] uppercase tracking-widest hover:text-[#1B4332] transition-colors flex items-center gap-2">
+            <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-[#212529] dark:text-white">Gear Alternatif</h2>
+            <Link href="/katalog" className="text-[10px] font-black text-[#F77F00] uppercase tracking-widest hover:text-orange-400 transition-colors flex items-center gap-2">
               Katalog Lengkap <ArrowUpRight className="w-4 h-4" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {p.relatedProducts.map((rp, idx) => (
               <motion.div
                 key={rp.id}
@@ -575,21 +631,21 @@ export default function ProfessionalPDP() {
                 transition={{ duration: 0.6, delay: idx * 0.1 }}
               >
                 <Link href={`/produk/${rp.id}`} className="group flex flex-col">
-                  <div className="relative aspect-square bg-neutral-200 overflow-hidden mb-4 rounded-xl shadow-sm">
-                    <img src={rp.image} alt={rp.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-[#1B4332]/20 transition-all duration-300" />
+                  <div className="relative aspect-square bg-[#e9ecef] dark:bg-[#121212] border border-black/10 dark:border-white/10 overflow-hidden mb-4">
+                    <img src={rp.image} alt={rp.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-[#F77F00]/20 transition-all duration-300" />
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-                      <div className="bg-white text-[#1B4332] text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-lg shadow-xl transform translate-y-2 group-hover:translate-y-0 transition-transform">
-                        Detail
+                      <div className="bg-[#212529] dark:bg-white text-white dark:text-black text-[9px] font-black uppercase tracking-widest px-6 py-3 transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                        Inspect
                       </div>
                     </div>
                   </div>
-                  <h4 className="text-xs font-black uppercase tracking-tight mb-1 text-[#1B4332] group-hover:text-[#40916C] transition-colors line-clamp-1">{rp.name}</h4>
-                  <div className="flex items-center gap-1.5 mb-1.5">
+                  <h4 className="text-xs font-black uppercase tracking-tight mb-2 text-[#212529] dark:text-white group-hover:text-[#F77F00] transition-colors line-clamp-1">{rp.name}</h4>
+                  <div className="flex items-center gap-2 mb-2">
                     <RatingStars rating={rp.rating} />
-                    <span className="text-[9px] text-neutral-400 font-bold">{rp.rating}</span>
+                    <span className="text-[9px] text-[#6C757D] dark:text-neutral-500 font-bold">{rp.rating}</span>
                   </div>
-                  <span className="text-sm font-black text-[#1B4332]">{formatRupiah(rp.price)}</span>
+                  <span className="text-sm font-black text-[#212529] dark:text-white">{formatRupiah(rp.price)}</span>
                 </Link>
               </motion.div>
             ))}
@@ -597,6 +653,30 @@ export default function ProfessionalPDP() {
         </section>
 
       </div>
+      
+      {/* FOOTER GLOBAL */}
+      <Footer />
+
+      {/* Guest Alert Toast */}
+      <AnimatePresence>
+        {guestAlert && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] bg-red-600 text-white px-6 py-4 rounded-full shadow-2xl flex items-center gap-4"
+          >
+            <ShieldCheck className="w-6 h-6" />
+            <div>
+              <p className="text-sm font-black uppercase tracking-widest leading-none mb-1">Akses Terbatas</p>
+              <p className="text-[10px] font-mono opacity-80">Silakan login untuk bertransaksi.</p>
+            </div>
+            <Link href="/login" className="ml-4 px-4 py-2 bg-white text-red-600 text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-neutral-100 transition-colors">
+              Login
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
