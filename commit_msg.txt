@@ -1,0 +1,5 @@
+refactor: perbarui tampilan dan tombol halaman keranjang
+
+- Hapus UI metode pembayaran manual dari halaman keranjang.
+- Hapus checklist di daftar pesanan, fokus tampilkan barang terpilih saja.
+- Ganti teks tombol bawah menjadi "PILIH METODE PEMBAYARAN".

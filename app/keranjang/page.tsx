@@ -313,51 +313,22 @@ export default function KeranjangPage() {
               <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white flex items-center gap-3">
                 <Package className="w-5 h-5 text-[#F77F00]" /> Daftar Pesanan
               </h2>
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 cursor-pointer text-[10px] font-mono text-white/80 hover:text-white transition-colors">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedItemIds.length === checkoutItems.length && checkoutItems.length > 0}
-                    onChange={(e) => {
-                      if (!isBuyNowMode) toggleSelectAll(e.target.checked);
-                    }}
-                    disabled={isBuyNowMode}
-                    className="w-3.5 h-3.5 accent-[#F77F00] cursor-pointer disabled:opacity-50"
-                  />
-                  PILIH SEMUA
-                </label>
-                <span className="text-[10px] font-mono text-[#F77F00]">{selectedItemIds.length}/{checkoutItems.length} BARANG</span>
-              </div>
+              <span className="text-[10px] font-mono text-white/50">{selectedCheckoutItems.length} BARANG</span>
             </div>
             
             <div className="p-6 md:p-8">
               {/* Items List */}
               <div className="flex flex-col gap-6">
-                {checkoutItems.map((item) => {
+                {selectedCheckoutItems.map((item) => {
                   const hasDiscount = item.originalPrice && item.originalPrice > item.price;
-                  const isSelected = selectedItemIds.includes(item.id);
                   return (
-                  <div key={item.id} className={`flex flex-col md:flex-row gap-6 items-start relative group border p-4 transition-colors ${isSelected ? 'border-[#F77F00]/50 bg-[#F77F00]/5 dark:bg-[#F77F00]/10' : 'border-black/5 dark:border-white/5 hover:border-black/20 dark:hover:border-white/20'}`}>
+                  <div key={item.id} className="flex flex-col md:flex-row gap-6 items-start relative group border border-black/5 dark:border-white/5 p-4 hover:border-black/20 dark:hover:border-white/20 transition-colors">
                     
-                    <div className="flex gap-4 w-full md:w-auto">
-                      <div className="flex items-center pt-2 md:pt-16 shrink-0">
-                        <input 
-                          type="checkbox" 
-                          checked={isSelected}
-                          onChange={() => {
-                            if (!isBuyNowMode) toggleSelect(item.id);
-                          }}
-                          disabled={isBuyNowMode}
-                        className="w-5 h-5 accent-[#F77F00] cursor-pointer shadow-sm disabled:opacity-50"
-                        />
-                      </div>
-
-                      <div className="w-full md:w-32 h-40 bg-[#f8f9fa] dark:bg-[#0a0a0a] border border-black/10 dark:border-white/10 flex-shrink-0 relative">
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1581553680321-4fffae59fdda?w=400&q=80" }} />
-                        {hasDiscount && (
-                          <div className="absolute top-2 -left-2 bg-red-600 text-white text-[10px] font-black px-3 py-1 uppercase tracking-widest shadow-lg">SALE</div>
-                        )}
-                      </div>
+                    <div className="w-full md:w-32 h-40 bg-[#f8f9fa] dark:bg-[#0a0a0a] border border-black/10 dark:border-white/10 flex-shrink-0 relative">
+                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1581553680321-4fffae59fdda?w=400&q=80" }} />
+                      {hasDiscount && (
+                        <div className="absolute top-2 -left-2 bg-red-600 text-white text-[10px] font-black px-3 py-1 uppercase tracking-widest shadow-lg">SALE</div>
+                      )}
                     </div>
 
                     <div className="flex-1 flex flex-col justify-between h-full w-full">
@@ -427,47 +398,7 @@ export default function KeranjangPage() {
             </div>
           </section>
 
-          {/* 3. Pembayaran */}
-          <section className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 shadow-sm">
-             <div className="bg-[#212529] dark:bg-[#1a1a1a] px-6 py-4 border-b border-white/10">
-              <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white flex items-center gap-3">
-                <CreditCard className="w-5 h-5 text-[#F77F00]" /> Metode Pembayaran
-              </h2>
-            </div>
-            <div className="p-6 md:p-8">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                
-                <label className={`relative flex flex-col items-center justify-center p-6 border-2 cursor-pointer transition-all duration-300 text-center gap-4 overflow-hidden ${paymentMethod === "qris" ? "border-[#F77F00] border-[3px] bg-white dark:bg-[#121212] shadow-[0_0_15px_rgba(247,127,0,0.15)] scale-[1.02]" : "border-black/10 dark:border-white/10 bg-[#f8f9fa] dark:bg-[#1a1a1a] opacity-70 hover:opacity-100 hover:border-black/30 dark:hover:border-white/30"}`}>
-                  {paymentMethod === "qris" && <div className="absolute top-0 right-0 w-6 h-6 bg-[#F77F00] flex items-center justify-center rounded-bl-lg"><ShieldCheck className="w-3 h-3 text-white" /></div>}
-                  <input type="radio" name="payment" className="hidden" checked={paymentMethod === "qris"} onChange={() => setPaymentMethod("qris")} />
-                  <div className={`w-12 h-12 flex items-center justify-center border-2 transition-colors ${paymentMethod === "qris" ? "border-[#F77F00] text-[#F77F00] bg-[#F77F00]/10" : "border-current"}`}><QrCode className="w-6 h-6" /></div>
-                  <span className={`text-xs font-black uppercase tracking-widest transition-colors ${paymentMethod === "qris" ? "text-[#F77F00]" : ""}`}>QRIS</span>
-                </label>
 
-                <label className={`relative flex flex-col items-center justify-center p-6 border-2 cursor-pointer transition-all duration-300 text-center gap-4 overflow-hidden ${paymentMethod === "ewallet" ? "border-[#F77F00] border-[3px] bg-white dark:bg-[#121212] shadow-[0_0_15px_rgba(247,127,0,0.15)] scale-[1.02]" : "border-black/10 dark:border-white/10 bg-[#f8f9fa] dark:bg-[#1a1a1a] opacity-70 hover:opacity-100 hover:border-black/30 dark:hover:border-white/30"}`}>
-                  {paymentMethod === "ewallet" && <div className="absolute top-0 right-0 w-6 h-6 bg-[#F77F00] flex items-center justify-center rounded-bl-lg"><ShieldCheck className="w-3 h-3 text-white" /></div>}
-                  <input type="radio" name="payment" className="hidden" checked={paymentMethod === "ewallet"} onChange={() => setPaymentMethod("ewallet")} />
-                  <div className={`w-12 h-12 flex items-center justify-center border-2 transition-colors ${paymentMethod === "ewallet" ? "border-[#F77F00] text-[#F77F00] bg-[#F77F00]/10" : "border-current"}`}><Wallet className="w-6 h-6" /></div>
-                  <span className={`text-xs font-black uppercase tracking-widest transition-colors ${paymentMethod === "ewallet" ? "text-[#F77F00]" : ""}`}>E-Wallet</span>
-                </label>
-                
-                <label className={`relative flex flex-col items-center justify-center p-6 border-2 cursor-pointer transition-all duration-300 text-center gap-4 overflow-hidden ${paymentMethod === "transfer" ? "border-[#F77F00] border-[3px] bg-white dark:bg-[#121212] shadow-[0_0_15px_rgba(247,127,0,0.15)] scale-[1.02]" : "border-black/10 dark:border-white/10 bg-[#f8f9fa] dark:bg-[#1a1a1a] opacity-70 hover:opacity-100 hover:border-black/30 dark:hover:border-white/30"}`}>
-                  {paymentMethod === "transfer" && <div className="absolute top-0 right-0 w-6 h-6 bg-[#F77F00] flex items-center justify-center rounded-bl-lg"><ShieldCheck className="w-3 h-3 text-white" /></div>}
-                  <input type="radio" name="payment" className="hidden" checked={paymentMethod === "transfer"} onChange={() => setPaymentMethod("transfer")} />
-                  <div className={`w-12 h-12 flex items-center justify-center border-2 transition-colors ${paymentMethod === "transfer" ? "border-[#F77F00] text-[#F77F00] bg-[#F77F00]/10" : "border-current"}`}><Building2 className="w-6 h-6" /></div>
-                  <span className={`text-xs font-black uppercase tracking-widest transition-colors ${paymentMethod === "transfer" ? "text-[#F77F00]" : ""}`}>Transfer Bank</span>
-                </label>
-
-                <label className={`relative flex flex-col items-center justify-center p-6 border-2 cursor-pointer transition-all duration-300 text-center gap-4 overflow-hidden ${paymentMethod === "cc" ? "border-[#F77F00] border-[3px] bg-white dark:bg-[#121212] shadow-[0_0_15px_rgba(247,127,0,0.15)] scale-[1.02]" : "border-black/10 dark:border-white/10 bg-[#f8f9fa] dark:bg-[#1a1a1a] opacity-70 hover:opacity-100 hover:border-black/30 dark:hover:border-white/30"}`}>
-                  {paymentMethod === "cc" && <div className="absolute top-0 right-0 w-6 h-6 bg-[#F77F00] flex items-center justify-center rounded-bl-lg"><ShieldCheck className="w-3 h-3 text-white" /></div>}
-                  <input type="radio" name="payment" className="hidden" checked={paymentMethod === "cc"} onChange={() => setPaymentMethod("cc")} />
-                  <div className={`w-12 h-12 flex items-center justify-center border-2 transition-colors ${paymentMethod === "cc" ? "border-[#F77F00] text-[#F77F00] bg-[#F77F00]/10" : "border-current"}`}><CreditCard className="w-6 h-6" /></div>
-                  <span className={`text-xs font-black uppercase tracking-widest transition-colors ${paymentMethod === "cc" ? "text-[#F77F00]" : ""}`}>Kartu Kredit</span>
-                </label>
-
-              </div>
-            </div>
-          </section>
 
         </div>
 
@@ -585,7 +516,7 @@ export default function KeranjangPage() {
                   {isProcessing ? (
                     <><span className="w-5 h-5 border-[3px] border-black border-t-transparent rounded-full animate-spin"></span> MEMPROSES...</>
                   ) : (
-                    "BUAT PESANAN"
+                    "PILIH METODE PEMBAYARAN"
                   )}
                 </button>
               </div>
