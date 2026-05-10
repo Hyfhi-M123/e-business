@@ -1,5 +1,8 @@
-refactor: perbarui tampilan dan tombol halaman keranjang
+feat: membuat halaman tentang kami dan penyesuaian konten lokal
 
-- Hapus UI metode pembayaran manual dari halaman keranjang.
-- Hapus checklist di daftar pesanan, fokus tampilkan barang terpilih saja.
-- Ganti teks tombol bawah menjadi "PILIH METODE PEMBAYARAN".
+- Membuat halaman Tentang Kami secara utuh untuk menampilkan profil dan informasi utama toko.
+- Menyesuaikan tema antarmuka dan narasi menjadi merek perlengkapan pendakian lokal Indonesia.
+- Menambahkan profil anggota tim pengembang (Nabilla, Makka, Luthfi).
+- Menambahkan daftar testimoni pelanggan dari berbagai gunung di Indonesia.
+- Menambahkan visi, misi, serta komitmen pelestarian alam ("Jaga Gunungnya, Bukan Cuma Daki").
+- Menambahkan bagian formulir kontak dengan alamat kantor Bandar Lampung dan tautan langsung ke WhatsApp.
