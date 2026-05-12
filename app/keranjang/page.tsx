@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useCart, CartItem } from "../context/CartContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { Trash2, ShieldCheck, MapPin, CreditCard, Truck, Tag, Lock, ArrowRight, ChevronLeft, Package, Plus, Minus, Map, Crosshair, AlertTriangle, Fingerprint, ShoppingBag, QrCode, Wallet, Building2 } from "lucide-react";
+import { Trash2, ShieldCheck, MapPin, CreditCard, Truck, Tag, Lock, ArrowRight, ChevronLeft, Package, Plus, Minus, Map, Crosshair, AlertTriangle, Fingerprint, ShoppingBag, QrCode, Wallet, Building2, Loader2, RefreshCw, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Script from "next/script";
@@ -26,7 +26,39 @@ export default function KeranjangPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInsured, setIsInsured] = useState(false);
   const [isWaitingPayment, setIsWaitingPayment] = useState(false);
+
+  // Biteship Shipping Rates
+  const [shippingRates, setShippingRates] = useState<any[]>([]);
+  const [isLoadingRates, setIsLoadingRates] = useState(false);
+  const [selectedRate, setSelectedRate] = useState<any>(null);
+  const [postalCode, setPostalCode] = useState("12190");
+  const [ratesError, setRatesError] = useState("");
   const [paymentData, setPaymentData] = useState<any>(null);
+  const [paymentToken, setPaymentToken] = useState("");
+
+  useEffect(() => {
+    if (paymentToken && (window as any).snap) {
+      (window as any).snap.embed(paymentToken, {
+        embedId: 'snap-container',
+        onSuccess: function(result: any) {
+          router.push(`/pembayaran?method=${paymentMethod}&total=${finalTotal}&status=success`);
+        },
+        onPending: function(result: any) {
+          router.push(`/pembayaran?method=${paymentMethod}&total=${finalTotal}&status=pending`);
+        },
+        onError: function(result: any) {
+          alert("Pembayaran gagal!");
+          setIsProcessing(false);
+          setPaymentToken("");
+        },
+        onClose: function() {
+          setIsProcessing(false);
+          setPaymentToken("");
+        }
+      });
+    }
+  }, [paymentToken]);
+
   useEffect(() => {
     if (isBuyNowMode) {
       const buyNowData = sessionStorage.getItem("trailforge_buynow");
@@ -115,9 +147,58 @@ export default function KeranjangPage() {
   const FREE_SHIPPING_THRESHOLD = 2500000;
   const isFreeShipping = checkoutTotal >= FREE_SHIPPING_THRESHOLD;
   
-  const shippingCost = shippingMethod === "standard" 
-    ? (isFreeShipping ? 0 : 50000) 
-    : 150000;
+  const shippingCost = isFreeShipping ? 0 : (selectedRate ? selectedRate.price : 0);
+
+  // Fetch shipping rates from Biteship API
+  const fetchShippingRates = async (destPostalCode?: string) => {
+    const code = destPostalCode || postalCode;
+    if (!code || code.length < 5) return;
+    
+    setIsLoadingRates(true);
+    setRatesError("");
+    
+    try {
+      const items = selectedCheckoutItems.map(item => ({
+        name: item.name,
+        value: item.price,
+        weight: 1200,
+        quantity: item.quantity,
+        length: 30,
+        width: 20,
+        height: 15,
+      }));
+
+      const res = await fetch("/api/shipping/rates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          destination_postal_code: parseInt(code),
+          items,
+        }),
+      });
+
+      const data = await res.json();
+      
+      if (data.rates && data.rates.length > 0) {
+        setShippingRates(data.rates);
+        // Auto-select cheapest option
+        setSelectedRate(data.rates[0]);
+      } else {
+        setRatesError("Tidak ditemukan layanan pengiriman untuk kode pos ini.");
+      }
+    } catch (err) {
+      setRatesError("Gagal memuat ongkos kirim. Silakan coba lagi.");
+    } finally {
+      setIsLoadingRates(false);
+    }
+  };
+
+  // Auto-fetch rates on mount
+  useEffect(() => {
+    if (selectedCheckoutItems.length > 0) {
+      fetchShippingRates();
+    }
+  }, [selectedCheckoutItems.length]);
 
   const totalOriginalPrice = selectedCheckoutItems.reduce((sum, item) => sum + ((item.originalPrice || item.price) * item.quantity), 0);
   const totalProductDiscount = totalOriginalPrice - checkoutTotal;
@@ -175,22 +256,8 @@ export default function KeranjangPage() {
       const data = await response.json();
 
       if (data.token) {
-        // Panggil popup Midtrans Snap
-        (window as any).snap.pay(data.token, {
-          onSuccess: function(result: any) {
-            router.push(`/pembayaran?method=${paymentMethod}&total=${finalTotal}&status=success`);
-          },
-          onPending: function(result: any) {
-            router.push(`/pembayaran?method=${paymentMethod}&total=${finalTotal}&status=pending`);
-          },
-          onError: function(result: any) {
-            alert("Pembayaran gagal!");
-            setIsProcessing(false);
-          },
-          onClose: function() {
-            setIsProcessing(false);
-          }
-        });
+        // Embed Midtrans Snap di dalam modal kita
+        setPaymentToken(data.token);
       } else {
         console.warn("Midtrans Error:", data.error || data);
         alert("Gagal memproses pembayaran. Coba lagi.");
@@ -227,6 +294,34 @@ export default function KeranjangPage() {
       <Navbar />
       <Script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || ""} strategy="lazyOnload" />
       
+      {/* Midtrans Embed Modal */}
+      <AnimatePresence>
+        {paymentToken && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-white dark:bg-[#1a1a1a] rounded-3xl w-full max-w-md shadow-2xl relative overflow-hidden flex flex-col"
+            >
+              <div className="bg-[#212529] px-6 py-4 flex justify-between items-center border-b border-white/10">
+                <h3 className="text-white font-black uppercase tracking-widest text-sm flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" /> Selesaikan Pembayaran
+                </h3>
+                <button 
+                  onClick={() => { setPaymentToken(""); setIsProcessing(false); }} 
+                  className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+                >
+                  <Crosshair className="w-4 h-4 rotate-45" />
+                </button>
+              </div>
+              <div id="snap-container" className="w-full min-h-[500px]"></div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-[1600px] mx-auto px-6 md:px-12 lg:px-16 pt-36 flex flex-col xl:flex-row gap-10 xl:gap-20">
         
         {/* ================================================== */}
@@ -267,47 +362,7 @@ export default function KeranjangPage() {
             </div>
           </div>
 
-          {/* 1. Alamat Pengiriman */}
-          <section className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 overflow-hidden relative shadow-sm">
-            <div className="bg-[#212529] dark:bg-[#1a1a1a] px-6 py-4 flex justify-between items-center border-b border-white/10">
-              <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white flex items-center gap-3">
-                <MapPin className="w-5 h-5 text-[#F77F00]" /> Alamat Pengiriman
-              </h2>
-              <span className="text-[10px] font-mono text-[#F77F00] border border-[#F77F00]/50 px-2 py-1">LOKASI TERDETEKSI</span>
-            </div>
-            
-            <div className="flex flex-col md:flex-row">
-              {/* Real Leaflet Map */}
-              <div className="w-full md:w-64 min-h-[240px] bg-[#f8f9fa] dark:bg-[#121212] relative overflow-hidden flex-shrink-0 border-r border-black/10 dark:border-white/10 z-0">
-                 <div ref={mapRef} className="w-full h-full absolute inset-0 z-0"></div>
-                 {/* Overlay to enforce techwear styling and prevent interaction */}
-                 <div className="absolute inset-0 bg-[#F77F00]/20 pointer-events-none z-10 border-[4px] border-[#F77F00]/20"></div>
-              </div>
-              
-              <div className="p-6 md:p-8 flex-1 flex flex-col justify-center">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-black uppercase text-xl">Alex Mercer</h3>
-                    <span className="text-neutral-500 font-mono text-sm block mt-1">No. HP: (+62) 812-3456-7890</span>
-                  </div>
-                  <button className="text-xs font-black uppercase tracking-widest text-[#F77F00] hover:text-[#e06f00] border-b-2 border-[#F77F00] transition-colors pb-1">
-                    Ubah Alamat
-                  </button>
-                </div>
-                
-                <div className="bg-[#f8f9fa] dark:bg-[#1a1a1a] p-4 border border-black/5 dark:border-white/5">
-                  <span className="inline-block px-2 py-1 bg-black text-white dark:bg-white dark:text-black text-[10px] font-black uppercase tracking-widest mb-3">RUMAH</span>
-                  <p className="text-sm text-[#6C757D] dark:text-neutral-400 leading-relaxed font-mono">
-                    Jl. Jendral Sudirman No. 45, Tower A, Lantai 12<br/>
-                    Sudirman Central Business District (SCBD)<br/>
-                    Kebayoran Baru, Jakarta Selatan, 12190
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* 2. Daftar Pesanan */}
+          {/* 1. Daftar Pesanan */}
           <section className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 shadow-sm">
             <div className="bg-[#212529] dark:bg-[#1a1a1a] px-6 py-4 flex justify-between items-center border-b border-white/10">
               <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white flex items-center gap-3">
@@ -370,31 +425,132 @@ export default function KeranjangPage() {
                 )})}
               </div>
             </div>
+          </section>
+
+          {/* 2. Alamat Pengiriman (dipindah ke bawah daftar pesanan) */}
+          <section className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 overflow-hidden relative shadow-sm">
+            <div className="bg-[#212529] dark:bg-[#1a1a1a] px-6 py-4 flex justify-between items-center border-b border-white/10">
+              <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white flex items-center gap-3">
+                <MapPin className="w-5 h-5 text-[#F77F00]" /> Alamat Pengiriman
+              </h2>
+              <span className="text-[10px] font-mono text-[#F77F00] border border-[#F77F00]/50 px-2 py-1">LOKASI TERDETEKSI</span>
+            </div>
             
-            {/* Opsi Pengiriman */}
-            <div className="bg-[#f8f9fa] dark:bg-[#1a1a1a] border-t border-black/10 dark:border-white/10 p-6 md:p-8">
-              <span className="text-xs font-black tracking-widest uppercase text-[#6C757D] block mb-4 flex items-center gap-2">
-                <Truck className="w-4 h-4" /> Pilih Ekspedisi Pengiriman
-              </span>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
-                <label className={`relative p-5 border-2 cursor-pointer transition-all overflow-hidden ${shippingMethod === "standard" ? "border-[#F77F00] bg-white dark:bg-[#121212] shadow-md" : "border-black/10 dark:border-white/10 bg-transparent opacity-70 hover:opacity-100"}`}>
-                  <input type="radio" name="shipping" checked={shippingMethod === "standard"} onChange={() => setShippingMethod("standard")} className="absolute opacity-0" />
-                  {shippingMethod === "standard" && <div className="absolute top-0 right-0 w-8 h-8 bg-[#F77F00] flex items-center justify-center rounded-bl-lg"><ShieldCheck className="w-4 h-4 text-white" /></div>}
-                  <h4 className="text-lg font-black uppercase tracking-tighter mb-1 text-[#212529] dark:text-white">Reguler</h4>
-                  <p className="text-[10px] font-mono text-[#6C757D] mb-4">Estimasi Tiba: 3-5 Hari Kerja</p>
-                  <span className={`text-xl font-black ${isFreeShipping ? "text-emerald-600" : "text-[#F77F00]"}`}>{isFreeShipping ? "GRATIS ONGKIR" : "Rp 50.000"}</span>
-                </label>
-
-                <label className={`relative p-5 border-2 cursor-pointer transition-all overflow-hidden ${shippingMethod === "express" ? "border-[#F77F00] bg-white dark:bg-[#121212] shadow-md" : "border-black/10 dark:border-white/10 bg-transparent opacity-70 hover:opacity-100"}`}>
-                  <input type="radio" name="shipping" checked={shippingMethod === "express"} onChange={() => setShippingMethod("express")} className="absolute opacity-0" />
-                  {shippingMethod === "express" && <div className="absolute top-0 right-0 w-8 h-8 bg-[#F77F00] flex items-center justify-center rounded-bl-lg"><ShieldCheck className="w-4 h-4 text-white" /></div>}
-                  <h4 className="text-lg font-black uppercase tracking-tighter mb-1 text-[#212529] dark:text-white">Express</h4>
-                  <p className="text-[10px] font-mono text-[#6C757D] mb-4">Estimasi Tiba: 1-2 Hari Kerja</p>
-                  <span className="text-xl font-black text-[#F77F00]">Rp 150.000</span>
-                </label>
-
+            <div className="flex flex-col md:flex-row">
+              {/* Real Leaflet Map */}
+              <div className="w-full md:w-64 min-h-[240px] bg-[#f8f9fa] dark:bg-[#121212] relative overflow-hidden flex-shrink-0 border-r border-black/10 dark:border-white/10 z-0">
+                 <div ref={mapRef} className="w-full h-full absolute inset-0 z-0"></div>
+                 {/* Overlay to enforce techwear styling and prevent interaction */}
+                 <div className="absolute inset-0 bg-[#F77F00]/20 pointer-events-none z-10 border-[4px] border-[#F77F00]/20"></div>
               </div>
+              
+              <div className="p-6 md:p-8 flex-1 flex flex-col justify-center">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-black uppercase text-xl">Alex Mercer</h3>
+                    <span className="text-neutral-500 font-mono text-sm block mt-1">No. HP: (+62) 812-3456-7890</span>
+                  </div>
+                  <button className="text-xs font-black uppercase tracking-widest text-[#F77F00] hover:text-[#e06f00] border-b-2 border-[#F77F00] transition-colors pb-1">
+                    Ubah Alamat
+                  </button>
+                </div>
+                
+                <div className="bg-[#f8f9fa] dark:bg-[#1a1a1a] p-4 border border-black/5 dark:border-white/5">
+                  <span className="inline-block px-2 py-1 bg-black text-white dark:bg-white dark:text-black text-[10px] font-black uppercase tracking-widest mb-3">RUMAH</span>
+                  <p className="text-sm text-[#6C757D] dark:text-neutral-400 leading-relaxed font-mono">
+                    Jl. Jendral Sudirman No. 45, Tower A, Lantai 12<br/>
+                    Sudirman Central Business District (SCBD)<br/>
+                    Kebayoran Baru, Jakarta Selatan, 12190
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 3. Pilih Ekspedisi */}
+          <section className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 shadow-sm">
+            {/* Opsi Pengiriman — Biteship Integration */}
+            <div className="bg-[#212529] dark:bg-[#1a1a1a] px-6 py-4 flex justify-between items-center border-b border-white/10">
+              <h2 className="text-lg md:text-xl font-black uppercase tracking-tighter text-white flex items-center gap-3">
+                <Truck className="w-5 h-5 text-[#F77F00]" /> Pilih Ekspedisi
+              </h2>
+              {postalCode && (
+                <span className="text-[10px] font-mono text-emerald-400 border border-emerald-400/50 px-2 py-1 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  KODE POS: {postalCode}
+                </span>
+              )}
+            </div>
+
+            <div className="p-6 md:p-8">
+
+              {/* Loading State */}
+              {isLoadingRates && (
+                <div className="flex flex-col items-center justify-center py-12 gap-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#F77F00]" />
+                  <p className="text-xs font-mono uppercase tracking-widest text-[#6C757D] animate-pulse">Mencari ongkos kirim ke kode pos {postalCode}...</p>
+                </div>
+              )}
+
+              {/* Error State */}
+              {ratesError && !isLoadingRates && (
+                <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 p-4 flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-bold text-red-700 dark:text-red-400">{ratesError}</p>
+                    <button onClick={() => fetchShippingRates()} className="text-xs font-black text-red-500 uppercase tracking-widest mt-2 flex items-center gap-1 hover:text-red-700"><RefreshCw className="w-3 h-3" /> Coba Lagi</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Courier Options */}
+              {!isLoadingRates && shippingRates.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  {shippingRates.map((rate, i) => {
+                    const isSelected = selectedRate?.courier_code === rate.courier_code && selectedRate?.service_code === rate.service_code;
+                    const courierLogos: Record<string, string> = { jne: "JNE", sicepat: "SCP", anteraja: "ANT", jnt: "J&T", ninja: "NJV", tiki: "TKI" };
+                    return (
+                      <label 
+                        key={`${rate.courier_code}-${rate.service_code}-${i}`}
+                        className={`relative p-5 border-2 cursor-pointer transition-all overflow-hidden flex items-center gap-5 ${
+                          isSelected ? "border-[#F77F00] bg-white dark:bg-[#121212] shadow-md" : "border-black/10 dark:border-white/10 bg-transparent opacity-70 hover:opacity-100"
+                        }`}
+                      >
+                        <input type="radio" name="shipping_rate" checked={isSelected} onChange={() => setSelectedRate(rate)} className="absolute opacity-0" />
+                        {isSelected && <div className="absolute top-0 right-0 w-8 h-8 bg-[#F77F00] flex items-center justify-center rounded-bl-lg"><ShieldCheck className="w-4 h-4 text-white" /></div>}
+                        
+                        {/* Courier Logo */}
+                        <div className="w-14 h-14 bg-black/5 dark:bg-white/5 flex items-center justify-center shrink-0">
+                          <span className="text-sm font-black text-[#212529] dark:text-white">{courierLogos[rate.courier_code] || rate.courier_code.toUpperCase().slice(0,3)}</span>
+                        </div>
+
+                        {/* Details */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-base font-black uppercase tracking-tighter text-[#212529] dark:text-white truncate">{rate.courier_name}</h4>
+                          <p className="text-[10px] font-mono text-[#6C757D] truncate">{rate.service_name}</p>
+                          <p className="text-[10px] font-mono text-[#6C757D] mt-1">Estimasi: {rate.duration}</p>
+                        </div>
+
+                        {/* Price */}
+                        <div className="text-right shrink-0">
+                          <span className={`text-lg font-black ${
+                            isFreeShipping ? "text-emerald-600 line-through" : "text-[#F77F00]"
+                          }`}>{formatRupiah(rate.price)}</span>
+                          {isFreeShipping && <p className="text-[10px] font-black text-emerald-600 uppercase">GRATIS</p>}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* No Address State */}
+              {!isLoadingRates && shippingRates.length === 0 && !ratesError && (
+                <div className="text-center py-8 text-[#6C757D]">
+                  <MapPin className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-xs font-mono uppercase tracking-widest">Atur alamat pengiriman untuk melihat pilihan kurir</p>
+                </div>
+              )}
             </div>
           </section>
 
@@ -454,11 +610,13 @@ export default function KeranjangPage() {
                   )}
 
                   <div className="flex justify-between border-b border-dotted border-black/20 pb-2 mt-2">
-                    <span>ONGKOS KIRIM ({shippingMethod.substring(0,3)})</span>
-                    {shippingMethod === "standard" && isFreeShipping ? (
+                    <span>ONGKOS KIRIM {selectedRate ? `(${selectedRate.courier_code.toUpperCase()})` : ""}</span>
+                    {isFreeShipping ? (
                       <span className="text-emerald-700 font-bold">GRATIS</span>
-                    ) : (
+                    ) : selectedRate ? (
                       <span className="font-bold">{formatRupiah(shippingCost)}</span>
+                    ) : (
+                      <span className="text-black/40 italic">Pilih kurir</span>
                     )}
                   </div>
                   

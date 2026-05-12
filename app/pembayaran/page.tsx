@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ShieldCheck, Copy, ArrowRight, Lock, CheckCircle2, ChevronRight, Home, Smartphone, QrCode as QrCodeIcon, Wallet, Building2, CreditCard } from "lucide-react";
 import Link from "next/link";
 import Navbar from "../components/Navbar";
 
 export default function PembayaranPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [isMounted, setIsMounted] = useState(false);
   const [method, setMethod] = useState<string | null>(null);
@@ -23,12 +24,24 @@ export default function PembayaranPage() {
     setMethod(searchParams.get("method"));
     setTotal(searchParams.get("total"));
     
-    // Simulate real-time payment success after 10-15 seconds
-    const successTimer = setTimeout(() => {
+    const urlStatus = searchParams.get("status");
+    if (urlStatus === "success") {
       setPaymentStatus("success");
-    }, Math.floor(Math.random() * 5000) + 10000);
-    
-    return () => clearTimeout(successTimer);
+      
+      const orderId = searchParams.get("order_id") || "TRF-991203";
+      const redirectTimer = setTimeout(() => {
+        router.push(`/track/${orderId}`);
+      }, 3000);
+      
+      return () => clearTimeout(redirectTimer);
+    } else {
+      // Simulate real-time payment success after 10-15 seconds if pending
+      const successTimer = setTimeout(() => {
+        setPaymentStatus("success");
+      }, Math.floor(Math.random() * 5000) + 10000);
+      
+      return () => clearTimeout(successTimer);
+    }
   }, [searchParams]);
 
   useEffect(() => {
@@ -96,12 +109,17 @@ export default function PembayaranPage() {
               <CheckCircle2 className="w-12 h-12" />
             </div>
             <h2 className="text-3xl font-black uppercase tracking-tighter mb-2 text-emerald-500">LUNAS</h2>
-            <p className="text-[#6C757D] dark:text-neutral-400 font-mono text-sm mb-8">Dana sebesar <strong className="text-black dark:text-white">{formatRupiah(total)}</strong> telah diverifikasi.</p>
+            <p className="text-[#6C757D] dark:text-neutral-400 font-mono text-sm mb-4">Dana sebesar <strong className="text-black dark:text-white">{formatRupiah(total)}</strong> telah diverifikasi.</p>
+            
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-8 font-mono text-xs uppercase">
+              <div className="w-3 h-3 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+              Mengalihkan ke pelacakan pesanan...
+            </div>
             
             <div className="w-full h-[1px] bg-black/10 dark:bg-white/10 mb-8"></div>
             
-            <Link href="/" className="inline-flex items-center justify-center gap-3 w-full md:w-auto px-10 py-4 bg-black text-white dark:bg-white dark:text-black font-black text-xs uppercase tracking-widest hover:scale-[1.02] transition-transform">
-              <Home className="w-4 h-4" /> KEMBALI KE BERANDA
+            <Link href={`/track/${searchParams.get("order_id") || "TRF-991203"}`} className="inline-flex items-center justify-center gap-3 w-full md:w-auto px-10 py-4 bg-black text-white dark:bg-white dark:text-black font-black text-xs uppercase tracking-widest hover:scale-[1.02] transition-transform">
+              LIHAT PESANAN <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>
         ) : (

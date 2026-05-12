@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowLeft, Mountain, User, Package, MapPin, LogOut, Mail, Phone, Calendar, Edit3, ChevronRight, Loader2, Camera, Trash2, Star, X, Home, Building2, CreditCard, Wallet, Check, Truck, AlertTriangle, Heart } from "lucide-react";
+import { ArrowLeft, Mountain, User, Package, MapPin, LogOut, Mail, Phone, Calendar, Edit3, ChevronRight, Loader2, Camera, Trash2, Star, X, Home, Building2, CreditCard, Wallet, Check, Truck, AlertTriangle, Heart, Clock } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../utils/supabase/client";
@@ -34,7 +34,8 @@ const tabs = [
 import { DUMMY_ORDERS } from "../lib/orders";
 import { ALL_PRODUCTS } from "../lib/products";
 
-const ORDER_TABS = ["Semua", "Belum Bayar", "Diproses", "Dikirim", "Selesai", "Dibatalkan"];
+const ORDER_TABS = ["Semua", "Belum Bayar", "Diproses", "Dikirim", "Selesai"];
+const DIPROSES_STATUSES = ["Menunggu Konfirmasi", "Dikemas"];
 
 export default function ProfilPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("profil");
@@ -397,8 +398,8 @@ export default function ProfilPage() {
 
                 {/* Orders List */}
                 <div className="space-y-6">
-                  {DUMMY_ORDERS.filter(o => orderFilter === "Semua" || o.status === orderFilter).length > 0 ? (
-                    DUMMY_ORDERS.filter(o => orderFilter === "Semua" || o.status === orderFilter).map(order => (
+                  {DUMMY_ORDERS.filter(o => orderFilter === "Semua" || (orderFilter === "Diproses" ? DIPROSES_STATUSES.includes(o.status) : o.status === orderFilter)).length > 0 ? (
+                    DUMMY_ORDERS.filter(o => orderFilter === "Semua" || (orderFilter === "Diproses" ? DIPROSES_STATUSES.includes(o.status) : o.status === orderFilter)).map(order => (
                       <div key={order.id} className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                         {/* Header Store & Status */}
                         <Link href={`/pesanan/${order.id}`} className="block">
@@ -411,8 +412,16 @@ export default function ProfilPage() {
                               {order.status === "Selesai" && <span className="hidden sm:flex text-xs font-bold text-emerald-600 items-center gap-1"><Check className="w-3 h-3"/> Pesanan Selesai</span>}
                               {order.status === "Dikirim" && <span className="hidden sm:flex text-xs font-bold text-[#F77F00] items-center gap-1"><Truck className="w-3 h-3"/> Sedang Dikirim</span>}
                               {order.status === "Belum Bayar" && <span className="hidden sm:flex text-xs font-bold text-red-500 items-center gap-1"><AlertTriangle className="w-3 h-3"/> Menunggu Pembayaran</span>}
-                              <span className="hidden sm:inline text-neutral-300 dark:text-neutral-700 mx-2">|</span>
-                              <span className="text-xs font-mono text-[#F77F00] sm:text-[#6C757D]">{order.status.toUpperCase()}</span>
+                              {order.status === "Menunggu Konfirmasi" && <span className="hidden sm:flex text-xs font-bold text-amber-500 items-center gap-1"><Clock className="w-3 h-3"/> Menunggu Konfirmasi</span>}
+                              {order.status === "Dikemas" && <span className="hidden sm:flex text-xs font-bold text-blue-500 items-center gap-1"><Package className="w-3 h-3"/> Sedang Dikemas</span>}
+                              <span className={`text-xs font-mono px-2 py-0.5 rounded ${
+                                order.status === "Selesai" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600" :
+                                order.status === "Dikirim" ? "bg-orange-50 dark:bg-orange-500/10 text-[#F77F00]" :
+                                order.status === "Belum Bayar" ? "bg-red-50 dark:bg-red-500/10 text-red-500" :
+                                order.status === "Menunggu Konfirmasi" ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600" :
+                                order.status === "Dikemas" ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600" :
+                                "bg-black/5 text-[#6C757D]"
+                              }`}>{order.status.toUpperCase()}</span>
                             </div>
                           </div>
 
@@ -436,6 +445,26 @@ export default function ProfilPage() {
                           </div>
                         </Link>
 
+                        {/* Shipping Info Strip */}
+                        {(order.status === "Dikirim" || order.status === "Selesai") && order.shipping.receipt !== "-" && (
+                          <div className="px-4 py-3 border-t border-black/5 dark:border-white/5 bg-emerald-50/50 dark:bg-emerald-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-emerald-500/10 rounded-lg flex items-center justify-center">
+                                <Truck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">{order.shipping.courier}</p>
+                                <p className="text-[10px] font-mono text-[#6C757D]">Resi: {order.shipping.receipt}</p>
+                              </div>
+                            </div>
+                            <Link href={`/track/${order.id}`}>
+                              <button className="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/10 transition-colors flex items-center gap-1.5">
+                                <MapPin className="w-3 h-3" /> Lacak Pengiriman
+                              </button>
+                            </Link>
+                          </div>
+                        )}
+
                         {/* Footer & Actions */}
                         <div className="p-4 bg-[#f8f9fa] dark:bg-[#1a1a1a] border-t border-black/5 dark:border-white/5 flex flex-col sm:flex-row justify-between items-center gap-4">
                           <div className="text-xs text-[#6C757D]">
@@ -446,20 +475,16 @@ export default function ProfilPage() {
                               <button className="flex-1 sm:flex-none px-6 py-2 bg-[#F77F00] text-white font-bold text-xs uppercase tracking-widest rounded-lg hover:bg-[#e06f00] transition-colors">Bayar</button>
                             )}
                             {order.status === "Dikirim" && (
-                              <Link href={`/track/${order.id}`} className="flex-1 sm:flex-none">
-                                <button className="w-full px-6 py-2 bg-[#F77F00] text-white font-bold text-xs uppercase tracking-widest rounded-lg hover:bg-[#e06f00] transition-colors">Lacak</button>
-                              </Link>
+                              <button className="flex-1 sm:flex-none px-6 py-2 bg-emerald-600 text-white font-bold text-xs uppercase tracking-widest rounded-lg hover:bg-emerald-700 transition-colors">Pesanan Diterima</button>
                             )}
                             {order.status === "Selesai" && (
                               <Link href={`/pesanan/${order.id}/nilai`} className="flex-1 sm:flex-none">
                                 <button className="w-full px-6 py-2 bg-[#F77F00] text-white font-bold text-xs uppercase tracking-widest rounded-lg hover:bg-[#e06f00] transition-colors">Nilai</button>
                               </Link>
                             )}
-                            {(order.status === "Selesai" || order.status === "Dibatalkan") && (
-                              <Link href="/katalog" className="flex-1 sm:flex-none">
-                                <button className="w-full px-6 py-2 border border-black/20 dark:border-white/20 text-[#212529] dark:text-white font-bold text-xs uppercase tracking-widest rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">Beli Lagi</button>
-                              </Link>
-                            )}
+                            <Link href={`/track/${order.id}`} className="flex-1 sm:flex-none">
+                              <button className="w-full px-6 py-2 border border-black/20 dark:border-white/20 text-[#212529] dark:text-white font-bold text-xs uppercase tracking-widest rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">Lihat Status</button>
+                            </Link>
                           </div>
                         </div>
                       </div>
