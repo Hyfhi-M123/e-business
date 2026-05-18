@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Mountain } from "lucide-react";
 
 export default function Footer() {
   const [email, setEmail] = useState("");
@@ -39,7 +40,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
         {/* Newsletter */}
         <div className="lg:col-span-2">
-          <span className="text-2xl font-black tracking-tighter uppercase flex items-center gap-2 mb-4">TrailForge<span className="w-2 h-2 bg-[#F77F00] dark:bg-orange-500 rounded-full"></span></span>
+          <span className="text-2xl font-black tracking-tighter uppercase flex items-center gap-2 mb-4"><Mountain className="w-6 h-6 text-[#F77F00] dark:text-orange-500" />TrailForge<span className="w-2 h-2 bg-[#F77F00] dark:bg-orange-500 rounded-full"></span></span>
           <p className="text-[#6C757D] dark:text-neutral-400 text-sm font-medium mb-6 max-w-md">
             Dapatkan intel eksklusif tentang rilisan gear terbaru dan diskon 10% untuk ekspedisi pertamamu bersama kami.
           </p>
