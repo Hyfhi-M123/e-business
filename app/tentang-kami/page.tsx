@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 import { motion } from "framer-motion";
 import { Mountain, MapPin, Mail, Wind, Droplets, Weight, Leaf, MessageCircle, ChevronRight, Star } from "lucide-react";
 import Navbar from "../components/Navbar";
@@ -18,29 +20,7 @@ const team = [
   { name: "Luthfi Muthathohirin", nim: "2315061112" },
 ];
 
-const testimonials = [
-  {
-    name: "Arief S.",
-    location: "Surabaya",
-    mountain: "Gunung Prau",
-    quote: "Kualitasnya melebihi ekspektasi untuk brand lokal. Jaketnya nyaman dipakai seharian di jalur pendakian.",
-    rating: 5,
-  },
-  {
-    name: "Fitri N.",
-    location: "Bandung",
-    mountain: "Gunung Papandayan",
-    quote: "Ringan tapi terasa kokoh. Senang akhirnya ada pilihan gear lokal yang serius soal kualitas.",
-    rating: 5,
-  },
-  {
-    name: "Dimas P.",
-    location: "Jakarta",
-    mountain: "Gunung Gede",
-    quote: "Material breathable-nya terasa bedanya, tidak gerah meski dipakai seharian mendaki.",
-    rating: 5,
-  },
-];
+
 
 const conservationStats = [
   { value: "2%", label: "Setiap Pembelian untuk Alam" },
@@ -68,8 +48,40 @@ const gearFeatures = [
 ];
 
 export default function TentangKamiPage() {
-  const handleSubmit = () => {
-    alert("Pesan terkirim! Kami akan menghubungi Anda segera.");
+  const [contactForm, setContactForm] = useState({ name: "", email: "", topic: "", message: "" });
+  const [contactStatus, setContactStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [testimonials, setTestimonials] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/reviews")
+      .then(res => res.json())
+      .then(data => {
+        if (data.reviews) {
+          setTestimonials(data.reviews.slice(0, 3));
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!contactForm.name || !contactForm.email || !contactForm.message) return;
+    setContactStatus("loading");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(contactForm)
+      });
+      if (res.ok) {
+        setContactStatus("success");
+        setContactForm({ name: "", email: "", topic: "", message: "" });
+        setTimeout(() => setContactStatus("idle"), 4000);
+      } else {
+        setContactStatus("error");
+      }
+    } catch {
+      setContactStatus("error");
+    }
   };
 
   return (
@@ -298,15 +310,12 @@ export default function TentangKamiPage() {
                   ))}
                 </div>
                 <p className="text-sm font-mono text-[#6C757D] dark:text-neutral-400 leading-relaxed mb-6">
-                  &quot;{t.quote}&quot;
+                  &quot;{t.comment}&quot;
                 </p>
                 <div className="border-t border-black/10 dark:border-white/10 pt-4">
-                  <p className="font-black text-sm">{t.name}</p>
-                  <p className="text-[10px] font-mono text-[#6C757D] dark:text-neutral-400">{t.location}</p>
-                  <div className="flex items-center gap-1 mt-2">
-                    <Mountain className="w-3 h-3 text-[#F77F00]" />
-                    <span className="text-[10px] font-mono text-[#F77F00]">{t.mountain}</span>
-                  </div>
+                  <p className="font-black text-sm">{t.user_name}</p>
+                  <p className="text-[10px] font-mono text-[#6C757D] dark:text-neutral-400">Pembeli Terverifikasi</p>
+
                 </div>
               </motion.div>
             ))}
@@ -357,9 +366,9 @@ export default function TentangKamiPage() {
             <div className="flex-1 bg-[#f8f9fa] dark:bg-[#1a1a1a] p-8 border border-black/10 dark:border-white/10">
               <h3 className="font-black uppercase tracking-widest mb-6">Kirim Pesan</h3>
               <div className="space-y-4">
-                <input type="text" placeholder="Nama Lengkap" className="w-full bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 p-3 font-mono text-sm focus:border-[#F77F00] outline-none transition-colors" />
-                <input type="email" placeholder="Alamat Email" className="w-full bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 p-3 font-mono text-sm focus:border-[#F77F00] outline-none transition-colors" />
-                <select className="w-full bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 p-3 font-mono text-sm focus:border-[#F77F00] outline-none transition-colors text-[#6C757D]">
+                <input type="text" placeholder="Nama Lengkap" value={contactForm.name} onChange={e => setContactForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 p-3 font-mono text-sm focus:border-[#F77F00] outline-none transition-colors" />
+                <input type="email" placeholder="Alamat Email" value={contactForm.email} onChange={e => setContactForm(p => ({ ...p, email: e.target.value }))} className="w-full bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 p-3 font-mono text-sm focus:border-[#F77F00] outline-none transition-colors" />
+                <select value={contactForm.topic} onChange={e => setContactForm(p => ({ ...p, topic: e.target.value }))} className="w-full bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 p-3 font-mono text-sm focus:border-[#F77F00] outline-none transition-colors text-[#6C757D]">
                   <option value="">Topik Pesan</option>
                   <option value="produk">Pertanyaan Produk</option>
                   <option value="ukuran">Panduan Ukuran</option>
@@ -367,10 +376,12 @@ export default function TentangKamiPage() {
                   <option value="kerjasama">Kerjasama Komunitas</option>
                   <option value="lainnya">Lainnya</option>
                 </select>
-                <textarea placeholder="Tulis pesanmu di sini..." rows={4} className="w-full bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 p-3 font-mono text-sm focus:border-[#F77F00] outline-none transition-colors resize-none" />
-                <button onClick={handleSubmit} type="button" className="w-full bg-[#F77F00] text-white font-black uppercase tracking-widest text-xs py-4 hover:bg-[#e06f00] transition-colors">
-                  Kirim Pesan
+                <textarea placeholder="Tulis pesanmu di sini..." rows={4} value={contactForm.message} onChange={e => setContactForm(p => ({ ...p, message: e.target.value }))} className="w-full bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 p-3 font-mono text-sm focus:border-[#F77F00] outline-none transition-colors resize-none" />
+                <button onClick={handleSubmit} disabled={contactStatus === "loading"} type="button" className="w-full bg-[#F77F00] text-white font-black uppercase tracking-widest text-xs py-4 hover:bg-[#e06f00] transition-colors disabled:opacity-60">
+                  {contactStatus === "loading" ? "Mengirim..." : contactStatus === "success" ? "✓ Terkirim!" : "Kirim Pesan"}
                 </button>
+                {contactStatus === "success" && <p className="text-center text-[10px] font-bold text-emerald-600">Pesan berhasil dikirim! Kami akan menghubungi Anda segera.</p>}
+                {contactStatus === "error" && <p className="text-center text-[10px] font-bold text-red-500">Gagal mengirim. Coba lagi.</p>}
                 <p className="text-center text-[10px] font-mono text-[#6C757D]">
                   Atau langsung chat via{" "}
                   <a href="https://wa.me/6281234567890" target="_blank" rel="noopener noreferrer" className="text-[#25D366] hover:underline">WhatsApp</a>

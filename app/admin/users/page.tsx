@@ -1,29 +1,88 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Filter, Download, UserPlus, Users, Star, TrendingUp, Mail, MoreHorizontal, ShieldCheck, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
-// Dummy Data
-const CUSTOMER_DATA = [
-  { id: "CUST-001", name: "Budi Santoso", email: "budi.santoso@example.com", orders: 12, spent: 24500000, lastActive: "2 hours ago", status: "vip" },
-  { id: "CUST-002", name: "Sarah Wijaya", email: "sarah.w@example.com", orders: 3, spent: 4200000, lastActive: "1 day ago", status: "active" },
-  { id: "CUST-003", name: "Rizky Pratama", email: "rizky.p@example.com", orders: 1, spent: 1250000, lastActive: "5 days ago", status: "new" },
-  { id: "CUST-004", name: "David Kurniadi", email: "david.k@example.com", orders: 5, spent: 12000000, lastActive: "2 weeks ago", status: "active" },
-  { id: "CUST-005", name: "Siti Aminah", email: "siti.a@example.com", orders: 0, spent: 0, lastActive: "1 month ago", status: "inactive" },
-  { id: "CUST-006", name: "Andi Saputra", email: "andi.s@example.com", orders: 8, spent: 18500000, lastActive: "Today", status: "vip" },
-];
-
 export default function CustomersPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const totalCustomers = CUSTOMER_DATA.length;
-  const vipCustomers = CUSTOMER_DATA.filter(c => c.status === 'vip').length;
-  const avgLtv = CUSTOMER_DATA.reduce((acc, curr) => acc + curr.spent, 0) / (totalCustomers || 1);
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const res = await fetch("/api/orders");
+        const data = await res.json();
+        
+        if (data.orders) {
+          const customerMap = new Map();
 
-  const filteredData = CUSTOMER_DATA.filter(c => {
+          data.orders.forEach((o: any) => {
+            const email = o.user_email || "guest@trailforge.com";
+            
+            let name = "Guest Customer";
+            if (o.shipping?.address) {
+              name = o.shipping.address.split("\n")[0];
+            }
+
+            if (!customerMap.has(email)) {
+              customerMap.set(email, {
+                id: email,
+                name: name,
+                email: email,
+                orders: 0,
+                spent: 0,
+                lastActive: o.date,
+                status: "new"
+              });
+            }
+
+            const cust = customerMap.get(email);
+            cust.orders += 1;
+            cust.spent += o.total;
+            
+            // Track most recent date
+            if (new Date(o.date) > new Date(cust.lastActive)) {
+              cust.lastActive = o.date;
+            }
+          });
+
+          const mappedCustomers = Array.from(customerMap.values()).map(c => {
+            // Assign statuses based on simple logic
+            if (c.spent > 10000000) c.status = "vip";
+            else if (c.orders > 1) c.status = "active";
+            
+            // Format date
+            const date = new Date(c.lastActive);
+            const now = new Date();
+            const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 3600 * 24));
+            
+            if (diffDays === 0) c.lastActive = "Today";
+            else if (diffDays === 1) c.lastActive = "Yesterday";
+            else c.lastActive = `${diffDays} days ago`;
+
+            return c;
+          });
+
+          setCustomers(mappedCustomers);
+        }
+      } catch (err) {
+        console.error("Failed to fetch customers", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCustomers();
+  }, []);
+
+  const totalCustomers = customers.length;
+  const vipCustomers = customers.filter(c => c.status === 'vip').length;
+  const avgLtv = customers.reduce((acc, curr) => acc + curr.spent, 0) / (totalCustomers || 1);
+
+  const filteredData = customers.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase());
     if (!matchesSearch) return false;
     if (filter === "all") return true;
@@ -31,6 +90,26 @@ export default function CustomersPage() {
   });
 
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+  const handleExport = () => {
+    const headers = ["Name", "Email", "Orders", "Spent (Rp)", "Last Active", "Status"];
+    const csvContent = [
+      headers.join(","),
+      ...filteredData.map(c => 
+        `"${c.name}","${c.email}",${c.orders},${c.spent},"${c.lastActive}","${c.status}"`
+      )
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `customers_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <main className="p-8 lg:p-10 max-w-[1600px] mx-auto w-full min-h-screen">
@@ -43,7 +122,7 @@ export default function CustomersPage() {
         </div>
         
         <div className="flex gap-3 w-full md:w-auto">
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white dark:bg-[#111] border border-black/5 dark:border-white/5 shadow-sm text-[#212529] dark:text-white rounded-2xl px-6 py-3 text-sm font-bold hover:bg-neutral-50 transition-colors">
+          <button onClick={handleExport} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white dark:bg-[#111] border border-black/5 dark:border-white/5 shadow-sm text-[#212529] dark:text-white rounded-2xl px-6 py-3 text-sm font-bold hover:bg-neutral-50 transition-colors">
             <Download className="w-4 h-4" />
             Export Data
           </button>
@@ -92,7 +171,12 @@ export default function CustomersPage() {
       </div>
 
       {/* Main Content */}
-      <div className="bg-white dark:bg-[#111] rounded-[2rem] shadow-sm border border-black/5 dark:border-white/5 overflow-hidden">
+      <div className="bg-white dark:bg-[#111] rounded-[2rem] shadow-sm border border-black/5 dark:border-white/5 overflow-hidden relative">
+        {loading && (
+          <div className="absolute inset-0 z-50 bg-white/80 dark:bg-[#111]/80 flex items-center justify-center backdrop-blur-sm">
+            <div className="w-8 h-8 border-4 border-[#F77F00] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
         
         {/* Controls */}
         <div className="p-6 md:p-8 border-b border-black/5 dark:border-white/5 flex flex-col md:flex-row gap-4 justify-between items-center bg-neutral-50/50 dark:bg-[#1a1a1a]/50">

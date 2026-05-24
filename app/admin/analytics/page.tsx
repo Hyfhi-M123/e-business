@@ -1,47 +1,122 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Calendar, Download, TrendingUp, TrendingDown, DollarSign, ShoppingCart, Activity, Tag, Users, MapPin, Globe, Package } from "lucide-react";
 
 export default function AnalyticsPage() {
   const [dateRange, setDateRange] = useState("Last 30 Days");
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [revenueData, setRevenueData] = useState<any[]>([]);
+  const [topProducts, setTopProducts] = useState<any[]>([]);
+  const [funnelData, setFunnelData] = useState<any[]>([]);
+  const [activityStream, setActivityStream] = useState<any[]>([]);
+  const [maxRevenue, setMaxRevenue] = useState(0);
 
-  // Dummy Chart Data
-  const revenueData = [
-    { label: "1 Oct", value: 25 }, { label: "5 Oct", value: 45 }, { label: "10 Oct", value: 30 },
-    { label: "15 Oct", value: 65 }, { label: "20 Oct", value: 80 }, { label: "25 Oct", value: 55 },
-    { label: "30 Oct", value: 90 },
-  ];
-  
-  const maxRevenue = Math.max(...revenueData.map(d => d.value));
+  useEffect(() => {
+    fetch("/api/orders").then(res => res.json()).then(data => {
+      if (data.orders && data.orders.length > 0) {
+        setTotalOrders(data.orders.length);
+        const revenue = data.orders.reduce((acc: number, o: any) => acc + (o.total || 0), 0);
+        setTotalRevenue(revenue);
 
-  const topProducts = [
-    { name: "Timberline X-Coat Arctic Pro", sales: 124, revenue: 427800000, trend: "+12%" },
-    { name: "Vertex Summit Tent", sales: 86, revenue: 296700000, trend: "+5%" },
-    { name: "AeroTrek Hiking Boots", sales: 152, revenue: 182400000, trend: "-2%" },
-    { name: "SolarFlare Headlamp", sales: 345, revenue: 120750000, trend: "+18%" },
-  ];
+        // 1. Revenue Chart Data (Last 7 Days)
+        const last7Days = Array.from({length: 7}).map((_, i) => {
+          const d = new Date();
+          d.setDate(d.getDate() - (6 - i));
+          return d;
+        });
+        const revData = last7Days.map(day => {
+          const dayOrders = data.orders.filter((o: any) => {
+             const od = new Date(o.date);
+             return od.getDate() === day.getDate() && od.getMonth() === day.getMonth() && od.getFullYear() === day.getFullYear();
+          });
+          const val = dayOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+          return { label: day.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }), value: val };
+        });
+        setRevenueData(revData);
+        setMaxRevenue(Math.max(...revData.map(d => d.value), 1000000));
+
+        // 2. Top Products
+        const productMap: Record<string, {name: string, sales: number, revenue: number}> = {};
+        data.orders.forEach((o: any) => {
+          o.items?.forEach((item: any) => {
+            const quantity = item.quantity || 1;
+            const price = item.price || 0;
+            if (!productMap[item.id]) {
+              productMap[item.id] = { name: item.name, sales: 0, revenue: 0 };
+            }
+            productMap[item.id].sales += quantity;
+            productMap[item.id].revenue += price * quantity;
+          });
+        });
+        const sortedProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 4).map(p => ({...p, trend: "+5%"}));
+        setTopProducts(sortedProducts);
+
+        // 3. Funnel Data (Simulated based on actual orders)
+        const purchases = data.orders.length;
+        const checkout = purchases * 3;
+        const cart = checkout * 2.5;
+        const visitors = cart * 4;
+        setFunnelData([
+          { step: "Store Visitors", value: visitors, percentage: 100 },
+          { step: "Added to Cart", value: cart, percentage: ((cart/visitors)*100).toFixed(1) },
+          { step: "Reached Checkout", value: checkout, percentage: ((checkout/visitors)*100).toFixed(1) },
+          { step: "Purchased", value: purchases, percentage: ((purchases/visitors)*100).toFixed(1) },
+        ]);
+
+        // 4. Activity Stream (Last 5 orders)
+        const sortedOrders = [...data.orders].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
+        const activities = sortedOrders.map((o: any) => {
+          const diffMs = new Date().getTime() - new Date(o.date).getTime();
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffHours = Math.floor(diffMins / 60);
+          const diffDays = Math.floor(diffHours / 24);
+          
+          let timeStr = "Just now";
+          if (diffDays > 0) timeStr = `${diffDays} days ago`;
+          else if (diffHours > 0) timeStr = `${diffHours} hours ago`;
+          else if (diffMins > 0) timeStr = `${diffMins} mins ago`;
+
+          return {
+            time: timeStr,
+            text: `New order #${o.id} placed for Rp ${o.total.toLocaleString('id-ID')}`,
+            icon: ShoppingCart,
+            color: "text-blue-500", bg: "bg-blue-500/10"
+          };
+        });
+        setActivityStream(activities);
+        setActivityStream(activities);
+      }
+    }).catch(err => console.error(err));
+  }, []);
+
+  const handleExport = () => {
+    if (topProducts.length === 0) return;
+    
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Product Name,Total Sales (Pcs),Revenue (Rp)\n";
+    
+    topProducts.forEach(prod => {
+      // Escape commas in product name
+      const name = `"${prod.name.replace(/"/g, '""')}"`;
+      csvContent += `${name},${prod.sales},${prod.revenue}\n`;
+    });
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `trailforge_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const devices = [
     { name: "Mobile", percentage: 65, color: "bg-[#F77F00]" },
     { name: "Desktop", percentage: 30, color: "bg-[#212529] dark:bg-white" },
     { name: "Tablet", percentage: 5, color: "bg-neutral-300 dark:bg-neutral-600" },
-  ];
-
-  const funnelData = [
-    { step: "Store Visitors", value: 12500, percentage: 100 },
-    { step: "Added to Cart", value: 4200, percentage: 33.6 },
-    { step: "Reached Checkout", value: 1850, percentage: 14.8 },
-    { step: "Purchased", value: 405, percentage: 3.24 },
-  ];
-
-  const activityStream = [
-    { time: "Just now", text: "New order #TRF-1030 placed.", icon: ShoppingCart, color: "text-blue-500", bg: "bg-blue-500/10" },
-    { time: "15 mins ago", text: "Payment failed for order #TRF-1026.", icon: Activity, color: "text-rose-500", bg: "bg-rose-500/10" },
-    { time: "2 hours ago", text: "Timberline X-Coat stock low (3 left).", icon: Tag, color: "text-[#F77F00]", bg: "bg-orange-500/10" },
-    { time: "5 hours ago", text: "New customer registered: Budi S.", icon: Users, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-    { time: "Yesterday", text: "Order #TRF-1020 fulfilled.", icon: Package, color: "text-[#212529] dark:text-white", bg: "bg-neutral-100 dark:bg-[#222]" },
   ];
 
   return (
@@ -68,7 +143,7 @@ export default function AnalyticsPage() {
               <option>Year to Date</option>
             </select>
           </div>
-          <button className="flex items-center justify-center gap-2 bg-[#212529] dark:bg-white text-white dark:text-black shadow-lg rounded-2xl px-6 py-3 text-sm font-bold hover:bg-black dark:hover:bg-neutral-200 transition-colors shrink-0">
+          <button onClick={handleExport} className="flex items-center justify-center gap-2 bg-[#212529] dark:bg-white text-white dark:text-black shadow-lg rounded-2xl px-6 py-3 text-sm font-bold hover:bg-black dark:hover:bg-neutral-200 transition-colors shrink-0">
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">Export Report</span>
           </button>
@@ -89,7 +164,7 @@ export default function AnalyticsPage() {
             </span>
           </div>
           <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1">Total Revenue</p>
-          <h3 className="text-2xl xl:text-3xl font-black text-[#212529] dark:text-white">Rp 1.45B</h3>
+          <h3 className="text-2xl xl:text-3xl font-black text-[#212529] dark:text-white">Rp {(totalRevenue / 1000000).toFixed(1)}M</h3>
         </motion.div>
 
         {/* Orders */}
@@ -103,7 +178,7 @@ export default function AnalyticsPage() {
             </span>
           </div>
           <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1">Total Orders</p>
-          <h3 className="text-2xl xl:text-3xl font-black text-[#212529] dark:text-white">1,284</h3>
+          <h3 className="text-2xl xl:text-3xl font-black text-[#212529] dark:text-white">{totalOrders}</h3>
         </motion.div>
 
         {/* Conversion Rate */}
@@ -131,7 +206,9 @@ export default function AnalyticsPage() {
             </span>
           </div>
           <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1">Avg Order Value</p>
-          <h3 className="text-2xl xl:text-3xl font-black text-[#212529] dark:text-white">Rp 1.12M</h3>
+          <h3 className="text-2xl xl:text-3xl font-black text-[#212529] dark:text-white">
+            Rp {totalOrders > 0 ? (totalRevenue / totalOrders / 1000000).toFixed(2) : 0}M
+          </h3>
         </motion.div>
 
       </div>
@@ -164,8 +241,8 @@ export default function AnalyticsPage() {
                 <div key={idx} className="flex flex-col items-center gap-3 flex-1 z-10 group">
                   <div className="w-full relative h-full flex items-end justify-center rounded-t-lg">
                     {/* Tooltip */}
-                    <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-[#212529] dark:bg-white text-white dark:text-black text-[10px] font-bold px-2 py-1 rounded whitespace-nowrap pointer-events-none">
-                      Rp {(data.value * 1200000).toLocaleString('id-ID')}
+                    <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-[#212529] dark:bg-white text-white dark:text-black text-[10px] font-bold px-2 py-1 rounded whitespace-nowrap pointer-events-none z-20">
+                      Rp {data.value.toLocaleString('id-ID')}
                     </div>
                     
                     <motion.div 

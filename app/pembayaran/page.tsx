@@ -30,14 +30,26 @@ export default function PembayaranPage() {
       
       const orderId = searchParams.get("order_id") || "TRF-991203";
       const redirectTimer = setTimeout(() => {
-        router.push(`/track/${orderId}`);
+        router.push(`/pesanan/${orderId}`);
       }, 3000);
       
       return () => clearTimeout(redirectTimer);
     } else {
       // Simulate real-time payment success after 10-15 seconds if pending
-      const successTimer = setTimeout(() => {
+      const successTimer = setTimeout(async () => {
         setPaymentStatus("success");
+        const orderId = searchParams.get("order_id");
+        if (orderId) {
+          try {
+            await fetch("/api/orders", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: orderId, status: "Menunggu Konfirmasi" })
+            });
+          } catch (e) {
+            console.error(e);
+          }
+        }
       }, Math.floor(Math.random() * 5000) + 10000);
       
       return () => clearTimeout(successTimer);
@@ -69,6 +81,26 @@ export default function PembayaranPage() {
   };
 
   const virtualAccountNumber = "8801" + Math.floor(100000000 + Math.random() * 900000000);
+
+  const handleManualCheck = async () => {
+    setPaymentStatus("success");
+    const orderId = searchParams.get("order_id");
+    if (orderId) {
+      try {
+        await fetch("/api/orders", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: orderId, status: "Menunggu Konfirmasi" })
+        });
+      } catch (e) {
+        console.error(e);
+      }
+      
+      setTimeout(() => {
+        router.push(`/pesanan/${orderId}`);
+      }, 3000);
+    }
+  };
 
   if (!isMounted) return null;
 
@@ -228,9 +260,10 @@ export default function PembayaranPage() {
             {/* Footer / Cek Status */}
             <div className="p-6 bg-white dark:bg-[#121212] border-t border-black/10 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
               <span className="text-[10px] font-mono text-[#6C757D] dark:text-neutral-500 uppercase tracking-widest">
-                ID Transaksi: TRF-{Math.floor(Math.random() * 100000000)}
+                ID Transaksi: {searchParams.get("order_id") || `TRF-${Math.floor(Math.random() * 100000000)}`}
               </span>
               <button 
+                onClick={handleManualCheck}
                 className="text-xs font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-600 transition-colors flex items-center gap-2"
               >
                 SAYA SUDAH BAYAR <ArrowRight className="w-4 h-4" />

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Send, Edit, Trash2, Users, MousePointerClick, Eye, Plus, Search, Filter, Clock, CheckCircle2, MoreHorizontal } from "lucide-react";
+import { Mail, Send, Edit, Trash2, Users, MousePointerClick, Eye, Plus, Search, Filter, Clock, CheckCircle2, MoreHorizontal, Calendar as CalendarIcon } from "lucide-react";
 
 // Dummy Campaign Data
 const CAMPAIGN_DATA = [
@@ -16,6 +16,14 @@ const CAMPAIGN_DATA = [
 export default function NewsletterPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [activeTab, setActiveTab] = useState<"campaigns" | "subscribers">("campaigns");
+  const [subscribers, setSubscribers] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/newsletter").then(res => res.json()).then(data => {
+      if (data.subscribers) setSubscribers(data.subscribers);
+    }).catch(err => console.error(err));
+  }, []);
 
   const filteredData = CAMPAIGN_DATA.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.subject.toLowerCase().includes(search.toLowerCase());
@@ -52,7 +60,7 @@ export default function NewsletterPage() {
           </div>
           <div>
             <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1">Total Subscribers</p>
-            <h3 className="text-3xl font-black text-[#212529] dark:text-white">12,450</h3>
+            <h3 className="text-3xl font-black text-[#212529] dark:text-white">{subscribers.length.toLocaleString('id-ID')}</h3>
           </div>
         </motion.div>
 
@@ -97,16 +105,35 @@ export default function NewsletterPage() {
         <div className="p-6 md:p-8 border-b border-black/5 dark:border-white/5 flex flex-col md:flex-row gap-4 justify-between items-center bg-neutral-50/50 dark:bg-[#1a1a1a]/50">
           
           <div className="flex bg-neutral-100 dark:bg-[#222] p-1 rounded-xl w-full md:w-auto overflow-x-auto scrollbar-hide">
-            {["all", "sent", "scheduled", "draft"].map((f) => (
-              <button 
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-xs font-bold capitalize transition-all whitespace-nowrap ${filter === f ? 'bg-white dark:bg-[#111] shadow-sm text-[#212529] dark:text-white' : 'text-neutral-500 hover:text-[#212529] dark:hover:text-white'}`}
-              >
-                {f}
-              </button>
-            ))}
+            <button 
+              onClick={() => setActiveTab("campaigns")}
+              className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-xs font-bold capitalize transition-all whitespace-nowrap ${activeTab === "campaigns" ? 'bg-white dark:bg-[#111] shadow-sm text-[#212529] dark:text-white' : 'text-neutral-500 hover:text-[#212529] dark:hover:text-white'}`}
+            >
+              Campaigns
+            </button>
+            <button 
+              onClick={() => setActiveTab("subscribers")}
+              className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-xs font-bold capitalize transition-all whitespace-nowrap ${activeTab === "subscribers" ? 'bg-white dark:bg-[#111] shadow-sm text-[#212529] dark:text-white' : 'text-neutral-500 hover:text-[#212529] dark:hover:text-white'}`}
+            >
+              Subscribers List
+            </button>
           </div>
+
+          {activeTab === "campaigns" && (
+            <div className="flex items-center gap-3 w-full md:w-auto">
+              <div className="flex bg-neutral-100 dark:bg-[#222] p-1 rounded-xl w-full md:w-auto overflow-x-auto scrollbar-hide">
+                {["all", "sent", "scheduled", "draft"].map((f) => (
+                  <button 
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`flex-1 md:flex-none px-4 py-2 rounded-lg text-[10px] font-bold capitalize transition-all whitespace-nowrap ${filter === f ? 'bg-white dark:bg-[#111] shadow-sm text-[#212529] dark:text-white' : 'text-neutral-500 hover:text-[#212529] dark:hover:text-white'}`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center gap-3 w-full md:w-auto">
             <div className="relative flex-1 md:w-80">
@@ -124,91 +151,126 @@ export default function NewsletterPage() {
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
-            <thead>
-              <tr className="border-b border-black/5 dark:border-white/5 bg-white dark:bg-[#111]">
-                <th className="py-5 px-8 text-[10px] font-black uppercase tracking-widest text-neutral-400">Campaign Name</th>
-                <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Status</th>
-                <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Audience</th>
-                <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Open Rate</th>
-                <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Click Rate</th>
-                <th className="py-5 px-8 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">Sent Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              <AnimatePresence>
-                {filteredData.map((cmp, i) => (
-                  <motion.tr 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    key={cmp.id} 
-                    className="border-b border-black/5 dark:border-white/5 group hover:bg-neutral-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
-                  >
-                    
-                    {/* Name & Subject */}
-                    <td className="py-4 px-8">
+          {activeTab === "campaigns" ? (
+            <table className="w-full text-left border-collapse min-w-[1000px]">
+              <thead>
+                <tr className="border-b border-black/5 dark:border-white/5 bg-white dark:bg-[#111]">
+                  <th className="py-5 px-8 text-[10px] font-black uppercase tracking-widest text-neutral-400">Campaign Name</th>
+                  <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Status</th>
+                  <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Audience</th>
+                  <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Open Rate</th>
+                  <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Click Rate</th>
+                  <th className="py-5 px-8 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">Sent Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <AnimatePresence>
+                  {filteredData.map((cmp, i) => (
+                    <motion.tr 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      key={cmp.id} 
+                      className="border-b border-black/5 dark:border-white/5 group hover:bg-neutral-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
+                    >
+                      
+                      {/* Name & Subject */}
+                      <td className="py-4 px-8">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                            cmp.status === 'sent' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500' :
+                            cmp.status === 'scheduled' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-500' :
+                            'bg-neutral-100 dark:bg-[#222] text-neutral-400'
+                          }`}>
+                            {cmp.status === 'sent' ? <Send className="w-4 h-4" /> : cmp.status === 'scheduled' ? <Clock className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-[#212529] dark:text-white mb-0.5 group-hover:text-[#F77F00] transition-colors">{cmp.name}</span>
+                            <span className="text-xs font-medium text-neutral-500 max-w-[250px] truncate">Subject: {cmp.subject}</span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-4 px-4">
+                        {cmp.status === 'sent' && <span className="inline-flex items-center px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500"><CheckCircle2 className="w-3 h-3 mr-1" /> Sent</span>}
+                        {cmp.status === 'scheduled' && <span className="inline-flex items-center px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest bg-blue-50 dark:bg-blue-500/10 text-blue-500"><Clock className="w-3 h-3 mr-1" /> Scheduled</span>}
+                        {cmp.status === 'draft' && <span className="inline-flex items-center px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest bg-neutral-100 dark:bg-[#222] text-neutral-500"><Edit className="w-3 h-3 mr-1" /> Draft</span>}
+                      </td>
+
+                      {/* Audience */}
+                      <td className="py-4 px-4">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-600 dark:text-neutral-300 bg-neutral-50 dark:bg-[#1a1a1a] px-3 py-1.5 rounded-lg border border-black/5 dark:border-white/5">
+                          <Users className="w-3 h-3 text-neutral-400" />
+                          {cmp.audience}
+                        </span>
+                      </td>
+
+                      {/* Open Rate */}
+                      <td className="py-4 px-4">
+                        <div className="flex flex-col gap-1 w-24">
+                          <span className="text-sm font-black text-[#212529] dark:text-white">{cmp.opens}%</span>
+                          <div className="w-full h-1.5 bg-neutral-100 dark:bg-[#222] rounded-full overflow-hidden">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${cmp.opens}%` }} className="h-full bg-emerald-500 rounded-full"></motion.div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Click Rate */}
+                      <td className="py-4 px-4">
+                        <div className="flex flex-col gap-1 w-24">
+                          <span className="text-sm font-black text-[#212529] dark:text-white">{cmp.clicks}%</span>
+                          <div className="w-full h-1.5 bg-neutral-100 dark:bg-[#222] rounded-full overflow-hidden">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${cmp.clicks}%` }} className="h-full bg-[#F77F00] rounded-full"></motion.div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Date */}
+                      <td className="py-4 px-8 text-right">
+                        <span className="text-sm font-bold text-neutral-600 dark:text-neutral-400">{cmp.sentDate}</span>
+                      </td>
+
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-left border-collapse min-w-[600px]">
+              <thead>
+                <tr className="border-b border-black/5 dark:border-white/5 bg-white dark:bg-[#111]">
+                  <th className="py-5 px-8 text-[10px] font-black uppercase tracking-widest text-neutral-400">Subscriber Email</th>
+                  <th className="py-5 px-8 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">Subscribed Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subscribers.filter(sub => sub.email.toLowerCase().includes(search.toLowerCase())).map((sub, i) => (
+                  <tr key={i} className="border-b border-black/5 dark:border-white/5 hover:bg-neutral-50 dark:hover:bg-white/[0.02] transition-colors">
+                    <td className="py-5 px-8">
                       <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                          cmp.status === 'sent' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500' :
-                          cmp.status === 'scheduled' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-500' :
-                          'bg-neutral-100 dark:bg-[#222] text-neutral-400'
-                        }`}>
-                          {cmp.status === 'sent' ? <Send className="w-4 h-4" /> : cmp.status === 'scheduled' ? <Clock className="w-4 h-4" /> : <Edit className="w-4 h-4" />}
+                        <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-[#F77F00]/10 flex items-center justify-center shrink-0">
+                          <Mail className="w-4 h-4 text-[#F77F00]" />
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-[#212529] dark:text-white mb-0.5 group-hover:text-[#F77F00] transition-colors">{cmp.name}</span>
-                          <span className="text-xs font-medium text-neutral-500 max-w-[250px] truncate">Subject: {cmp.subject}</span>
-                        </div>
+                        <span className="text-sm font-bold text-[#212529] dark:text-white">{sub.email}</span>
                       </div>
                     </td>
-
-                    {/* Status */}
-                    <td className="py-4 px-4">
-                      {cmp.status === 'sent' && <span className="inline-flex items-center px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500"><CheckCircle2 className="w-3 h-3 mr-1" /> Sent</span>}
-                      {cmp.status === 'scheduled' && <span className="inline-flex items-center px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest bg-blue-50 dark:bg-blue-500/10 text-blue-500"><Clock className="w-3 h-3 mr-1" /> Scheduled</span>}
-                      {cmp.status === 'draft' && <span className="inline-flex items-center px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-widest bg-neutral-100 dark:bg-[#222] text-neutral-500"><Edit className="w-3 h-3 mr-1" /> Draft</span>}
-                    </td>
-
-                    {/* Audience */}
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-600 dark:text-neutral-300 bg-neutral-50 dark:bg-[#1a1a1a] px-3 py-1.5 rounded-lg border border-black/5 dark:border-white/5">
-                        <Users className="w-3 h-3 text-neutral-400" />
-                        {cmp.audience}
+                    <td className="py-5 px-8 text-right">
+                      <span className="text-sm font-bold text-neutral-600 dark:text-neutral-400">
+                        {new Date(sub.subscribed_at).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' })}
                       </span>
                     </td>
-
-                    {/* Open Rate */}
-                    <td className="py-4 px-4">
-                      <div className="flex flex-col gap-1 w-24">
-                        <span className="text-sm font-black text-[#212529] dark:text-white">{cmp.opens}%</span>
-                        <div className="w-full h-1.5 bg-neutral-100 dark:bg-[#222] rounded-full overflow-hidden">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${cmp.opens}%` }} className="h-full bg-emerald-500 rounded-full"></motion.div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Click Rate */}
-                    <td className="py-4 px-4">
-                      <div className="flex flex-col gap-1 w-24">
-                        <span className="text-sm font-black text-[#212529] dark:text-white">{cmp.clicks}%</span>
-                        <div className="w-full h-1.5 bg-neutral-100 dark:bg-[#222] rounded-full overflow-hidden">
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${cmp.clicks}%` }} className="h-full bg-[#F77F00] rounded-full"></motion.div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Date */}
-                    <td className="py-4 px-8 text-right">
-                      <span className="text-sm font-bold text-neutral-600 dark:text-neutral-400">{cmp.sentDate}</span>
-                    </td>
-
-                  </motion.tr>
+                  </tr>
                 ))}
-              </AnimatePresence>
-            </tbody>
-          </table>
+                {subscribers.length === 0 && (
+                  <tr>
+                    <td colSpan={2} className="py-8 text-center text-sm text-neutral-500 font-medium">No subscribers found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
 
       </div>

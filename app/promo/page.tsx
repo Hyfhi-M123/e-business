@@ -8,21 +8,14 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useWishlist } from "../context/WishlistContext";
+import QuickAddModal from "../components/QuickAddModal";
 
 // ==========================================
 // DATA PRODUK (Filter Khusus Diskon)
 // ==========================================
-const PROMO_PRODUCTS = [
-  { id: "101", name: "Vertex Summit Tent", category: "Tenda", price: 3450000, originalPrice: 4200000, tag: "Ultralight", rating: 4.9, reviews: 87, sold: 342, image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600&q=80" },
-  { id: "102", name: "Timberline X-Coat Arctic", category: "Pakaian", price: 1200000, originalPrice: 1800000, tag: "Thermal", rating: 4.8, reviews: 124, sold: 892, image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600&q=80" },
-  { id: "104", name: "Polaris Compass Pro", category: "Navigasi", price: 450000, originalPrice: 600000, tag: "Akurasi 99%", rating: 4.6, reviews: 56, sold: 230, image: "https://images.unsplash.com/photo-1504376830547-506dedee1643?w=600&q=80" },
-  { id: "105", name: "Everest Sleeping Bag", category: "Tenda", price: 1800000, originalPrice: 2200000, tag: "-15°C Rated", rating: 4.9, reviews: 167, sold: 678, image: "https://images.unsplash.com/photo-1445308394109-4ec2920981b1?w=600&q=80" },
-  { id: "107", name: "Storm Shell V2 Jacket", category: "Pakaian", price: 980000, originalPrice: 1400000, tag: "Windproof", rating: 4.6, reviews: 78, sold: 310, image: "https://images.unsplash.com/photo-1544022613-e87ca75a784a?w=600&q=80" },
-  { id: "109", name: "Summit Fleece Pro", category: "Pakaian", price: 650000, originalPrice: 750000, tag: "Midlayer", rating: 4.7, reviews: 145, sold: 780, image: "https://images.unsplash.com/photo-1495103033382-fe343886b671?w=600&q=80" },
-  { id: "110", name: "Trailblazer 55L Pack", category: "Tas", price: 2800000, originalPrice: 3500000, tag: "Ergonomic", rating: 4.8, reviews: 312, sold: 1100, image: "https://images.unsplash.com/photo-1622260614153-03223fb72052?w=600&q=80" },
-  { id: "112", name: "Carbon Trekking Poles", category: "Navigasi", price: 1250000, originalPrice: 1600000, tag: "Ultralight", rating: 4.8, reviews: 176, sold: 890, image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&q=80" },
-  { id: "113", name: "Kids Explorer Set", category: "Tenda", price: 450000, originalPrice: 550000, tag: "Aman Anak", rating: 4.8, reviews: 42, sold: 120, image: "https://images.unsplash.com/photo-1510337269632-f3e997298642?w=600&q=80" },
-];
+// DATA PRODUK PROMO AKAN DI-FETCH DARI DATABASE
+// ==========================================
 
 function formatRupiah(n: number) {
   return "Rp " + n.toLocaleString("id-ID");
@@ -41,9 +34,13 @@ const cardReveal = {
 export default function PromoPage() {
   const { addToCart } = useCart();
   const { user } = useAuth(); // Action Guard Listener
-  const [wishlist, setWishlist] = useState<string[]>([]);
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  
+  const [promoProducts, setPromoProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [addedItems, setAddedItems] = useState<string[]>([]);
   const [guestAlert, setGuestAlert] = useState(false);
+  const [quickAddProduct, setQuickAddProduct] = useState<any>(null);
   
   // Timer State
   const [timeLeft, setTimeLeft] = useState({ hours: 14, minutes: 32, seconds: 59 });
@@ -57,6 +54,26 @@ export default function PromoPage() {
         return prev; // Selesai
       });
     }, 1000);
+
+    const fetchPromoProducts = async () => {
+      try {
+        const res = await fetch("/api/products");
+        if (res.ok) {
+          const data = await res.json();
+          const discounted = data.filter((p: any) => p.original_price > p.price).map((item: any) => ({
+            ...item,
+            originalPrice: item.original_price
+          }));
+          setPromoProducts(discounted);
+        }
+      } catch (err) {
+        console.error("Failed to fetch promo products:", err);
+      }
+      setIsLoading(false);
+    };
+
+    fetchPromoProducts();
+
     return () => clearInterval(timer);
   }, []);
 
@@ -65,16 +82,15 @@ export default function PromoPage() {
     setTimeout(() => setGuestAlert(false), 3000);
   };
 
-  const toggleWishlist = (id: string) => {
+  const openQuickAdd = (product: any) => {
     if (!user) return showGuestWarning();
-    setWishlist(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setQuickAddProduct(product);
   };
 
-  const quickAdd = (product: any) => {
-    if (!user) return showGuestWarning();
-    setAddedItems(prev => [...prev, product.id]);
-    addToCart(product);
-    setTimeout(() => setAddedItems(prev => prev.filter(x => x !== product.id)), 2000);
+  const handleConfirmQuickAdd = (cartItem: any) => {
+    setAddedItems(prev => [...prev, cartItem.id]);
+    addToCart(cartItem);
+    setTimeout(() => setAddedItems(prev => prev.filter(x => x !== cartItem.id)), 2000);
   };
 
   return (
@@ -143,7 +159,7 @@ export default function PromoPage() {
           <div className="flex items-center gap-3">
             <Zap className="w-5 h-5 text-red-600 dark:text-red-500" />
             <h2 className="text-2xl font-black uppercase tracking-tighter text-[#212529] dark:text-white">Flash Deals</h2>
-            <span className="text-[#6C757D] dark:text-neutral-500 font-mono text-[10px] ml-2">[{PROMO_PRODUCTS.length} ITEMS]</span>
+            <span className="text-[#6C757D] dark:text-neutral-500 font-mono text-[10px] ml-2">[{promoProducts.length} ITEMS]</span>
           </div>
           
           <div className="flex gap-2">
@@ -153,14 +169,19 @@ export default function PromoPage() {
         </div>
 
         {/* Grid Katalog Khusus Diskon */}
-        <motion.div 
-          variants={staggerContainer} initial="hidden" animate="visible"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-        >
-          {PROMO_PRODUCTS.sort((a, b) => ((b.originalPrice - b.price) / b.originalPrice) - ((a.originalPrice - a.price) / a.originalPrice)).map((product) => {
-            const discount = Math.round((1 - product.price / product.originalPrice) * 100);
-            const isWished = wishlist.includes(product.id);
-            const isAdded = addedItems.includes(product.id);
+        {isLoading ? (
+          <div className="py-20 flex justify-center">
+            <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : (
+          <motion.div 
+            variants={staggerContainer} initial="hidden" animate="visible"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+          >
+            {promoProducts.sort((a, b) => ((b.originalPrice - b.price) / b.originalPrice) - ((a.originalPrice - a.price) / a.originalPrice)).map((product) => {
+              const discount = Math.round((1 - product.price / product.originalPrice) * 100);
+              const isWished = isInWishlist(product.id);
+              const isAdded = addedItems.includes(product.id);
 
             return (
               <motion.div
@@ -186,16 +207,28 @@ export default function PromoPage() {
                   <div className="absolute bottom-4 left-4 right-4 z-10 flex gap-2 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
                     <motion.button 
                       whileTap={{ scale: 0.95 }}
-                      onClick={(e) => { e.preventDefault(); quickAdd(product); }}
+                      onClick={(e) => { e.preventDefault(); openQuickAdd(product); }}
                       className={`flex-1 py-3 font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-colors border ${
                         isAdded ? "bg-emerald-500 border-emerald-500 text-neutral-950" : "bg-white/90 dark:bg-black/60 backdrop-blur-md border-red-600 text-red-600 hover:bg-red-600 hover:text-white"
                       }`}
                     >
-                      {isAdded ? "✓ SECURED" : <><ShoppingBag className="w-3.5 h-3.5" /> SECURE ITEM</>}
+                      {isAdded ? "✓ ADDED" : <><ShoppingBag className="w-3.5 h-3.5" /> QUICK ADD</>}
                     </motion.button>
                     <motion.button
                       whileTap={{ scale: 0.9 }}
-                      onClick={(e) => { e.preventDefault(); toggleWishlist(product.id); }}
+                      onClick={(e) => { 
+                        e.preventDefault(); 
+                        if(!user) return showGuestWarning();
+                        toggleWishlist({
+                          id: product.id,
+                          name: product.name,
+                          price: product.price,
+                          originalPrice: product.originalPrice,
+                          image: product.image,
+                          category: product.category || "Promo",
+                          discount: Math.round((1 - product.price / product.originalPrice) * 100)
+                        }); 
+                      }}
                       className={`w-11 h-11 flex items-center justify-center border transition-colors ${
                         isWished ? "bg-[#212529] border-[#212529] text-white dark:bg-white dark:border-white dark:text-black" : "bg-white/90 dark:bg-black/60 backdrop-blur-md border-black/20 dark:border-white/20 text-[#212529] dark:text-white hover:border-[#212529] hover:bg-[#212529] hover:text-white dark:hover:border-white dark:hover:bg-white dark:hover:text-black"
                       }`}
@@ -237,8 +270,9 @@ export default function PromoPage() {
                 </div>
               </motion.div>
             );
-          })}
-        </motion.div>
+            })}
+          </motion.div>
+        )}
 
       </div>
       
@@ -264,6 +298,13 @@ export default function PromoPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <QuickAddModal 
+        isOpen={!!quickAddProduct}
+        onClose={() => setQuickAddProduct(null)}
+        product={quickAddProduct}
+        onAdd={handleConfirmQuickAdd}
+      />
     </main>
   );
 }

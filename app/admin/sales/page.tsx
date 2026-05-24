@@ -1,30 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, DollarSign, ArrowDownRight, ArrowUpRight, Receipt, CreditCard, Wallet, Calendar, FileText, Search } from "lucide-react";
-
-// Dummy Accounting Data
-const LEDGER_DATA = [
-  { id: "TRX-1092", date: "Oct 25, 2023", gross: 3500000, tax: 385000, discount: 200000, net: 3685000, method: "Credit Card", status: "settled" },
-  { id: "TRX-1091", date: "Oct 25, 2023", gross: 1200000, tax: 132000, discount: 0, net: 1332000, method: "Bank Transfer", status: "settled" },
-  { id: "TRX-1090", date: "Oct 24, 2023", gross: 850000, tax: 93500, discount: 50000, net: 893500, method: "E-Wallet", status: "settled" },
-  { id: "TRX-1089", date: "Oct 24, 2023", gross: 5000000, tax: 550000, discount: 1000000, net: 4550000, method: "Credit Card", status: "refunded" },
-  { id: "TRX-1088", date: "Oct 23, 2023", gross: 2400000, tax: 264000, discount: 0, net: 2664000, method: "Bank Transfer", status: "settled" },
-  { id: "TRX-1087", date: "Oct 23, 2023", gross: 150000, tax: 16500, discount: 15000, net: 151500, method: "E-Wallet", status: "settled" },
-];
 
 export default function SalesPage() {
   const [dateRange, setDateRange] = useState("This Month");
   const [search, setSearch] = useState("");
+  const [ledger, setLedger] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const totalGross = LEDGER_DATA.reduce((acc, curr) => curr.status !== 'refunded' ? acc + curr.gross : acc, 0);
-  const totalTaxes = LEDGER_DATA.reduce((acc, curr) => curr.status !== 'refunded' ? acc + curr.tax : acc, 0);
-  const totalDiscounts = LEDGER_DATA.reduce((acc, curr) => curr.status !== 'refunded' ? acc + curr.discount : acc, 0);
-  const netSales = LEDGER_DATA.reduce((acc, curr) => curr.status !== 'refunded' ? acc + curr.net : acc, 0);
-  const totalRefunds = LEDGER_DATA.reduce((acc, curr) => curr.status === 'refunded' ? acc + curr.gross : acc, 0);
+  useEffect(() => {
+    const fetchSales = async () => {
+      try {
+        const res = await fetch("/api/orders");
+        const data = await res.json();
+        
+        if (data.orders) {
+          const mappedLedger = data.orders.map((o: any) => {
+            // Calculate a synthetic breakdown since we only store `total`
+            const total = o.total || 0;
+            const discount = 0;
+            const tax = Math.round(total * 0.11); // 11% assumed PPN
+            const gross = total - tax + discount;
+            
+            return {
+              id: o.id,
+              date: new Date(o.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              gross: gross,
+              tax: tax,
+              discount: discount,
+              net: total,
+              method: "Bank Transfer", // Default since payment method isn't stored in DB yet
+              status: o.status === "Belum Bayar" ? "pending" : "settled"
+            };
+          });
+          
+          // Sort by newest first
+          setLedger(mappedLedger.reverse());
+        }
+      } catch (error) {
+        console.error("Failed to fetch sales data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchSales();
+  }, []);
 
-  const filteredData = LEDGER_DATA.filter(t => t.id.toLowerCase().includes(search.toLowerCase()));
+  const totalGross = ledger.reduce((acc, curr) => curr.status !== 'refunded' ? acc + curr.gross : acc, 0);
+  const totalTaxes = ledger.reduce((acc, curr) => curr.status !== 'refunded' ? acc + curr.tax : acc, 0);
+  const totalDiscounts = ledger.reduce((acc, curr) => curr.status !== 'refunded' ? acc + curr.discount : acc, 0);
+  const netSales = ledger.reduce((acc, curr) => curr.status !== 'refunded' ? acc + curr.net : acc, 0);
+  const totalRefunds = ledger.reduce((acc, curr) => curr.status === 'refunded' ? acc + curr.gross : acc, 0);
+
+  const filteredData = ledger.filter(t => t.id.toLowerCase().includes(search.toLowerCase()) && t.status !== 'pending');
 
   return (
     <main className="p-8 lg:p-10 max-w-[1600px] mx-auto w-full min-h-screen">
@@ -94,7 +125,12 @@ export default function SalesPage() {
       </div>
 
       {/* Main Ledger Content */}
-      <div className="bg-white dark:bg-[#111] rounded-[2rem] shadow-sm border border-black/5 dark:border-white/5 overflow-hidden">
+      <div className="bg-white dark:bg-[#111] rounded-[2rem] shadow-sm border border-black/5 dark:border-white/5 overflow-hidden relative">
+        {loading && (
+          <div className="absolute inset-0 z-50 bg-white/80 dark:bg-[#111]/80 flex items-center justify-center backdrop-blur-sm">
+            <div className="w-8 h-8 border-4 border-[#F77F00] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
         
         {/* Controls */}
         <div className="p-6 md:p-8 border-b border-black/5 dark:border-white/5 flex flex-col md:flex-row gap-4 justify-between items-center bg-neutral-50/50 dark:bg-[#1a1a1a]/50">

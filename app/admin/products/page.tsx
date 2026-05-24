@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Search, Plus, Filter, MoreHorizontal, Edit, Trash2, Tag, Image as ImageIcon } from "lucide-react";
@@ -18,14 +18,64 @@ export default function ProductsPage() {
     show: { opacity: 1, y: 0 }
   };
 
-  // Dummy data for premium presentation
-  const mockProducts = [
-    { id: "PRD-001", name: "Vertex Summit Tent", category: "Tenda", price: 3450000, stock: 45, status: "Active", img: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=200&q=80" },
-    { id: "PRD-002", name: "AeroStep Boot", category: "Sepatu", price: 1850000, stock: 12, status: "Active", img: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=200&q=80" },
-    { id: "PRD-003", name: "Timberline X-Coat", category: "Pakaian", price: 1200000, stock: 0, status: "Out of Stock", img: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=200&q=80" },
-    { id: "PRD-004", name: "Polaris Compass", category: "Aksesoris", price: 450000, stock: 120, status: "Active", img: "https://images.unsplash.com/photo-1512413914565-ebff0d9c4c23?w=200&q=80" },
-    { id: "PRD-005", name: "Titanium Flask", category: "Perlengkapan", price: 350000, stock: 8, status: "Draft", img: "https://images.unsplash.com/photo-1614088659123-5777df43e98b?w=200&q=80" },
-  ];
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://wsenprneavjusqmmxobd.supabase.co";
+        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_v2YG0aXS_8AhAxZaHq7xGQ_jWnLA26J";
+        
+        const res = await fetch(`${url}/rest/v1/products?select=*`, {
+          headers: {
+            "apikey": key,
+            "Authorization": `Bearer ${key}`
+          }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          // Map to admin dashboard expected format
+          const mappedProducts = data.map((p: any) => ({
+            id: p.id || `PRD-${Math.floor(Math.random()*1000)}`,
+            name: p.name,
+            category: p.category || "General",
+            price: p.price,
+            stock: p.variants && p.variants.length > 0 ? p.variants.reduce((acc: number, curr: any) => acc + (parseInt(curr.stock) || 0), 0) : 99,
+            status: "Active",
+            img: p.image
+          }));
+          setProducts(mappedProducts);
+        }
+      } catch (error) {
+        console.error("Failed to fetch products for admin", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProducts();
+  }, []);
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+    
+    setProducts(products.filter(p => p.id !== id)); // Optimistic UI update
+
+    try {
+      const res = await fetch(`/api/products?id=${id}`, {
+        method: "DELETE"
+      });
+      if (!res.ok) {
+        throw new Error("Failed to delete");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to delete product.");
+      // In a real app, we would revert the optimistic update here by re-fetching
+    }
+  };
 
   return (
     <main className="p-8 lg:p-10 max-w-[1600px] mx-auto w-full min-h-screen">
@@ -69,7 +119,7 @@ export default function ProductsPage() {
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-neutral-500 bg-neutral-50 dark:bg-[#1a1a1a] px-3 py-1.5 rounded-lg border border-black/5 dark:border-white/5">
-              All Products ({mockProducts.length})
+              All Products ({products.length})
             </span>
           </div>
           <button className="flex items-center gap-2 bg-neutral-50 dark:bg-[#1a1a1a] px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-[#222] transition-colors border border-black/5 dark:border-white/5">
@@ -96,7 +146,7 @@ export default function ProductsPage() {
               initial="hidden"
               animate="show"
             >
-              {mockProducts.map((product) => (
+              {products.map((product) => (
                 <motion.tr 
                   variants={itemVariant}
                   key={product.id} 
@@ -152,7 +202,10 @@ export default function ProductsPage() {
                       <Link href={`/admin/products/new?edit=${product.id}`} className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-[#1a1a1a] flex items-center justify-center hover:bg-neutral-200 dark:hover:bg-[#222] text-neutral-600 dark:text-neutral-400 transition-colors">
                         <Edit className="w-4 h-4" />
                       </Link>
-                      <button className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 transition-colors">
+                      <button 
+                        onClick={() => handleDeleteProduct(product.id)}
+                        className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 transition-colors"
+                      >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>

@@ -81,3 +81,25 @@ body {
     transform: translateY(0);
   }
 }
+
+/* Print Styles */
+@media print {
+  aside, nav, header, button, .print-hide {
+    display: none !important;
+  }
+  body, main {
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .glass {
+    border: 1px solid #ccc;
+    box-shadow: none;
+    background: white;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

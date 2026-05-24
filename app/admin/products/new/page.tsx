@@ -2,10 +2,16 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, UploadCloud, Save, X, Plus, Trash2, ImageIcon, PlusCircle, Check } from "lucide-react";
+import { ArrowLeft, UploadCloud, Save, X, Plus, Trash2, ImageIcon, PlusCircle, Check, Loader2 } from "lucide-react";
+import { supabase } from "../../../lib/supabase";
+import { useToast } from "@/app/components/Toast";
 
 export default function AddProductPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [product, setProduct] = useState({
     name: "",
@@ -35,39 +41,27 @@ export default function AddProductPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("edit")) {
+    const editId = params.get("edit");
+    if (editId) {
       setIsEdit(true);
-      setProduct({
-        name: "Vertex Summit Tent",
-        description: "Tenda premium tahan badai untuk ekspedisi ekstrim dengan teknologi aerogel.",
-        category: "Tenda & Shelter",
-        status: "active"
-      });
-      setHighlights([
-        "Teknologi Aerogel Insulation generasi ke-4",
-        "Tahan air 20,000mm dengan lapisan GORE-TEX Pro",
-        "Kapasitas 2-3 orang dewasa"
-      ]);
-      setSpecs([
-        {key: "Material", value: "100% GORE-TEX Pro 3-Layer"},
-        {key: "Berat", value: "2.5 kg"}
-      ]);
-      setGlobalImages([
-        "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=200&q=80"
-      ]);
-      setVariants([
-        {
-          id: "v1",
-          image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=200&q=80",
-          size: "All Size",
-          colorName: "Forest Green",
-          colorHex: "#228B22",
-          price: "3450000",
-          originalPrice: "4000000",
-          stock: "45",
-          sku: "TRF-TENT-01"
-        }
-      ]);
+      // Fetch real product data
+      fetch(`/api/products?id=${editId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.error) {
+            setProduct({
+              name: data.name || "",
+              description: data.description || "",
+              category: data.category || "General",
+              status: "active"
+            });
+            setHighlights(data.highlights || [""]);
+            setSpecs(data.specs || [{key: "", value: ""}]);
+            setGlobalImages(data.images || [data.image].filter(Boolean));
+            setVariants(data.variants || []);
+          }
+        })
+        .catch(err => console.error("Failed to load product for edit", err));
     }
   }, []);
 
@@ -133,6 +127,65 @@ export default function AddProductPage() {
     setVariants(variants.map(v => v.id === id ? { ...v, [field]: value } : v));
   };
 
+  const handleSaveProduct = async () => {
+    if (!product.name) {
+      toast("warning", "Nama produk wajib diisi", "Silakan isi nama produk sebelum menyimpan.");
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      const defaultPrice = variants.length > 0 ? parseFloat(variants[0].price) : 0;
+      const defaultOriginalPrice = variants.length > 0 && variants[0].originalPrice ? parseFloat(variants[0].originalPrice) : defaultPrice;
+      const defaultImage = globalImages.length > 0 ? globalImages[0] : "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600&q=80";
+
+      const params = new URLSearchParams(window.location.search);
+      const editId = params.get("edit");
+      
+      const payload: any = {
+        name: product.name,
+        category: product.category || "General",
+        gender: "Unisex",
+        price: defaultPrice,
+        original_price: defaultOriginalPrice,
+        image: defaultImage,
+        description: product.description || "",
+        highlights: highlights,
+        specs: specs,
+        variants: variants,
+        images: globalImages
+      };
+
+      if (isEdit && editId) {
+        payload.id = editId;
+      } else {
+        payload.id = `PRD-${Date.now()}`;
+        payload.rating = 0;
+        payload.reviews = 0;
+        payload.sold = 0;
+      }
+
+      const res = await fetch("/api/products", {
+        method: isEdit ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to save product");
+      
+      toast("success", "Produk berhasil disimpan! ✨", `"${product.name}" sudah masuk ke database.`);
+      setTimeout(() => router.push("/admin/products"), 1500);
+    } catch (err: any) {
+      console.error("API ERROR:", err);
+      toast("error", "Gagal menyimpan produk", err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <main className="p-8 lg:p-10 max-w-[1600px] mx-auto w-full min-h-screen">
       
@@ -149,9 +202,13 @@ export default function AddProductPage() {
         </div>
         
         <div className="flex items-center gap-4 w-full md:w-auto">
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#F77F00] text-white shadow-lg shadow-orange-500/20 rounded-2xl px-8 py-3 text-sm font-bold hover:bg-orange-600 transition-colors">
-            <Save className="w-4 h-4" />
-            Save Product
+          <button 
+            onClick={handleSaveProduct}
+            disabled={isSaving}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#F77F00] text-white shadow-lg shadow-orange-500/20 rounded-2xl px-8 py-3 text-sm font-bold hover:bg-orange-600 transition-colors disabled:bg-neutral-500 disabled:shadow-none"
+          >
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isSaving ? "Saving..." : "Save Product"}
           </button>
         </div>
       </div>

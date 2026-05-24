@@ -3,18 +3,25 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart, CartItem } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { Trash2, ShieldCheck, MapPin, CreditCard, Truck, Tag, Lock, ArrowRight, ChevronLeft, Package, Plus, Minus, Map, Crosshair, AlertTriangle, Fingerprint, ShoppingBag, QrCode, Wallet, Building2, Loader2, RefreshCw, Search } from "lucide-react";
+import { Trash2, ShieldCheck, MapPin, CreditCard, Truck, Tag, Lock, ArrowRight, ChevronLeft, Package, Plus, Minus, Map, Crosshair, AlertTriangle, Fingerprint, ShoppingBag, QrCode, Wallet, Building2, Loader2, RefreshCw, Search, X, Home } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Script from "next/script";
 import "leaflet/dist/leaflet.css";
+import { supabase } from "@/utils/supabase/client";
+import dynamic from "next/dynamic";
+import Barcode from "react-barcode";
+
+const MapPicker = dynamic(() => import("../profil/MapPicker"), { ssr: false, loading: () => <div className="w-full h-56 rounded-2xl bg-neutral-100 dark:bg-white/5 animate-pulse" /> });
 
 export default function KeranjangPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { cartItems, removeFromCart, updateQuantity, cartTotal, selectedItemIds: contextSelectedIds, toggleSelect, toggleSelectAll } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal, selectedItemIds: contextSelectedIds, toggleSelect, toggleSelectAll } = useCart();
+  const { user } = useAuth();
   
   const [checkoutItems, setCheckoutItems] = useState<CartItem[]>([]);
   const isBuyNowMode = searchParams.get("mode") === "buynow";
@@ -23,6 +30,9 @@ export default function KeranjangPage() {
   const [paymentMethod, setPaymentMethod] = useState("qris");
   const [promoCode, setPromoCode] = useState("");
   const [isPromoApplied, setIsPromoApplied] = useState(false);
+  const [promoData, setPromoData] = useState<any>(null);
+  const [promoError, setPromoError] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInsured, setIsInsured] = useState(false);
   const [isWaitingPayment, setIsWaitingPayment] = useState(false);
@@ -35,16 +45,92 @@ export default function KeranjangPage() {
   const [ratesError, setRatesError] = useState("");
   const [paymentData, setPaymentData] = useState<any>(null);
   const [paymentToken, setPaymentToken] = useState("");
+  const [currentOrderId, setCurrentOrderId] = useState("");
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [localAddresses, setLocalAddresses] = useState<any[]>([]);
+  const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [addrForm, setAddrForm] = useState({ label: "Rumah", name: "", phone: "", full: "", lat: 0, lng: 0 });
+  const [displayOrderId, setDisplayOrderId] = useState("TRF-000000");
+
+  useEffect(() => {
+    if (user?.user_metadata?.addresses) {
+      setLocalAddresses(user.user_metadata.addresses);
+    }
+    setDisplayOrderId("TRF-" + (Math.floor(Math.random() * 9000000) + 1000000));
+  }, [user]);
+
+  const extractPostalCode = (text: string) => {
+    const match = text.match(/\b\d{5}\b/);
+    return match ? match[0] : "12190";
+  };
+
+  useEffect(() => {
+    if (localAddresses.length > 0 && !selectedAddressId) {
+      const defaultAddr = localAddresses.find(a => a.isDefault) || localAddresses[0];
+      setSelectedAddressId(defaultAddr.id);
+      const code = extractPostalCode(defaultAddr.full);
+      if (code && code !== postalCode) {
+        setPostalCode(code);
+      }
+    }
+  }, [localAddresses, selectedAddressId]);
+
+  const handleAddAddress = async () => {
+    if (!addrForm.name || !addrForm.phone || !addrForm.full) {
+      alert("Lengkapi semua field!");
+      return;
+    }
+    const cleanForm = { ...addrForm };
+    const newAddr = { id: crypto.randomUUID(), ...cleanForm, isDefault: localAddresses.length === 0 };
+    const updated = [...localAddresses, newAddr];
+    await supabase.auth.updateUser({ data: { addresses: updated } });
+    setLocalAddresses(updated);
+    setAddrForm({ label: "Rumah", name: "", phone: "", full: "", lat: 0, lng: 0 });
+    setIsAddingAddress(false);
+    
+    setSelectedAddressId(newAddr.id);
+    const code = extractPostalCode(newAddr.full);
+    setPostalCode(code);
+    fetchShippingRates(code);
+  };
 
   useEffect(() => {
     if (paymentToken && (window as any).snap) {
       (window as any).snap.embed(paymentToken, {
         embedId: 'snap-container',
-        onSuccess: function(result: any) {
-          router.push(`/pembayaran?method=${paymentMethod}&total=${finalTotal}&status=success`);
+        onSuccess: async function(result: any) {
+          if (!isBuyNowMode) clearCart();
+          
+          // Extract actual payment data from Midtrans result
+          const actualMethod = result.payment_type || paymentMethod;
+          const methodLabel = actualMethod === 'bank_transfer' 
+            ? (result.va_numbers?.[0]?.bank?.toUpperCase() || 'BANK TRANSFER') 
+            : actualMethod === 'echannel' ? 'MANDIRI' 
+            : actualMethod.toUpperCase();
+          
+          try {
+            await fetch("/api/orders", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ 
+                id: currentOrderId, 
+                status: "Menunggu Konfirmasi",
+                payment_method: methodLabel,
+                midtrans_transaction_id: result.transaction_id || null,
+                midtrans_transaction_time: result.transaction_time || null,
+                midtrans_gross_amount: result.gross_amount || null,
+                midtrans_status: result.transaction_status || null,
+              })
+            });
+          } catch (e) {
+            console.error("Failed to update status", e);
+          }
+
+          router.push(`/pembayaran?method=${methodLabel}&total=${finalTotal}&status=success&order_id=${currentOrderId}`);
         },
         onPending: function(result: any) {
-          router.push(`/pembayaran?method=${paymentMethod}&total=${finalTotal}&status=pending`);
+          router.push(`/pembayaran?method=${paymentMethod}&total=${finalTotal}&status=pending&order_id=${currentOrderId}`);
         },
         onError: function(result: any) {
           alert("Pembayaran gagal!");
@@ -96,53 +182,11 @@ export default function KeranjangPage() {
   const selectedCheckoutItems = checkoutItems.filter(i => selectedItemIds.includes(i.id));
   const checkoutTotal = selectedCheckoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-  // Leaflet Map Init
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstance = useRef<any>(null);
-
-  useEffect(() => {
-    if (!mapRef.current) return;
-    if (mapInstance.current) {
-      mapInstance.current.remove();
-      mapInstance.current = null;
-    }
-    const initMap = async () => {
-      const L = (await import("leaflet")).default;
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-      });
-
-      if ((mapRef.current as any)?._leaflet_id) return;
-      
-      const lat = -6.2278;
-      const lng = 106.8080; // SCBD Coordinates
-
-      const map = L.map(mapRef.current!, { zoomControl: false, dragging: false, scrollWheelZoom: false }).setView([lat, lng], 15);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; OpenStreetMap',
-      }).addTo(map);
-
-      L.marker([lat, lng]).addTo(map);
-      mapInstance.current = map;
-      
-      // Mencegah map menjadi abu-abu atau hitam karena telat memuat dimensi
-      setTimeout(() => {
-        if (mapInstance.current) {
-          mapInstance.current.invalidateSize();
-        }
-      }, 500);
-    };
-    initMap();
-    return () => {
-      if (mapInstance.current) {
-        mapInstance.current.remove();
-        mapInstance.current = null;
-      }
-    };
-  }, []);
+  const currentAddressText = localAddresses.length > 0 
+    ? (localAddresses.find(a => a.id === selectedAddressId)?.full || "Jl. Jendral Sudirman No. 45, Tower A, Lantai 12\nSudirman Central Business District (SCBD)\nKebayoran Baru, Jakarta Selatan, 12190") 
+    : (user?.user_metadata?.address || "Jl. Jendral Sudirman No. 45, Tower A, Lantai 12\nSudirman Central Business District (SCBD)\nKebayoran Baru, Jakarta Selatan, 12190");
+  const mapQuery = encodeURIComponent(currentAddressText);
+  const mapUrl = `https://maps.google.com/maps?q=${mapQuery}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
 
   const FREE_SHIPPING_THRESHOLD = 2500000;
   const isFreeShipping = checkoutTotal >= FREE_SHIPPING_THRESHOLD;
@@ -203,7 +247,12 @@ export default function KeranjangPage() {
   const totalOriginalPrice = selectedCheckoutItems.reduce((sum, item) => sum + ((item.originalPrice || item.price) * item.quantity), 0);
   const totalProductDiscount = totalOriginalPrice - checkoutTotal;
 
-  const promoDiscount = isPromoApplied ? checkoutTotal * 0.1 : 0;
+  const promoDiscount = isPromoApplied && promoData
+    ? promoData.type === 'percentage' ? checkoutTotal * (promoData.value / 100)
+    : promoData.type === 'fixed' ? promoData.value
+    : promoData.type === 'shipping' ? shippingCost
+    : 0
+    : 0;
   const insuranceCost = isInsured ? 15000 : 0;
   const finalTotal = checkoutTotal + shippingCost - promoDiscount + insuranceCost;
 
@@ -211,14 +260,34 @@ export default function KeranjangPage() {
     return "Rp " + n.toLocaleString("id-ID");
   }
 
-  const handleApplyPromo = (e: React.FormEvent) => {
+  const handleApplyPromo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (promoCode.toUpperCase() === "TRAILFORGE10") {
-      setIsPromoApplied(true);
-    } else {
-      alert("Kode promo tidak valid. Coba 'TRAILFORGE10'");
+    if (!promoCode.trim()) return;
+    setPromoLoading(true);
+    setPromoError("");
+    try {
+      const res = await fetch(`/api/promo?code=${encodeURIComponent(promoCode)}`);
+      const data = await res.json();
+      if (data.valid) {
+        if (data.promo.min_order_amount && checkoutTotal < data.promo.min_order_amount) {
+          setPromoError(`Minimum belanja Rp ${data.promo.min_order_amount.toLocaleString('id-ID')}`);
+          setIsPromoApplied(false);
+          setPromoData(null);
+        } else {
+          setPromoData(data.promo);
+          setIsPromoApplied(true);
+          setPromoError("");
+        }
+      } else {
+        setPromoError(data.message || "Kode promo tidak valid.");
+        setIsPromoApplied(false);
+        setPromoData(null);
+      }
+    } catch {
+      setPromoError("Gagal memvalidasi promo. Coba lagi.");
       setIsPromoApplied(false);
     }
+    setPromoLoading(false);
   };
 
   const handleCheckout = async () => {
@@ -236,19 +305,38 @@ export default function KeranjangPage() {
     if (insuranceCost > 0) items.push({ id: "INSURANCE", price: insuranceCost, quantity: 1, name: "Asuransi Pengiriman" });
 
     try {
+      const generatedOrderId = "TRF-" + Math.floor(Math.random() * 100000000);
+      setCurrentOrderId(generatedOrderId);
+
+      const selectedAddr = localAddresses.find(a => a.id === selectedAddressId);
+      const fullAddress = selectedAddr?.full || `Kode Pos: ${postalCode}`;
+
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          order_id: "TRF-" + Math.floor(Math.random() * 100000000),
+          order_id: generatedOrderId,
           gross_amount: finalTotal,
           items: items,
-          payment_type: paymentMethod, // Filter opsi Midtrans Snap
+          payment_type: paymentMethod,
           customer_details: {
-            first_name: "Alex",
-            last_name: "Mercer",
-            email: "alex.mercer@example.com",
-            phone: "081234567890"
+            first_name: selectedAddr?.name || user?.user_metadata?.full_name || "Guest",
+            last_name: "",
+            email: user?.email || "guest@trailforge.com",
+            phone: selectedAddr?.phone || "081234567890"
+          },
+          shipping_info: {
+            courier: selectedRate?.courier_name || "Belum dipilih",
+            service: selectedRate?.courier_service_name || "-",
+            address: fullAddress,
+            recipient_name: selectedAddr?.name || "",
+            recipient_phone: selectedAddr?.phone || "",
+          },
+          cost_breakdown: {
+            subtotal: checkoutTotal,
+            shipping_cost: shippingCost,
+            insurance_cost: insuranceCost,
+            promo_discount: promoDiscount,
           }
         })
       });
@@ -438,29 +526,50 @@ export default function KeranjangPage() {
             
             <div className="flex flex-col md:flex-row">
               {/* Real Leaflet Map */}
-              <div className="w-full md:w-64 min-h-[240px] bg-[#f8f9fa] dark:bg-[#121212] relative overflow-hidden flex-shrink-0 border-r border-black/10 dark:border-white/10 z-0">
-                 <div ref={mapRef} className="w-full h-full absolute inset-0 z-0"></div>
+              <div className="w-full md:w-64 h-[240px] md:h-auto bg-[#f8f9fa] dark:bg-[#121212] relative overflow-hidden flex-shrink-0 border-r border-black/10 dark:border-white/10">
+                 <iframe 
+                   src={mapUrl} 
+                   frameBorder="0" 
+                   scrolling="no" 
+                   marginHeight={0} 
+                   marginWidth={0} 
+                   className="absolute inset-0 w-full h-full"
+                 ></iframe>
                  {/* Overlay to enforce techwear styling and prevent interaction */}
-                 <div className="absolute inset-0 bg-[#F77F00]/20 pointer-events-none z-10 border-[4px] border-[#F77F00]/20"></div>
+                 <div className="absolute inset-0 bg-[#F77F00]/10 pointer-events-none border-[4px] border-[#F77F00]/20 z-[400]"></div>
               </div>
               
               <div className="p-6 md:p-8 flex-1 flex flex-col justify-center">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="font-black uppercase text-xl">Alex Mercer</h3>
-                    <span className="text-neutral-500 font-mono text-sm block mt-1">No. HP: (+62) 812-3456-7890</span>
+                    <h3 className="font-black uppercase text-xl">
+                      {localAddresses.length > 0 
+                        ? localAddresses.find(a => a.id === selectedAddressId)?.name || user?.user_metadata?.full_name 
+                        : user?.user_metadata?.full_name || "GUEST ACCOUNT"}
+                    </h3>
+                    <span className="text-neutral-500 font-mono text-sm block mt-1">
+                      No. HP: {localAddresses.length > 0 
+                        ? localAddresses.find(a => a.id === selectedAddressId)?.phone || user?.user_metadata?.phone 
+                        : user?.user_metadata?.phone || "(+62) 812-3456-7890"}
+                    </span>
                   </div>
-                  <button className="text-xs font-black uppercase tracking-widest text-[#F77F00] hover:text-[#e06f00] border-b-2 border-[#F77F00] transition-colors pb-1">
+                  <button 
+                    onClick={() => {
+                      setIsAddingAddress(false);
+                      setShowAddressModal(true);
+                    }}
+                    className="text-xs font-black uppercase tracking-widest text-[#F77F00] hover:text-[#e06f00] border-b-2 border-[#F77F00] transition-colors pb-1"
+                  >
                     Ubah Alamat
                   </button>
                 </div>
                 
                 <div className="bg-[#f8f9fa] dark:bg-[#1a1a1a] p-4 border border-black/5 dark:border-white/5">
-                  <span className="inline-block px-2 py-1 bg-black text-white dark:bg-white dark:text-black text-[10px] font-black uppercase tracking-widest mb-3">RUMAH</span>
-                  <p className="text-sm text-[#6C757D] dark:text-neutral-400 leading-relaxed font-mono">
-                    Jl. Jendral Sudirman No. 45, Tower A, Lantai 12<br/>
-                    Sudirman Central Business District (SCBD)<br/>
-                    Kebayoran Baru, Jakarta Selatan, 12190
+                  <span className="inline-block px-2 py-1 bg-black text-white dark:bg-white dark:text-black text-[10px] font-black uppercase tracking-widest mb-3">
+                    {localAddresses.length > 0 ? localAddresses.find(a => a.id === selectedAddressId)?.label?.toUpperCase() || "ALAMAT PENGIRIMAN" : "RUMAH"}
+                  </span>
+                  <p className="text-sm text-[#6C757D] dark:text-neutral-400 leading-relaxed font-mono whitespace-pre-line">
+                    {currentAddressText}
                   </p>
                 </div>
               </div>
@@ -571,28 +680,44 @@ export default function KeranjangPage() {
               
               <div className="p-8 md:p-10 border-b-2 border-dashed border-black/30">
                 <div className="text-center mb-8">
-                  {/* Fake Barcode */}
-                  <div className="w-full h-16 flex mb-4 justify-center gap-1 opacity-70">
-                    {[...Array(30)].map((_, i) => (
-                      <div key={i} className="bg-black h-full" style={{ width: `${Math.random() * 4 + 1}px` }}></div>
-                    ))}
+                  {/* Real Barcode for Logistics / Internal Tracking */}
+                  <div className="w-full h-16 flex mb-4 justify-center overflow-hidden mix-blend-multiply opacity-80">
+                    <Barcode 
+                      value={displayOrderId} 
+                      format="CODE128" 
+                      width={1.8} 
+                      height={60} 
+                      displayValue={false} 
+                      background="transparent" 
+                      lineColor="#1a1a1a" 
+                      margin={0}
+                    />
                   </div>
                   <h2 className="text-2xl font-black uppercase tracking-tighter">Ringkasan Belanja</h2>
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-black/60">ID Pesanan: #{Math.floor(Math.random() * 9000000) + 1000000}</p>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-black/60">Sesi Trx: {displayOrderId}</p>
                 </div>
 
                 {/* Promo Code */}
-                <form onSubmit={handleApplyPromo} className="flex gap-2 mb-8">
-                  <div className="relative flex-1">
-                    <input 
-                      type="text" 
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value)}
-                      placeholder="PUNYA KODE PROMO?" 
-                      className="w-full bg-white border-2 border-black p-3 text-sm font-bold uppercase tracking-widest focus:outline-none focus:border-[#F77F00]"
-                    />
+                <form onSubmit={handleApplyPromo} className="mb-8">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input 
+                        type="text" 
+                        value={promoCode}
+                        onChange={(e) => { setPromoCode(e.target.value); if (promoError) setPromoError(""); }}
+                        placeholder="PUNYA KODE PROMO?" 
+                        className={`w-full bg-white border-2 p-3 text-sm font-bold uppercase tracking-widest focus:outline-none focus:border-[#F77F00] ${isPromoApplied ? 'border-emerald-500' : promoError ? 'border-red-400' : 'border-black'}`}
+                        disabled={isPromoApplied}
+                      />
+                    </div>
+                    {isPromoApplied ? (
+                      <button type="button" onClick={() => { setIsPromoApplied(false); setPromoData(null); setPromoCode(""); setPromoError(""); }} className="px-6 bg-red-500 text-white text-xs font-black uppercase tracking-widest hover:bg-red-600 transition-colors">Hapus</button>
+                    ) : (
+                      <button type="submit" disabled={promoLoading} className="px-6 bg-black text-white text-xs font-black uppercase tracking-widest hover:bg-[#F77F00] transition-colors disabled:opacity-50">{promoLoading ? "..." : "Pakai"}</button>
+                    )}
                   </div>
-                  <button type="submit" className="px-6 bg-black text-white text-xs font-black uppercase tracking-widest hover:bg-[#F77F00] transition-colors">Pakai</button>
+                  {promoError && <p className="text-[10px] font-bold text-red-500 mt-2 uppercase tracking-widest">{promoError}</p>}
+                  {isPromoApplied && promoData && <p className="text-[10px] font-bold text-emerald-600 mt-2 uppercase tracking-widest">✓ {promoData.description || `Diskon ${promoData.type === 'percentage' ? promoData.value + '%' : 'Rp ' + promoData.value.toLocaleString('id-ID')} aktif!`}</p>}
                 </form>
 
                 {/* Kalkulasi Biaya (Receipt style) */}
@@ -654,16 +779,32 @@ export default function KeranjangPage() {
                 )}
 
                 {/* Order Bump: Asuransi in Receipt style */}
-                <label className="flex items-start gap-3 mb-8 cursor-pointer group">
-                  <div className={`w-5 h-5 flex items-center justify-center border-2 border-black mt-0.5 ${isInsured ? "bg-black text-white" : "bg-transparent"}`}>
-                    {isInsured && <div className="w-2.5 h-2.5 bg-white"></div>}
-                  </div>
-                  <input type="checkbox" checked={isInsured} onChange={() => setIsInsured(!isInsured)} className="hidden" />
+                <div 
+                  onClick={() => setIsInsured(!isInsured)}
+                  className={`flex items-start md:items-center justify-between gap-4 p-4 mb-8 cursor-pointer rounded-xl transition-all border-2 ${isInsured ? "border-[#F77F00] bg-orange-500/10" : "border-black/10 hover:border-black/30"}`}
+                >
                   <div className="flex-1">
-                    <span className="text-xs font-black uppercase tracking-tighter block text-black">Pakai Asuransi Pengiriman (+Rp 15.000)</span>
-                    <p className="text-[9px] font-mono text-black/60 leading-relaxed mt-1">Dapatkan garansi ganti rugi 100% penuh jika barang rusak atau hilang selama di tangan kurir pengiriman.</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <ShieldCheck className={`w-4 h-4 ${isInsured ? "text-[#F77F00]" : "text-black/40"}`} />
+                      <span className={`text-xs font-black uppercase tracking-tighter ${isInsured ? "text-black" : "text-black/60"}`}>
+                        Asuransi Pengiriman (+Rp 15.000)
+                      </span>
+                    </div>
+                    <p className="text-[9px] font-mono text-black/60 leading-relaxed pl-6">
+                      Garansi 100% oleh Biteship jika barang rusak/hilang di jalan.
+                    </p>
                   </div>
-                </label>
+                  
+                  {/* Modern Toggle Switch */}
+                  <div className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${isInsured ? "bg-[#F77F00]" : "bg-black/20"}`}>
+                    <motion.div 
+                      layout
+                      initial={false}
+                      animate={{ x: isInsured ? 24 : 2 }}
+                      className="absolute top-1 bottom-1 w-4 h-4 bg-white rounded-full shadow-sm"
+                    />
+                  </div>
+                </div>
 
                 {/* Checkout CTA */}
                 <button 
@@ -688,6 +829,133 @@ export default function KeranjangPage() {
 
       </div>
       <Footer />
+
+      {/* Address Update Modal */}
+      <AnimatePresence>
+        {showAddressModal && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 20, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="w-full max-w-md bg-[#F8F9FA] dark:bg-neutral-900 border border-black/10 dark:border-white/10 p-6 shadow-2xl relative"
+            >
+              <button 
+                onClick={() => {
+                  if (isAddingAddress) setIsAddingAddress(false);
+                  else setShowAddressModal(false);
+                }}
+                className="absolute top-4 right-4 text-neutral-500 hover:text-[#F77F00] transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <h2 className="text-xl font-black uppercase tracking-tight text-[#212529] dark:text-white mb-6 flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-[#F77F00]" /> {isAddingAddress ? "Tambah Alamat Baru" : "Pilih Alamat"}
+              </h2>
+
+              {!isAddingAddress ? (
+                <>
+                  <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                    {localAddresses.length > 0 ? (
+                      localAddresses.map(addr => (
+                        <div 
+                          key={addr.id}
+                          onClick={() => {
+                            setSelectedAddressId(addr.id);
+                            const code = extractPostalCode(addr.full);
+                            setPostalCode(code);
+                            fetchShippingRates(code);
+                            setShowAddressModal(false);
+                          }}
+                          className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                            selectedAddressId === addr.id 
+                              ? "border-[#F77F00] bg-orange-500/5" 
+                              : "border-black/10 dark:border-white/10 hover:border-black/30 dark:hover:border-white/30"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-orange-500/10 text-[#F77F00]">{addr.label}</span>
+                            {addr.isDefault && <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500">Utama</span>}
+                          </div>
+                          <p className="font-bold text-sm mb-1 text-[#212529] dark:text-white">{addr.name}</p>
+                          <p className="text-xs text-[#6C757D] mb-1">{addr.phone}</p>
+                          <p className="text-xs text-[#6C757D] line-clamp-2">{addr.full}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-[#6C757D] mb-4">Belum ada alamat tersimpan.</p>
+                      </div>
+                    )}
+                  </div>
+                    
+                  <div className="pt-6 border-t border-black/10 dark:border-white/10 mt-6 flex gap-3">
+                    <button 
+                      onClick={() => setShowAddressModal(false)}
+                      className="flex-1 px-4 py-3 border border-black/10 dark:border-white/10 text-xs font-black uppercase tracking-widest hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded-lg"
+                    >
+                      Batal
+                    </button>
+                    <button 
+                      onClick={() => setIsAddingAddress(true)}
+                      className="flex-[2] px-4 py-3 bg-[#F77F00] text-white text-xs font-black uppercase tracking-widest hover:bg-[#e06f00] transition-colors shadow-lg shadow-orange-500/20 rounded-lg flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" /> Tambah Alamat
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="flex gap-2">
+                    {["Rumah", "Kantor", "Lainnya"].map(l => (
+                      <button key={l} onClick={() => setAddrForm({ ...addrForm, label: l })}
+                        className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded-lg transition-all ${addrForm.label === l ? "bg-[#F77F00] text-white" : "bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-neutral-500 dark:text-neutral-400"}`}>
+                        {l === "Rumah" ? <span className="flex items-center gap-1"><Home className="w-3 h-3" />{l}</span> : l === "Kantor" ? <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{l}</span> : l}
+                      </button>
+                    ))}
+                  </div>
+                  <input value={addrForm.name} onChange={e => setAddrForm({ ...addrForm, name: e.target.value })} placeholder="Nama penerima"
+                    className="w-full bg-transparent border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:border-[#F77F00] outline-none transition-colors" />
+                  <input value={addrForm.phone} onChange={e => setAddrForm({ ...addrForm, phone: e.target.value })} placeholder="Nomor telepon"
+                    className="w-full bg-transparent border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:border-[#F77F00] outline-none transition-colors" />
+                  <textarea value={addrForm.full} onChange={e => setAddrForm({ ...addrForm, full: e.target.value })} placeholder="Alamat lengkap (Wajib sertakan 5 digit kode pos di akhir)" rows={3}
+                    className="w-full bg-transparent border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:border-[#F77F00] outline-none transition-colors resize-none" />
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-[#6C757D] mb-2">📍 Pin Lokasi di Peta</p>
+                    <MapPicker
+                      initialLat={addrForm.lat || undefined}
+                      initialLng={addrForm.lng || undefined}
+                      onSelect={(lat: number, lng: number, address: string) => {
+                        setAddrForm(prev => ({ ...prev, lat, lng, full: prev.full || address }));
+                      }}
+                    />
+                  </div>
+                  <div className="pt-4 flex gap-3">
+                    <button 
+                      onClick={() => setIsAddingAddress(false)}
+                      className="flex-1 px-4 py-3 border border-black/10 dark:border-white/10 text-xs font-black uppercase tracking-widest hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded-xl"
+                    >
+                      Batal
+                    </button>
+                    <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={handleAddAddress}
+                      className="flex-[2] py-3 bg-gradient-to-r from-orange-500 to-[#F77F00] text-white font-bold text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-orange-500/20">
+                      Simpan Alamat
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </main>
   );
 }

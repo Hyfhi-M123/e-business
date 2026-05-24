@@ -1,18 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Filter, Tag, Plus, Ticket, ArrowDownToLine, Clock, CalendarX2, CheckCircle2, MoreHorizontal, Percent, Truck, Banknote, Edit, Copy, PowerOff, Trash2 } from "lucide-react";
 import Link from "next/link";
-
-// Dummy Data
-const OFFERS_DATA = [
-  { id: "OFR-1", code: "PAYDAY20", type: "percentage", value: 20, desc: "20% off all expedition jackets", status: "active", used: 145, limit: 200, startDate: "Oct 25, 2023", endDate: "Oct 31, 2023" },
-  { id: "OFR-2", code: "FREESHIP", type: "shipping", value: 0, desc: "Free shipping for orders > Rp 1M", status: "active", used: 890, limit: null, startDate: "Sep 01, 2023", endDate: "Dec 31, 2023" },
-  { id: "OFR-3", code: "NEWYEAR50", type: "fixed", value: 50000, desc: "Rp 50.000 off for new users", status: "scheduled", used: 0, limit: 500, startDate: "Jan 01, 2024", endDate: "Jan 07, 2024" },
-  { id: "OFR-4", code: "FLASH10", type: "percentage", value: 10, desc: "10% off flash sale event", status: "expired", used: 50, limit: 50, startDate: "Oct 10, 2023", endDate: "Oct 12, 2023" },
-  { id: "OFR-5", code: "VIPMEMBER", type: "percentage", value: 15, desc: "15% off for VIP customers only", status: "active", used: 34, limit: 100, startDate: "Oct 01, 2023", endDate: "Nov 01, 2023" },
-];
 
 export default function OffersPage() {
   const [search, setSearch] = useState("");
@@ -26,11 +17,52 @@ export default function OffersPage() {
     };
   }
 
-  const activeOffersCount = OFFERS_DATA.filter(o => o.status === 'active').length;
-  const totalUsed = OFFERS_DATA.reduce((acc, curr) => acc + curr.used, 0);
+  const [offers, setOffers] = useState<any[]>([]);
 
-  const filteredData = OFFERS_DATA.filter(o => {
-    const matchesSearch = o.code.toLowerCase().includes(search.toLowerCase()) || o.desc.toLowerCase().includes(search.toLowerCase());
+  useEffect(() => {
+    fetchOffers();
+  }, []);
+
+  const fetchOffers = async () => {
+    try {
+      const res = await fetch("/api/promo");
+      const data = await res.json();
+      if (data.promos) setOffers(data.promos);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this offer?")) return;
+    try {
+      await fetch(`/api/promo/${id}`, { method: "DELETE" });
+      fetchOffers();
+    } catch (error) {
+      console.error("Failed to delete", error);
+    }
+  };
+
+  const handleDeactivate = async (id: string, currentStatus: string) => {
+    try {
+      await fetch(`/api/promo/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: currentStatus === "active" ? "expired" : "active" })
+      });
+      fetchOffers();
+    } catch (error) {
+      console.error("Failed to update status", error);
+    }
+  };
+
+  const activeOffersCount = offers.filter(o => o.status === 'active').length;
+  const totalUsed = offers.reduce((acc, curr) => acc + (curr.usage_count || 0), 0);
+
+  const topPerformer = offers.length > 0 ? offers.reduce((prev, current) => ((prev.usage_count || 0) > (current.usage_count || 0)) ? prev : current) : null;
+
+  const filteredData = offers.filter(o => {
+    const matchesSearch = o.code.toLowerCase().includes(search.toLowerCase()) || (o.description || "").toLowerCase().includes(search.toLowerCase());
     if (!matchesSearch) return false;
     if (filter === "all") return true;
     return o.status === filter;
@@ -87,7 +119,7 @@ export default function OffersPage() {
           </div>
           <div className="flex-1 w-full overflow-hidden">
             <p className="text-xs font-bold text-[#F77F00] uppercase tracking-widest mb-1 flex items-center gap-2">Top Performer</p>
-            <h3 className="text-xl font-black text-[#212529] dark:text-white truncate">PAYDAY20</h3>
+            <h3 className="text-xl font-black text-[#212529] dark:text-white truncate">{topPerformer ? topPerformer.code : "-"}</h3>
           </div>
         </motion.div>
 
@@ -145,7 +177,7 @@ export default function OffersPage() {
             <tbody>
               <AnimatePresence>
                 {filteredData.map((offer, i) => {
-                  const usagePercent = offer.limit ? (offer.used / offer.limit) * 100 : 0;
+                  const usagePercent = offer.usage_limit ? ((offer.usage_count || 0) / offer.usage_limit) * 100 : 0;
                   
                   return (
                     <motion.tr 
@@ -162,7 +194,7 @@ export default function OffersPage() {
                       <td className="py-4 px-4">
                         <div className="flex flex-col">
                           <span className="text-sm font-black text-[#212529] dark:text-white mb-0.5 uppercase group-hover:text-[#F77F00] transition-colors">{offer.code}</span>
-                          <span className="text-xs font-medium text-neutral-500 max-w-[200px] truncate">{offer.desc}</span>
+                          <span className="text-xs font-medium text-neutral-500 max-w-[200px] truncate">{offer.description}</span>
                         </div>
                       </td>
 
@@ -197,11 +229,11 @@ export default function OffersPage() {
                       <td className="py-4 px-4">
                         <div className="flex flex-col w-[160px]">
                           <div className="flex justify-between items-end mb-1.5">
-                            <span className="text-xs font-bold text-[#212529] dark:text-white">{offer.used} <span className="text-neutral-400 font-medium">used</span></span>
-                            {offer.limit && <span className="text-[10px] font-bold text-neutral-400">Limit: {offer.limit}</span>}
-                            {!offer.limit && <span className="text-[10px] font-bold text-emerald-500">Unlimited</span>}
+                            <span className="text-xs font-bold text-[#212529] dark:text-white">{offer.usage_count || 0} <span className="text-neutral-400 font-medium">used</span></span>
+                            {offer.usage_limit && <span className="text-[10px] font-bold text-neutral-400">Limit: {offer.usage_limit}</span>}
+                            {!offer.usage_limit && <span className="text-[10px] font-bold text-emerald-500">Unlimited</span>}
                           </div>
-                          {offer.limit ? (
+                          {offer.usage_limit ? (
                             <div className="w-full h-1.5 bg-neutral-100 dark:bg-[#222] rounded-full overflow-hidden">
                               <motion.div 
                                 initial={{ width: 0 }}
@@ -221,8 +253,8 @@ export default function OffersPage() {
                       {/* Active Period */}
                       <td className="py-4 px-4">
                         <div className="flex flex-col">
-                          <span className="text-sm font-bold text-[#212529] dark:text-white">{offer.startDate}</span>
-                          <span className="text-xs font-medium text-neutral-400">to {offer.endDate}</span>
+                          <span className="text-sm font-bold text-[#212529] dark:text-white">{offer.start_date ? new Date(offer.start_date).toLocaleDateString() : 'Always'}</span>
+                          <span className="text-xs font-medium text-neutral-400">to {offer.end_date ? new Date(offer.end_date).toLocaleDateString() : 'Forever'}</span>
                         </div>
                       </td>
 
@@ -255,12 +287,12 @@ export default function OffersPage() {
                                 <Copy className="w-4 h-4 text-neutral-400" />
                                 Duplicate
                               </button>
-                              <button className="w-full px-4 py-2.5 text-left text-sm font-bold text-neutral-500 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors flex items-center gap-3">
+                              <button onClick={() => handleDeactivate(offer.id, offer.status)} className="w-full px-4 py-2.5 text-left text-sm font-bold text-neutral-500 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors flex items-center gap-3">
                                 <PowerOff className="w-4 h-4 text-neutral-400" />
-                                Deactivate
+                                {offer.status === "active" ? "Deactivate" : "Activate"}
                               </button>
                               <div className="h-px bg-black/5 dark:bg-white/5 my-1"></div>
-                              <button className="w-full px-4 py-2.5 text-left text-sm font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors flex items-center gap-3">
+                              <button onClick={() => handleDelete(offer.id)} className="w-full px-4 py-2.5 text-left text-sm font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors flex items-center gap-3">
                                 <Trash2 className="w-4 h-4" />
                                 Delete Offer
                               </button>

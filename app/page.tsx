@@ -35,6 +35,31 @@ const ALL_REVIEWS = [
 ];
 
 export default function Home() {
+  const [bestSellers, setBestSellers] = useState<any[]>([]);
+  const [loadingBestSellers, setLoadingBestSellers] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/products")
+      .then(res => res.json())
+      .then(data => {
+        if(Array.isArray(data)) {
+          // Sort by sold descending
+          const sorted = data.sort((a, b) => {
+            const soldA = a.sold || 0;
+            const soldB = b.sold || 0;
+            if (soldB !== soldA) {
+              return soldB - soldA;
+            }
+            // Tie-breaker: Price descending
+            return (b.price || 0) - (a.price || 0);
+          });
+          // Take top 3
+          setBestSellers(sorted.slice(0, 3));
+        }
+      })
+      .catch(err => console.error("Failed to load best sellers:", err))
+      .finally(() => setLoadingBestSellers(false));
+  }, []);
   const { scrollYProgress } = useScroll();
   const smoothProgress = useSpring(scrollYProgress, { stiffness: 50, damping: 20, restDelta: 0.001 });
   
@@ -361,31 +386,48 @@ export default function Home() {
             </Link>
           </div>
 
-          <motion.div variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
-            {[
-              { id: "103", name: "AeroStep Mountain Boot", price: 2150000, img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80", tag: "Terlaris" },
-              { id: "110", name: "Trailblazer 55L Pack", price: 2800000, img: "https://images.unsplash.com/photo-1622260614153-03223fb72052?w=600&q=80", tag: "Hot" },
-              { id: "108", name: "Glacier Down Parka", price: 1500000, img: "https://images.unsplash.com/photo-1532054950669-026859e2185c?w=600&q=80", tag: "" },
-              { id: "102", name: "Timberline X-Coat Arctic", price: 1200000, img: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600&q=80", tag: "" },
-            ].map((product, i) => (
-              <motion.div variants={popUpVariant} key={i} className="group cursor-pointer" onClick={() => window.location.href=`/produk/${product.id}`}>
-                <div className="relative aspect-[4/5] bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-3xl overflow-hidden mb-6 border border-white/50 dark:border-white/5 shadow-lg group-hover:border-amber-500/50 group-hover:shadow-[0_0_30px_rgba(245,158,11,0.15)] transition-all duration-500 group-hover:-translate-y-2">
-                  {product.tag && (
-                    <span className="absolute top-4 left-4 z-10 px-4 py-1.5 bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 animate-gradient-x text-white text-[9px] font-black uppercase tracking-widest rounded-full shadow-lg border border-yellow-300/30">
-                      {product.tag}
-                    </span>
-                  )}
-                  <img src={product.img} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6">
-                    <button onClick={(e) => { e.stopPropagation(); window.location.href=`/produk/${product.id}`; }} className="w-full py-4 bg-white text-black text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-amber-500 hover:text-white transition-colors shadow-xl">
-                      Lihat Detail
-                    </button>
+          <motion.div variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10">
+            {loadingBestSellers ? (
+              [1, 2, 3].map((n) => (
+                <div key={n} className="aspect-[4/5] bg-neutral-200 dark:bg-neutral-800 animate-pulse rounded-3xl" />
+              ))
+            ) : bestSellers.map((product, i) => {
+              // Parse images
+              let coverImage = "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80"; // fallback
+              try {
+                if (Array.isArray(product.images) && product.images.length > 0) {
+                  coverImage = product.images[0];
+                } else if (typeof product.images === 'string') {
+                  const parsed = JSON.parse(product.images);
+                  if (parsed.length > 0) coverImage = parsed[0];
+                }
+              } catch(e){}
+
+              return (
+                <motion.div variants={popUpVariant} key={product.id} className="group cursor-pointer" onClick={() => window.location.href=`/produk/${product.id}`}>
+                  <div className="relative aspect-[4/5] bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-3xl overflow-hidden mb-6 border border-white/50 dark:border-white/5 shadow-lg group-hover:border-amber-500/50 group-hover:shadow-[0_0_30px_rgba(245,158,11,0.15)] transition-all duration-500 group-hover:-translate-y-2">
+                    {i === 0 && (
+                      <span className="absolute top-4 left-4 z-10 px-4 py-1.5 bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 animate-gradient-x text-white text-[9px] font-black uppercase tracking-widest rounded-full shadow-lg border border-yellow-300/30">
+                        Top #1 Terlaris
+                      </span>
+                    )}
+                    {i === 1 && (
+                      <span className="absolute top-4 left-4 z-10 px-4 py-1.5 bg-[#F77F00] text-white text-[9px] font-black uppercase tracking-widest rounded-full shadow-lg">
+                        Hot Item
+                      </span>
+                    )}
+                    <img src={coverImage} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6">
+                      <button onClick={(e) => { e.stopPropagation(); window.location.href=`/produk/${product.id}`; }} className="w-full py-4 bg-white text-black text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-amber-500 hover:text-white transition-colors shadow-xl">
+                        Lihat Detail
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <h4 className="text-base font-black uppercase tracking-wide mb-1 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">{product.name}</h4>
-                <p className="text-sm font-mono text-[#6C757D] dark:text-neutral-400 font-bold">Rp {product.price.toLocaleString("id-ID")}</p>
-              </motion.div>
-            ))}
+                  <h4 className="text-base font-black uppercase tracking-wide mb-1 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-1">{product.name}</h4>
+                  <p className="text-sm font-mono text-[#6C757D] dark:text-neutral-400 font-bold">Rp {(product.price || 0).toLocaleString("id-ID")}</p>
+                </motion.div>
+              );
+            })}
           </motion.div>
         </motion.section>
 

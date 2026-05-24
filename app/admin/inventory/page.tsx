@@ -1,24 +1,73 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Filter, AlertTriangle, Package, PackageX, History, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import Link from "next/link";
 
-// Dummy data
-const INVENTORY_DATA = [
-  { id: "INV-001", name: "Timberline X-Coat Arctic Pro", variant: "Midnight Black - M", sku: "TRF-XCT-MB-M", stock: 12, incoming: 50, status: "in-stock" },
-  { id: "INV-002", name: "Timberline X-Coat Arctic Pro", variant: "Midnight Black - L", sku: "TRF-XCT-MB-L", stock: 3, incoming: 0, status: "low-stock" },
-  { id: "INV-003", name: "Vertex Summit Tent", variant: "Forest Green - All Size", sku: "TRF-TENT-01", stock: 0, incoming: 20, status: "out-of-stock" },
-  { id: "INV-004", name: "AeroTrek Hiking Boots", variant: "Desert Sand - 42", sku: "TRF-BT-DS-42", stock: 45, incoming: 0, status: "in-stock" },
-  { id: "INV-005", name: "AeroTrek Hiking Boots", variant: "Desert Sand - 43", sku: "TRF-BT-DS-43", stock: 2, incoming: 0, status: "low-stock" },
-  { id: "INV-006", name: "SolarFlare Headlamp", variant: "Standard - All Size", sku: "TRF-HL-01", stock: 120, incoming: 200, status: "in-stock" },
-];
-
 export default function InventoryPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
-  const [inventory, setInventory] = useState(INVENTORY_DATA);
+  const [inventory, setInventory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchInventory = async () => {
+      try {
+        const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://wsenprneavjusqmmxobd.supabase.co";
+        const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_v2YG0aXS_8AhAxZaHq7xGQ_jWnLA26J";
+        
+        const res = await fetch(`${url}/rest/v1/products?select=*`, {
+          headers: {
+            "apikey": key,
+            "Authorization": `Bearer ${key}`
+          }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          let items: any[] = [];
+          
+          data.forEach((p: any) => {
+            if (p.variants && p.variants.length > 0) {
+              p.variants.forEach((v: any, idx: number) => {
+                const stockVal = parseInt(v.stock) || 0;
+                items.push({
+                  id: `${p.id}-var-${idx}`,
+                  productId: p.id,
+                  name: p.name,
+                  variant: `${v.colorName} - ${v.size}`,
+                  sku: v.sku || `${p.id}-${v.colorName.substring(0,3)}-${v.size}`.toUpperCase().replace(/\s+/g, ''),
+                  stock: stockVal,
+                  incoming: 0,
+                  status: stockVal === 0 ? "out-of-stock" : stockVal <= 5 ? "low-stock" : "in-stock"
+                });
+              });
+            } else {
+              items.push({
+                id: p.id,
+                productId: p.id,
+                name: p.name,
+                variant: "All Size",
+                sku: p.id.toUpperCase(),
+                stock: 99,
+                incoming: 0,
+                status: "in-stock"
+              });
+            }
+          });
+          
+          setInventory(items);
+        }
+      } catch (error) {
+        console.error("Failed to fetch inventory", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchInventory();
+  }, []);
 
   // Stats calculation
   const totalVariants = inventory.length;
@@ -114,7 +163,12 @@ export default function InventoryPage() {
       </div>
 
       {/* Main Content */}
-      <div className="bg-white dark:bg-[#111] rounded-[2rem] shadow-sm border border-black/5 dark:border-white/5 overflow-hidden">
+      <div className="bg-white dark:bg-[#111] rounded-[2rem] shadow-sm border border-black/5 dark:border-white/5 overflow-hidden relative">
+        {loading && (
+          <div className="absolute inset-0 z-50 bg-white/80 dark:bg-[#111]/80 flex items-center justify-center backdrop-blur-sm">
+            <div className="w-8 h-8 border-4 border-[#F77F00] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
         
         {/* Controls */}
         <div className="p-6 md:p-8 border-b border-black/5 dark:border-white/5 flex flex-col md:flex-row gap-4 justify-between items-center bg-neutral-50/50 dark:bg-[#1a1a1a]/50">

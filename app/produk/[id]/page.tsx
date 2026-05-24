@@ -7,13 +7,14 @@ import {
   ThumbsUp, ImageIcon, X, Globe, MessageSquare, Copy, Search
 } from "lucide-react";
 import Link from "next/link";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
-import { ALL_PRODUCTS } from "../../lib/products";
+import { useWishlist } from "../../context/WishlistContext";
+import { supabase } from "../../lib/supabase";
 
 // Variasi animasi global
 const fadeUp = {
@@ -120,35 +121,84 @@ export default function ProfessionalPDP() {
   const router = useRouter();
   const idProduk = pathname.split('/').pop() || "102";
   
-  // Cari produk dari database dummy berdasarkan ID
-  const foundProduct = ALL_PRODUCTS.find(item => item.id === idProduk);
+  const [dbProduct, setDbProduct] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Real Reviews State
+  const [realReviews, setRealReviews] = useState<any[]>([]);
+  const [realRating, setRealRating] = useState(0);
+  const [realReviewCount, setRealReviewCount] = useState(0);
   
-  // Merge data dasar dari ALL_PRODUCTS dengan detail lengkap dari mock data
-  const p = foundProduct ? {
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [newRating, setNewRating] = useState(5);
+  const [newComment, setNewComment] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/api/products?id=${idProduk}`);
+        
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        
+        const data = await res.json();
+        setDbProduct(data);
+
+        // Fetch Real Reviews
+        const revRes = await fetch(`/api/reviews?product_id=${idProduk}`);
+        if (revRes.ok) {
+          const revData = await revRes.json();
+          setRealReviews(revData.reviews || []);
+          setRealRating(revData.averageRating || 0);
+          setRealReviewCount(revData.totalReviews || 0);
+        }
+      } catch (error: any) {
+        console.error("Error fetching product:", error.message || error);
+      }
+      setIsLoading(false);
+    };
+    fetchProduct();
+  }, [idProduk]);
+  
+  // Read from Database, fallback to productData (mock) if the new fields are empty
+  const p = dbProduct ? {
     ...productData,
-    name: foundProduct.name,
-    category: foundProduct.category,
-    price: foundProduct.price,
-    originalPrice: foundProduct.originalPrice,
-    rating: foundProduct.rating,
-    reviewCount: foundProduct.reviews,
-    soldCount: foundProduct.sold,
-    images: [foundProduct.image, ...productData.images.slice(1)]
+    id: dbProduct.id,
+    name: dbProduct.name,
+    category: dbProduct.category,
+    price: dbProduct.price,
+    originalPrice: dbProduct.original_price,
+    rating: realReviewCount > 0 ? realRating : 0,
+    reviewCount: realReviewCount,
+    soldCount: dbProduct.sold,
+    images: dbProduct.images && dbProduct.images.length > 0 
+      ? dbProduct.images 
+      : [dbProduct.image, ...productData.images.slice(1)],
+    description: dbProduct.description || productData.description,
+    highlights: dbProduct.highlights && dbProduct.highlights.length > 0 ? dbProduct.highlights : productData.highlights,
+    specs: dbProduct.specs && dbProduct.specs.length > 0 
+      ? dbProduct.specs.reduce((acc: any, curr: any) => ({ ...acc, [curr.key]: curr.value }), {}) 
+      : productData.specs,
+    variants: dbProduct.variants && dbProduct.variants.length > 0 ? dbProduct.variants : null,
+    reviews: realReviewCount > 0 ? realReviews : productData.reviews, // fallback for styling only if 0
   } : productData;
 
   const { addToCart } = useCart();
+
+  const { toggleWishlist, isInWishlist } = useWishlist();
 
   // State UI
   const [activeSize, setActiveSize] = useState("M");
   const [activeColor, setActiveColor] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [wishlisted, setWishlisted] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const [openAccordion, setOpenAccordion] = useState<string | null>("highlights");
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [reviewSort, setReviewSort] = useState("helpful");
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
   
   const { user } = useAuth(); // Action Guard Listener
   const [guestAlert, setGuestAlert] = useState(false);
@@ -156,14 +206,29 @@ export default function ProfessionalPDP() {
   // Refs untuk scroll-triggered animations
   const reviewRef = useRef(null);
   const relatedRef = useRef(null);
-  const reviewInView = useInView(reviewRef, { once: true, margin: "-100px" });
-  const relatedInView = useInView(relatedRef, { once: true, margin: "-100px" });
+  const reviewInView = useInView(reviewRef, { once: true, margin: "-50px" });
+  const relatedInView = useInView(relatedRef, { once: true, margin: "-50px" });
 
-  const sizeSurcharge = activeSize === "L" ? 50000 : activeSize === "XL" ? 100000 : 0;
-  const currentPrice = p.price + sizeSurcharge;
-  const currentOriginalPrice = p.originalPrice + sizeSurcharge;
+  const hasVariants = p.variants && p.variants.length > 0;
+  const availableSizes = hasVariants ? Array.from(new Set(p.variants.map((v: any) => v.size))) : ["S", "M", "L", "XL"];
+  const availableColors = hasVariants ? Array.from(new Set(p.variants.map((v: any) => v.colorName))) : p.colors.map((c: any) => c.name);
 
-  const discount = Math.round((1 - currentPrice / currentOriginalPrice) * 100);
+  // Set default if current activeSize is not in availableSizes
+  useEffect(() => {
+    if (hasVariants && !availableSizes.includes(activeSize)) {
+      setActiveSize(availableSizes[0] as string);
+    }
+    if (hasVariants && activeColor >= availableColors.length) {
+      setActiveColor(0);
+    }
+  }, [p.variants]);
+
+  const selectedVariant = hasVariants ? p.variants.find((v: any) => v.size === activeSize && v.colorName === availableColors[activeColor]) : null;
+
+  const currentPrice = selectedVariant && selectedVariant.price ? parseFloat(selectedVariant.price) : p.price + (activeSize === "L" ? 50000 : activeSize === "XL" ? 100000 : 0);
+  const currentOriginalPrice = selectedVariant && selectedVariant.originalPrice ? parseFloat(selectedVariant.originalPrice) : p.originalPrice + (activeSize === "L" ? 50000 : activeSize === "XL" ? 100000 : 0);
+
+  const discount = currentOriginalPrice > currentPrice ? Math.round((1 - currentPrice / currentOriginalPrice) * 100) : 0;
 
   const showGuestWarning = () => {
     setGuestAlert(true);
@@ -173,7 +238,7 @@ export default function ProfessionalPDP() {
   const executeAddToCart = () => {
     addToCart({
       id: idProduk,
-      name: `${p.name} - ${activeSize} - ${p.colors[activeColor].name}`,
+      name: `${p.name} - ${activeSize} - ${availableColors[activeColor]}`,
       price: currentPrice,
       originalPrice: currentOriginalPrice,
       image: p.images[0],
@@ -193,7 +258,7 @@ export default function ProfessionalPDP() {
     if (!user) return showGuestWarning();
     const buyNowItem = {
       id: idProduk,
-      name: `${p.name} - ${activeSize} - ${p.colors[activeColor].name}`,
+      name: `${p.name} - ${activeSize} - ${availableColors[activeColor]}`,
       price: currentPrice,
       originalPrice: currentOriginalPrice,
       image: p.images[0],
@@ -201,12 +266,54 @@ export default function ProfessionalPDP() {
       quantity: quantity
     };
     sessionStorage.setItem("trailforge_buynow", JSON.stringify([buyNowItem]));
-    router.push('/keranjang?mode=buynow');
+    router.push("/keranjang?mode=buynow");
   };
+
+  const submitReview = async () => {
+    if (!user) return showGuestWarning();
+    setIsSubmittingReview(true);
+    try {
+      await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_id: idProduk,
+          user_email: user.email,
+          user_name: user.user_metadata?.full_name || user.email?.split("@")[0],
+          rating: newRating,
+          comment: newComment
+        })
+      });
+      // refresh reviews
+      const revRes = await fetch(`/api/reviews?product_id=${idProduk}`);
+      if (revRes.ok) {
+        const revData = await revRes.json();
+        setRealReviews(revData.reviews || []);
+        setRealRating(revData.averageRating || 0);
+        setRealReviewCount(revData.totalReviews || 0);
+      }
+      setShowReviewModal(false);
+      setNewComment("");
+    } catch (err) {
+      console.error(err);
+    }
+    setIsSubmittingReview(false);
+  };
+
+
+  const isWishlisted = isInWishlist(idProduk);
 
   const handleWishlist = () => {
     if (!user) return showGuestWarning();
-    setWishlisted(!wishlisted);
+    toggleWishlist({
+      id: idProduk,
+      name: `${p.name} - ${activeSize} - ${availableColors[activeColor]}`,
+      price: currentPrice,
+      originalPrice: currentOriginalPrice,
+      image: p.images[0],
+      category: p.category,
+      discount: discount
+    });
   };
 
   const toggleAccordion = (key: string) => {
@@ -219,8 +326,16 @@ export default function ProfessionalPDP() {
       {/* NAVBAR GLOBAL */}
       <Navbar />
 
-      {/* KONTEN UTAMA */}
-      <div className="max-w-[1400px] mx-auto px-6 md:px-12 pt-32 pb-24">
+      {/* Konten Utama */}
+      {isLoading ? (
+        <div className="pt-40 pb-40 flex flex-col items-center justify-center min-h-[70vh]">
+          <div className="w-12 h-12 border-4 border-[#F77F00] dark:border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <span className="text-xs font-mono uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">
+            MEMUAT PRODUK...
+          </span>
+        </div>
+      ) : (
+        <div className="pt-24 lg:pt-32 pb-16 px-0 md:px-6 lg:px-12 max-w-[1600px] mx-auto">
 
         {/* Breadcrumb */}
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-500 mb-8 mt-2">
@@ -370,7 +485,7 @@ export default function ProfessionalPDP() {
               </div>
               <span className="text-[10px] text-[#6C757D] dark:text-neutral-500">({p.reviewCount} ulasan)</span>
               <span className="text-xs text-black/20 dark:text-white/20">•</span>
-              <span className="text-[10px] text-[#6C757D] dark:text-neutral-500 font-bold uppercase tracking-widest">{p.soldCount} terjual</span>
+              <span className="text-[10px] text-[#6C757D] dark:text-neutral-500 font-bold uppercase tracking-widest">{p.soldCount > 0 ? `${p.soldCount} terjual` : "BARU"}</span>
             </motion.div>
 
             <motion.div variants={fadeUp} custom={0} className="flex items-end gap-4 mb-8 pb-8 border-b border-black/10 dark:border-white/10">
@@ -385,14 +500,20 @@ export default function ProfessionalPDP() {
 
             <div className="mb-6">
               <div className="flex justify-between items-end mb-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">Warna: <span className="text-[#212529] dark:text-white">{p.colors[activeColor].name}</span></span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">Warna: <span className="text-[#212529] dark:text-white">{availableColors[activeColor] as string}</span></span>
               </div>
-              <div className="flex gap-3">
-                {p.colors.map((c, i) => (
+              <div className="flex gap-3 flex-wrap">
+                {hasVariants ? availableColors.map((colorName, i) => (
                   <button
                     key={i} onClick={() => { setActiveColor(i); setActiveImage(i % p.images.length); }}
-                    className={`w-10 h-10 transition-all flex items-center justify-center border-2 ${activeColor === i ? "border-[#F77F00] scale-110" : "border-transparent hover:scale-110"
-                      }`}
+                    className={`px-4 h-10 transition-all flex items-center justify-center border text-xs font-bold uppercase tracking-widest ${activeColor === i ? "border-[#F77F00] text-[#F77F00]" : "border-black/20 dark:border-white/20 text-[#212529] dark:text-white hover:border-[#F77F00]"}`}
+                  >
+                    {colorName as string}
+                  </button>
+                )) : p.colors.map((c: any, i: number) => (
+                  <button
+                    key={i} onClick={() => { setActiveColor(i); setActiveImage(i % p.images.length); }}
+                    className={`w-10 h-10 transition-all flex items-center justify-center border-2 ${activeColor === i ? "border-[#F77F00] scale-110" : "border-transparent hover:scale-110"}`}
                     style={{ backgroundColor: c.hex }}
                   >
                     {activeColor === i && <Check className="w-4 h-4 text-white drop-shadow-md" />}
@@ -404,18 +525,18 @@ export default function ProfessionalPDP() {
             <div className="mb-6">
               <div className="flex justify-between items-end mb-3">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">Ukuran</span>
-                <button className="text-[9px] uppercase tracking-widest text-[#F77F00] font-bold hover:underline">Panduan Ukuran</button>
+                <button onClick={() => setShowSizeGuide(true)} className="text-[9px] uppercase tracking-widest text-[#F77F00] font-bold hover:underline">Panduan Ukuran</button>
               </div>
               <div className="grid grid-cols-4 gap-3">
-                {["S", "M", "L", "XL"].map(size => (
+                {availableSizes.map(size => (
                   <button
-                    key={size} onClick={() => setActiveSize(size)}
+                    key={size as string} onClick={() => setActiveSize(size as string)}
                     className={`h-12 transition-all text-xs font-black uppercase tracking-widest border ${activeSize === size
                       ? "bg-[#212529] dark:bg-white text-white dark:text-black border-[#212529] dark:border-white"
                       : "bg-transparent border-black/20 dark:border-white/20 text-[#212529] dark:text-white hover:border-[#F77F00]"
                       }`}
                   >
-                    {size}
+                    {size as string}
                   </button>
                 ))}
               </div>
@@ -459,12 +580,13 @@ export default function ProfessionalPDP() {
 
             <div className="flex flex-col gap-4 mb-10">
               <motion.button
-                whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                whileHover={!addedToCart ? { scale: 1.01 } : {}} whileTap={!addedToCart ? { scale: 0.99 } : {}}
                 onClick={handleAddToCart}
+                disabled={addedToCart || !dbProduct}
                 className={`w-full h-16 font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${addedToCart
-                  ? "bg-green-600 text-white"
+                  ? "bg-green-600 text-white cursor-not-allowed"
                   : "bg-[#F77F00] text-black hover:bg-orange-600 hover:text-white"
-                  }`}
+                  } ${!dbProduct ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 {addedToCart ? <><Check className="w-5 h-5" /> Ditambahkan!</> : <><ShoppingBag className="w-5 h-5" /> Tambah Ke Keranjang</>}
               </motion.button>
@@ -478,10 +600,10 @@ export default function ProfessionalPDP() {
               <div className="flex gap-4 mt-2">
                 <button
                   onClick={handleWishlist}
-                  className={`flex-1 h-14 flex items-center justify-center gap-2 border transition-all font-bold text-xs uppercase tracking-widest ${wishlisted ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400" : "bg-transparent border-black/20 dark:border-white/20 text-[#212529] dark:text-white hover:border-[#F77F00]"}`}
+                  className={`flex-1 h-14 flex items-center justify-center gap-2 border transition-all font-bold text-xs uppercase tracking-widest ${isWishlisted ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900 text-red-600 dark:text-red-400" : "bg-transparent border-black/20 dark:border-white/20 text-[#212529] dark:text-white hover:border-[#F77F00]"}`}
                 >
-                  <Heart className={`w-4 h-4 ${wishlisted ? "fill-current" : ""}`} />
-                  {wishlisted ? "Disimpan" : "Wishlist"}
+                  <Heart className={`w-4 h-4 ${isWishlisted ? "fill-current" : ""}`} />
+                  {isWishlisted ? "Disimpan" : "Wishlist"}
                 </button>
 
                 <div className="flex-1 relative">
@@ -554,57 +676,55 @@ export default function ProfessionalPDP() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] text-[#6C757D] dark:text-neutral-500 font-black uppercase tracking-widest">Filter:</span>
-              {["helpful", "newest"].map(opt => (
-                <button
-                  key={opt} onClick={() => setReviewSort(opt)}
-                  className={`text-[10px] font-black uppercase tracking-widest px-6 py-3 border transition-all ${reviewSort === opt ? "bg-[#212529] dark:bg-white text-white dark:text-black border-[#212529] dark:border-white" : "border-black/20 dark:border-white/20 text-[#6C757D] dark:text-neutral-400 hover:border-[#F77F00]"
-                    }`}
-                >
-                  {opt === "helpful" ? "Top Intel" : "Terbaru"}
-                </button>
-              ))}
+            <div className="flex flex-col items-end gap-6">
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] text-[#6C757D] dark:text-neutral-500 font-black uppercase tracking-widest">Filter:</span>
+                {["helpful", "newest"].map(opt => (
+                  <button
+                    key={opt} onClick={() => setReviewSort(opt)}
+                    className={`text-[10px] font-black uppercase tracking-widest px-6 py-3 border transition-all ${reviewSort === opt ? "bg-[#212529] dark:bg-white text-white dark:text-black border-[#212529] dark:border-white" : "border-black/20 dark:border-white/20 text-[#6C757D] dark:text-neutral-400 hover:border-[#F77F00]"
+                      }`}
+                  >
+                    {opt === "helpful" ? "Top Intel" : "Terbaru"}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {(showAllReviews ? p.reviews : p.reviews.slice(0, 2)).map((rev, idx) => (
-              <motion.div
-                key={rev.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={reviewInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.6, delay: idx * 0.15 }}
-                className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 p-8 hover:border-[#F77F00] transition-all group"
-              >
-                <div className="flex justify-between items-start mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-[#212529] dark:bg-white flex items-center justify-center text-sm font-black text-white dark:text-black">
-                      {rev.avatar}
+            {realReviewCount === 0 ? (
+              <div className="col-span-1 md:col-span-2 py-16 text-center border border-black/10 dark:border-white/10 bg-white/50 dark:bg-[#121212]/50">
+                <p className="text-[#6C757D] dark:text-neutral-500 font-mono text-sm uppercase tracking-widest">Belum ada ulasan untuk produk ini.</p>
+              </div>
+            ) : (
+              (showAllReviews ? realReviews : realReviews.slice(0, 2)).map((rev, idx) => (
+                <motion.div
+                  key={rev.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={reviewInView ? { opacity: 1, y: 0 } : {}}
+                  transition={{ duration: 0.6, delay: idx * 0.15 }}
+                  className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 p-8 hover:border-[#F77F00] transition-all group flex flex-col"
+                >
+                  <div className="flex justify-between items-start mb-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-[#212529] dark:bg-white flex items-center justify-center text-sm font-black text-white dark:text-black uppercase">
+                        {(rev.user_name || "G")[0]}
+                      </div>
+                      <div>
+                        <span className="text-base font-black text-[#212529] dark:text-white block uppercase tracking-widest">{rev.user_name || "Guest"}</span>
+                        <span className="text-[10px] text-[#6C757D] dark:text-neutral-500 font-black uppercase tracking-widest">{new Date(rev.created_at).toLocaleDateString("id-ID")}</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-base font-black text-[#212529] dark:text-white block uppercase tracking-widest">{rev.name}</span>
-                      <span className="text-[10px] text-[#6C757D] dark:text-neutral-500 font-black uppercase tracking-widest">Ukuran: {rev.size} • {rev.date}</span>
-                    </div>
+                    <RatingStars rating={rev.rating} />
                   </div>
-                  <RatingStars rating={rev.rating} />
-                </div>
-                <p className="text-sm text-[#212529] dark:text-white leading-relaxed font-mono mb-8">"{rev.text}"</p>
-                <div className="flex items-center justify-between mt-auto pt-6 border-t border-black/10 dark:border-white/10">
-                  {rev.hasPhoto && (
-                    <div className="flex items-center gap-2 text-[10px] text-[#F77F00] font-black uppercase tracking-widest">
-                      <ImageIcon className="w-4 h-4" /> Ada Visual
-                    </div>
-                  )}
-                  <button className="flex items-center gap-2 text-[10px] text-[#6C757D] dark:text-neutral-500 hover:text-[#F77F00] transition-colors font-black uppercase tracking-widest">
-                    <ThumbsUp className="w-4 h-4" /> {rev.helpful} Terbantu
-                  </button>
-                </div>
-              </motion.div>
-            ))}
+                  <p className="text-sm text-[#212529] dark:text-white leading-relaxed font-mono mb-8 flex-1">"{rev.comment}"</p>
+                </motion.div>
+              ))
+            )}
           </div>
 
-          {!showAllReviews && p.reviews.length > 2 && (
+          {!showAllReviews && realReviewCount > 2 && (
             <div className="mt-12 flex justify-center">
               <button onClick={() => setShowAllReviews(true)} className="px-12 py-5 bg-transparent border-2 border-[#212529] dark:border-white text-xs font-black uppercase tracking-widest text-[#212529] dark:text-white hover:bg-[#212529] hover:text-white dark:hover:bg-white dark:hover:text-black transition-all">
                 Dekripsi Semua Ulasan
@@ -627,25 +747,36 @@ export default function ProfessionalPDP() {
               <motion.div
                 key={rp.id}
                 initial={{ opacity: 0, y: 40 }}
-                animate={relatedInView ? { opacity: 1, y: 0 } : {}}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "0px" }}
                 transition={{ duration: 0.6, delay: idx * 0.1 }}
               >
-                <Link href={`/produk/${rp.id}`} className="group flex flex-col">
-                  <div className="relative aspect-square bg-[#e9ecef] dark:bg-[#121212] border border-black/10 dark:border-white/10 overflow-hidden mb-4">
-                    <img src={rp.image} alt={rp.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-[#F77F00]/20 transition-all duration-300" />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-                      <div className="bg-[#212529] dark:bg-white text-white dark:text-black text-[9px] font-black uppercase tracking-widest px-6 py-3 transform translate-y-2 group-hover:translate-y-0 transition-transform">
-                        Inspect
+                <Link href={`/produk/${rp.id}`} className="group block">
+                  <div className="relative aspect-[4/5] bg-neutral-100 dark:bg-neutral-900 rounded-[24px] overflow-hidden mb-5 border border-black/5 dark:border-white/5">
+                    <img 
+                      src={rp.image} 
+                      alt={rp.name} 
+                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    
+                    <div className="absolute bottom-5 left-5 right-5 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 ease-out">
+                      <div className="bg-white/95 dark:bg-black/95 backdrop-blur-xl text-black dark:text-white text-[10px] font-black uppercase tracking-widest py-3.5 flex items-center justify-center gap-2 rounded-xl w-full shadow-2xl">
+                        Lihat Detail <ArrowUpRight className="w-4 h-4 text-[#F77F00]" />
                       </div>
                     </div>
                   </div>
-                  <h4 className="text-xs font-black uppercase tracking-tight mb-2 text-[#212529] dark:text-white group-hover:text-[#F77F00] transition-colors line-clamp-1">{rp.name}</h4>
-                  <div className="flex items-center gap-2 mb-2">
-                    <RatingStars rating={rp.rating} />
-                    <span className="text-[9px] text-[#6C757D] dark:text-neutral-500 font-bold">{rp.rating}</span>
+                  
+                  <div className="flex flex-col gap-2 px-2">
+                    <h4 className="text-sm font-black uppercase tracking-tighter text-[#212529] dark:text-white line-clamp-1 group-hover:text-[#F77F00] transition-colors">{rp.name}</h4>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-[#212529] dark:text-neutral-300">{formatRupiah(rp.price)}</span>
+                      <div className="flex items-center gap-1.5 bg-[#F0F4F2] dark:bg-neutral-800 px-2 py-1 rounded-md">
+                        <Star className="w-3 h-3 fill-[#F77F00] text-[#F77F00]" />
+                        <span className="text-[10px] text-[#212529] dark:text-white font-bold">{rp.rating}</span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-sm font-black text-[#212529] dark:text-white">{formatRupiah(rp.price)}</span>
                 </Link>
               </motion.div>
             ))}
@@ -653,6 +784,7 @@ export default function ProfessionalPDP() {
         </section>
 
       </div>
+      )}
       
       {/* FOOTER GLOBAL */}
       <Footer />
@@ -674,6 +806,81 @@ export default function ProfessionalPDP() {
             <Link href="/login" className="ml-4 px-4 py-2 bg-white text-red-600 text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-neutral-100 transition-colors">
               Login
             </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+
+      {/* Size Guide Modal */}
+      <AnimatePresence>
+        {showSizeGuide && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 20, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="w-full max-w-xl bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 p-6 md:p-10 shadow-2xl relative rounded-3xl"
+            >
+              <button 
+                onClick={() => setShowSizeGuide(false)}
+                className="absolute top-6 right-6 text-neutral-500 hover:text-[#F77F00] transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+
+              <h2 className="text-2xl font-black uppercase tracking-tight text-[#212529] dark:text-white mb-2">Panduan Ukuran</h2>
+              <p className="text-sm text-[#6C757D] dark:text-neutral-400 mb-8 font-mono">Standar ukuran internasional untuk gear {p.category}. Toleransi perbedaan 1-2 cm.</p>
+
+              <div className="overflow-x-auto custom-scrollbar pb-4">
+                <table className="w-full text-left text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b-2 border-black/10 dark:border-white/10">
+                      <th className="py-4 px-2 font-black uppercase tracking-widest text-[#F77F00]">Size</th>
+                      <th className="py-4 px-2 font-black uppercase tracking-widest text-[#212529] dark:text-white">Chest (cm)</th>
+                      <th className="py-4 px-2 font-black uppercase tracking-widest text-[#212529] dark:text-white">Waist (cm)</th>
+                      <th className="py-4 px-2 font-black uppercase tracking-widest text-[#212529] dark:text-white">Length (cm)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="font-mono text-[#6C757D] dark:text-neutral-400">
+                    <tr className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                      <td className="py-3 px-2 font-bold text-[#212529] dark:text-white">S</td>
+                      <td className="py-3 px-2">92 - 96</td>
+                      <td className="py-3 px-2">76 - 80</td>
+                      <td className="py-3 px-2">68</td>
+                    </tr>
+                    <tr className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                      <td className="py-3 px-2 font-bold text-[#212529] dark:text-white">M</td>
+                      <td className="py-3 px-2">96 - 104</td>
+                      <td className="py-3 px-2">81 - 89</td>
+                      <td className="py-3 px-2">70</td>
+                    </tr>
+                    <tr className="border-b border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                      <td className="py-3 px-2 font-bold text-[#212529] dark:text-white">L</td>
+                      <td className="py-3 px-2">104 - 112</td>
+                      <td className="py-3 px-2">89 - 97</td>
+                      <td className="py-3 px-2">72</td>
+                    </tr>
+                    <tr className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                      <td className="py-3 px-2 font-bold text-[#212529] dark:text-white">XL</td>
+                      <td className="py-3 px-2">112 - 124</td>
+                      <td className="py-3 px-2">97 - 109</td>
+                      <td className="py-3 px-2">74</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="mt-8 pt-6 border-t border-black/10 dark:border-white/10 flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#F77F00]">Tips</span>
+                <span className="text-[10px] md:text-xs font-mono text-[#6C757D] dark:text-neutral-400">Jika ragu, pilih 1 ukuran lebih besar untuk ruang base-layer.</span>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

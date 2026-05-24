@@ -6,16 +6,31 @@ import { useState } from "react";
 import { ArrowLeft, Star, Camera, Upload, CheckCircle2, ChevronRight, Package } from "lucide-react";
 import Navbar from "../../../components/Navbar";
 import Footer from "../../../components/Footer";
-import { DUMMY_ORDERS } from "../../../lib/orders";
 
 export default function NilaiPage() {
   const pathname = usePathname();
   // pathname is /pesanan/[id]/nilai. So we split and get the third from last.
   const pathParts = pathname.split('/');
-  const idPesanan = pathParts[pathParts.length - 2] || "TRF-991203";
+  const idPesanan = pathParts[pathParts.length - 2] || "";
   
-  const order = DUMMY_ORDERS.find(o => o.id === idPesanan) || DUMMY_ORDERS[1];
+  const [order, setOrder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchOrder = async () => {
+      try {
+        const res = await fetch("/api/orders");
+        const data = await res.json();
+        const found = data.orders?.find((o: any) => o.id === idPesanan);
+        if (found) setOrder(found);
+      } catch (e) {
+        console.error("Failed to fetch order:", e);
+      }
+      setLoading(false);
+    };
+    fetchOrder();
+  }, [idPesanan]);
 
   const [ratings, setRatings] = useState<{ [key: string]: number }>({});
   const [reviews, setReviews] = useState<{ [key: string]: string }>({});
@@ -44,6 +59,33 @@ export default function NilaiPage() {
           </div>
           <h1 className="text-3xl font-black uppercase tracking-tighter mb-4">Penilaian Terkirim!</h1>
           <p className="text-[#6C757D] dark:text-neutral-400 max-w-sm mb-8">Terima kasih atas ulasan Anda. Masukan Anda membantu para penjelajah lain dalam memilih perlengkapan terbaik.</p>
+        </div>
+        <Footer />
+      </main>
+    );
+  }
+
+  if (loading) {
+    return (
+      <main className="flex flex-col min-h-screen bg-[#f8f9fa] dark:bg-[#0a0a0a] text-[#212529] dark:text-white font-sans selection:bg-[#F77F00] selection:text-white transition-colors duration-300">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-[#F77F00] border-t-transparent rounded-full animate-spin"></div>
+        </div>
+        <Footer />
+      </main>
+    );
+  }
+
+  if (!order) {
+    return (
+      <main className="flex flex-col min-h-screen bg-[#f8f9fa] dark:bg-[#0a0a0a] text-[#212529] dark:text-white font-sans selection:bg-[#F77F00] selection:text-white transition-colors duration-300">
+        <Navbar />
+        <div className="flex-1 flex flex-col items-center justify-center pt-32 pb-24 text-center px-6">
+          <h1 className="text-3xl font-black uppercase mb-4 text-red-500">Pesanan Tidak Ditemukan</h1>
+          <Link href="/profil?tab=pesanan" className="px-6 py-3 bg-[#212529] dark:bg-white text-white dark:text-black font-bold uppercase tracking-widest hover:bg-[#F77F00] transition-colors rounded-lg">
+            Kembali ke Riwayat Pesanan
+          </Link>
         </div>
         <Footer />
       </main>

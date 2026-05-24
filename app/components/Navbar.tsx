@@ -132,17 +132,17 @@ export default function Navbar() {
                 <Package className="w-5 h-5 group-hover:text-[#F77F00] dark:text-orange-500 transition-colors" />
                 <span className="hidden md:block text-[10px] font-black tracking-widest uppercase group-hover:text-[#F77F00] dark:group-hover:text-orange-500 transition-colors">Pesanan</span>
               </Link>
-              <div onClick={() => setIsCartOpen(true)} className="relative cursor-pointer group flex items-center gap-3">
+              <button onClick={() => setIsCartOpen(true)} className="relative cursor-pointer group flex items-center gap-3 py-2 px-1 -my-2 -mx-1">
                 <div className="relative">
                   <ShoppingBag className="w-5 h-5 group-hover:text-[#F77F00] dark:text-orange-500 transition-colors" />
                   {cartCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center pointer-events-none">
                       {cartCount}
                     </span>
                   )}
                 </div>
-                <span className="hidden md:block text-[10px] font-black tracking-widest uppercase">Cart</span>
-              </div>
+                <span className="hidden md:block text-[10px] font-black tracking-widest uppercase group-hover:text-[#F77F00] dark:group-hover:text-orange-500 transition-colors">Cart</span>
+              </button>
               <Link href="/profil" className="cursor-pointer group flex items-center">
                 <img 
                   src={user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_metadata?.full_name || user.user_metadata?.name || 'User')}&background=F77F00&color=fff`} 
@@ -198,16 +198,17 @@ export default function Navbar() {
                 <div className="flex flex-col gap-4 border-b border-black/10 dark:border-white/10 pb-8">
                   <span className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase">Koleksi Utama</span>
                   <Link href="/katalog" onClick={() => setIsMenuOpen(false)} className="text-3xl font-black uppercase tracking-tighter hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors">Semua Gear</Link>
-                  <Link href="/katalog?kategori=ekspedisi" onClick={() => setIsMenuOpen(false)} className="text-3xl font-black uppercase tracking-tighter hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors">Ekspedisi Pro</Link>
-                  <Link href="/katalog?kategori=urban" onClick={() => setIsMenuOpen(false)} className="text-3xl font-black uppercase tracking-tighter hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors">Urban Tech</Link>
+                  <Link href="/katalog?category=Pakaian" onClick={() => setIsMenuOpen(false)} className="text-3xl font-black uppercase tracking-tighter hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors">Apparel</Link>
+                  <Link href="/katalog?category=Sepatu" onClick={() => setIsMenuOpen(false)} className="text-3xl font-black uppercase tracking-tighter hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors">Footwear</Link>
+                  <Link href="/katalog?category=Tenda" onClick={() => setIsMenuOpen(false)} className="text-3xl font-black uppercase tracking-tighter hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors">Shelter</Link>
+                  <Link href="/katalog?category=Tas" onClick={() => setIsMenuOpen(false)} className="text-3xl font-black uppercase tracking-tighter hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors">Ransel</Link>
                 </div>
 
                 <div className="flex flex-col gap-3 py-4 border-b border-black/10 dark:border-white/10 pb-8">
                   <span className="text-[10px] text-neutral-500 font-bold tracking-widest uppercase mb-2">Bantuan & Info</span>
-                  <Link href="/track" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-widest hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors">Lacak Pesanan</Link>
-                  <Link href="/faq" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-widest hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors">Customer Service</Link>
-                  <Link href="/ukuran" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-widest hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors">Panduan Ukuran</Link>
-                  <Link href="/lokasi" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-widest hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors">Lokasi Toko</Link>
+                  <Link href="/profil?tab=pesanan" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-widest hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors">Pesanan Saya</Link>
+                  <Link href="/chat" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-widest hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors">Customer Service</Link>
+                  <Link href="/panduan-ukuran" onClick={() => setIsMenuOpen(false)} className="text-sm font-bold uppercase tracking-widest hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors">Panduan Ukuran</Link>
                 </div>
 
                 <div className="mt-auto pt-8">

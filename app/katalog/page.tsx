@@ -12,7 +12,9 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
-import { ALL_PRODUCTS } from "../lib/products";
+import { useWishlist } from "../context/WishlistContext";
+import { supabase } from "../lib/supabase";
+import QuickAddModal from "../components/QuickAddModal";
 
 const CATEGORIES = ["Semua", "Pakaian", "Tenda", "Sepatu", "Navigasi", "Tas", "Alat Masak"];
 const SORT_OPTIONS = [
@@ -51,18 +53,48 @@ export default function KatalogPage() {
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000000]);
   const [showPriceFilter, setShowPriceFilter] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [wishlist, setWishlist] = useState<string[]>([]);
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const [addedItems, setAddedItems] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(6);
+  const [quickAddProduct, setQuickAddProduct] = useState<any>(null);
   
   // Toast Alert State for Guests
   const [guestAlert, setGuestAlert] = useState(false);
+
+  // Database State
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const gridRef = useRef(null);
   const gridInView = useInView(gridRef, { once: true, margin: "-50px" });
   
   // Infinite Scroll Observer
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/products");
+        
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const data = await res.json();
+        const formattedData = data.map((item: any) => ({
+          ...item,
+          originalPrice: item.original_price
+        }));
+        setAllProducts(formattedData);
+      } catch (error: any) {
+        console.error("Error fetching products:", error.message || error);
+      }
+      setIsLoading(false);
+    };
+    
+    fetchProducts();
+  }, []);
 
   useEffect(() => {
     // Ambil parameter dari URL secara dinamis (bereaksi terhadap perubahan rute Next.js)
@@ -83,27 +115,47 @@ export default function KatalogPage() {
   };
 
   // Toggle wishlist
-  const toggleWishlist = (id: string) => {
+  const handleToggleWishlist = (product: any) => {
     if (!user) return showGuestWarning();
-    setWishlist(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    const discount = product.originalPrice && product.originalPrice > product.price 
+      ? Math.round((1 - product.price / product.originalPrice) * 100) 
+      : 0;
+    
+    toggleWishlist({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      image: product.image,
+      category: product.category,
+      discount: discount
+    });
   };
 
   // Quick add to cart
-  const quickAdd = (product: any) => {
+  const openQuickAdd = (product: any) => {
     if (!user) return showGuestWarning();
-    setAddedItems(prev => [...prev, product.id]);
-    addToCart(product);
-    setTimeout(() => setAddedItems(prev => prev.filter(x => x !== product.id)), 2000);
+    setQuickAddProduct(product);
+  };
+
+  const handleConfirmQuickAdd = (cartItem: any) => {
+    setAddedItems(prev => [...prev, cartItem.id]);
+    addToCart(cartItem);
+    setTimeout(() => setAddedItems(prev => prev.filter(x => x !== cartItem.id)), 2000);
   };
 
   // Filter + Sort Logic
   const processed = useMemo(() => {
-    let items = [...ALL_PRODUCTS];
+    let items = [...allProducts];
 
     // Search
     if (search.trim()) {
       const q = search.toLowerCase();
-      items = items.filter(p => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || p.tag.toLowerCase().includes(q));
+      items = items.filter(p => 
+        (p.name && p.name.toLowerCase().includes(q)) || 
+        (p.category && p.category.toLowerCase().includes(q)) || 
+        (p.tag && p.tag.toLowerCase().includes(q))
+      );
     }
 
     // Category
@@ -129,7 +181,7 @@ export default function KatalogPage() {
     }
 
     return items;
-  }, [search, activeCategory, sortBy, priceRange]);
+  }, [allProducts, search, activeCategory, sortBy, priceRange]);
 
   const visibleProducts = processed.slice(0, visibleCount);
   const hasMore = visibleCount < processed.length;
@@ -372,7 +424,17 @@ export default function KatalogPage() {
 
         {/* PRODUCT GRID / LIST */}
         <div ref={gridRef}>
-          {processed.length === 0 ? (
+          {isLoading ? (
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center py-32"
+            >
+              <div className="w-8 h-8 border-4 border-[#F77F00] dark:border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#6C757D] dark:text-neutral-500">
+                MEMUAT DATA...
+              </span>
+            </motion.div>
+          ) : processed.length === 0 ? (
             /* EMPTY STATE */
             <motion.div 
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -389,24 +451,24 @@ export default function KatalogPage() {
               </button>
             </motion.div>
           ) : (
-            <motion.div 
-              variants={staggerContainer} initial="hidden" animate={gridInView ? "visible" : "hidden"}
+            <div 
               className={viewMode === "grid" 
                 ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" 
                 : "flex flex-col gap-6"
               }
             >
-              <AnimatePresence mode="popLayout">
-                {visibleProducts.map((product) => {
+                {visibleProducts.map((product, idx) => {
                   const discount = product.originalPrice > product.price ? Math.round((1 - product.price / product.originalPrice) * 100) : 0;
-                  const isWished = wishlist.includes(product.id);
+                  const isWished = isInWishlist(product.id);
                   const isAdded = addedItems.includes(product.id);
 
                   return viewMode === "grid" ? (
                     /* ====== GRID MODE CARD ====== */
                     <motion.div
-                      key={product.id} layout variants={cardReveal}
-                      exit={{ opacity: 0, scale: 0.9 }}
+                      key={product.id}
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: idx * 0.05, ease: [0.16, 1, 0.3, 1] }}
                       className="group flex flex-col cursor-pointer bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 overflow-hidden hover:border-[#F77F00] dark:hover:border-orange-500 hover:shadow-2xl transition-all relative h-full"
                     >
                       {/* Image */}
@@ -430,7 +492,7 @@ export default function KatalogPage() {
                         <div className="absolute bottom-4 left-4 right-4 z-10 flex gap-2 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
                           <motion.button 
                             whileTap={{ scale: 0.95 }}
-                            onClick={(e) => { e.preventDefault(); quickAdd(product); }}
+                            onClick={(e) => { e.preventDefault(); openQuickAdd(product); }}
                             className={`flex-1 py-3 font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-colors border ${
                               isAdded ? "bg-emerald-500 border-emerald-500 text-neutral-950" : "bg-black/50 dark:bg-black/50 backdrop-blur-md border-white/20 text-white hover:bg-[#F77F00] hover:border-[#F77F00] hover:text-black dark:hover:bg-orange-500 dark:hover:border-orange-500"
                             }`}
@@ -439,7 +501,7 @@ export default function KatalogPage() {
                           </motion.button>
                           <motion.button
                             whileTap={{ scale: 0.9 }}
-                            onClick={(e) => { e.preventDefault(); toggleWishlist(product.id); }}
+                            onClick={(e) => { e.preventDefault(); handleToggleWishlist(product); }}
                             className={`w-11 h-11 flex items-center justify-center border transition-colors ${
                               isWished ? "bg-red-500 border-red-500 text-white" : "bg-black/50 dark:bg-black/50 backdrop-blur-md border-white/20 text-white hover:border-red-500 hover:text-red-500"
                             }`}
@@ -458,7 +520,7 @@ export default function KatalogPage() {
                                 <Star key={i} className={`w-3 h-3 ${i <= Math.round(product.rating) ? "fill-[#F77F00] dark:fill-orange-500 text-[#F77F00] dark:text-orange-500" : "fill-neutral-300 dark:fill-neutral-800 text-neutral-300 dark:text-neutral-800"}`} />
                               ))}
                             </div>
-                            <span className="text-[9px] text-neutral-500 font-mono tracking-widest">{product.sold} TERJUAL</span>
+                            <span className="text-[9px] text-neutral-500 font-mono tracking-widest">{product.sold > 0 ? `${product.sold} TERJUAL` : "BARU"}</span>
                           </div>
                           
                           <Link href={`/produk/${product.id}`}>
@@ -480,8 +542,10 @@ export default function KatalogPage() {
                   ) : (
                     /* ====== LIST MODE CARD ====== */
                     <motion.div
-                      key={product.id} layout variants={cardReveal}
-                      exit={{ opacity: 0, x: -20 }}
+                      key={product.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.5, delay: idx * 0.05, ease: [0.16, 1, 0.3, 1] }}
                       className="group flex flex-col md:flex-row bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 overflow-hidden hover:border-[#F77F00] dark:hover:border-orange-500 hover:shadow-2xl transition-all h-auto md:h-56"
                     >
                       <Link href={`/produk/${product.id}`} className="relative w-full md:w-56 h-64 md:h-full flex-shrink-0 overflow-hidden bg-black/5 dark:bg-white/5">
@@ -508,7 +572,7 @@ export default function KatalogPage() {
                                 <Star key={i} className={`w-3 h-3 ${i <= Math.round(product.rating) ? "fill-[#F77F00] dark:fill-orange-500 text-[#F77F00] dark:text-orange-500" : "fill-neutral-300 dark:fill-neutral-800 text-neutral-300 dark:text-neutral-800"}`} />
                               ))}
                             </div>
-                            <span className="text-[10px] text-neutral-500 font-mono tracking-widest">{product.rating} ({product.reviews}) • {product.sold} TERJUAL</span>
+                            <span className="text-[10px] text-neutral-500 font-mono tracking-widest">{product.rating} ({product.reviews}) • {product.sold > 0 ? `${product.sold} TERJUAL` : "BARU"}</span>
                           </div>
                         </div>
                         
@@ -520,14 +584,14 @@ export default function KatalogPage() {
                           <div className="flex items-center gap-2">
                             <motion.button
                               whileTap={{ scale: 0.95 }}
-                              onClick={() => toggleWishlist(product.id)}
+                              onClick={(e) => { e.preventDefault(); handleToggleWishlist(product); }}
                               className={`w-10 h-10 flex items-center justify-center border transition-colors ${isWished ? "bg-red-500 border-red-500 text-white" : "border-black/20 dark:border-white/20 text-neutral-500 hover:border-red-500 hover:text-red-500"}`}
                             >
                               <Heart className={`w-4 h-4 ${isWished ? "fill-current" : ""}`} />
                             </motion.button>
                             <motion.button
                               whileTap={{ scale: 0.95 }}
-                              onClick={(e) => { e.preventDefault(); quickAdd(product); }}
+                              onClick={(e) => { e.preventDefault(); openQuickAdd(product); }}
                               className={`px-6 py-2.5 font-black uppercase tracking-widest text-[10px] flex items-center gap-2 transition-colors border ${
                                 isAdded ? "bg-emerald-500 border-emerald-500 text-neutral-950" : "bg-black dark:bg-white border-black dark:border-white text-white dark:text-black hover:bg-transparent hover:text-black dark:hover:bg-transparent dark:hover:text-white"
                               }`}
@@ -540,8 +604,7 @@ export default function KatalogPage() {
                     </motion.div>
                   );
                 })}
-              </AnimatePresence>
-            </motion.div>
+            </div>
           )}
         </div>
 
@@ -592,6 +655,13 @@ export default function KatalogPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <QuickAddModal 
+        isOpen={!!quickAddProduct}
+        onClose={() => setQuickAddProduct(null)}
+        product={quickAddProduct}
+        onAdd={handleConfirmQuickAdd}
+      />
     </main>
   );
 }

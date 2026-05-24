@@ -2,10 +2,11 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, Save, Sparkles, Percent, Banknote, Truck, Calendar, Clock } from "lucide-react";
 
 function OfferForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit');
   const isEdit = !!editId;
@@ -13,28 +14,77 @@ function OfferForm() {
   const [discountType, setDiscountType] = useState("percentage");
   const [code, setCode] = useState("");
   const [discountValue, setDiscountValue] = useState("");
+  const [description, setDescription] = useState("");
+  const [minOrder, setMinOrder] = useState("");
+  const [limit, setLimit] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [hasEndDate, setHasEndDate] = useState(false);
+  const [hasLimit, setHasLimit] = useState(false);
+  const [hasMinOrder, setHasMinOrder] = useState(false);
 
   useEffect(() => {
     if (isEdit) {
-      if (editId === 'OFR-1') {
-        setCode('PAYDAY20');
-        setDiscountType('percentage');
-        setDiscountValue('20');
-      } else if (editId === 'OFR-2') {
-        setCode('FREESHIP');
-        setDiscountType('shipping');
-        setDiscountValue('0');
-      } else if (editId === 'OFR-3') {
-        setCode('NEWYEAR50');
-        setDiscountType('fixed');
-        setDiscountValue('50000');
-      } else {
-        setCode('VIPMEMBER');
-        setDiscountType('percentage');
-        setDiscountValue('15');
-      }
+      fetch("/api/promo").then(res => res.json()).then(data => {
+        if (data.promos) {
+          const promo = data.promos.find((p: any) => p.id === editId);
+          if (promo) {
+            setCode(promo.code);
+            setDiscountType(promo.type);
+            setDiscountValue(promo.value.toString());
+            setDescription(promo.description || "");
+            if (promo.min_order_amount > 0) {
+              setHasMinOrder(true);
+              setMinOrder(promo.min_order_amount.toString());
+            }
+            if (promo.usage_limit) {
+              setHasLimit(true);
+              setLimit(promo.usage_limit.toString());
+            }
+            if (promo.start_date) setStartDate(promo.start_date.split("T")[0]);
+            if (promo.end_date) {
+              setHasEndDate(true);
+              setEndDate(promo.end_date.split("T")[0]);
+            }
+          }
+        }
+      });
     }
   }, [isEdit, editId]);
+
+  const handleSave = async () => {
+    try {
+      const payload = {
+        code,
+        type: discountType,
+        value: Number(discountValue) || 0,
+        description: description || `${discountType} discount`,
+        min_order_amount: hasMinOrder ? Number(minOrder) : 0,
+        usage_limit: hasLimit ? Number(limit) : null,
+        start_date: startDate ? new Date(startDate).toISOString() : null,
+        end_date: hasEndDate && endDate ? new Date(endDate).toISOString() : null
+      };
+
+      const url = isEdit ? `/api/promo/${editId}` : "/api/promo";
+      const method = isEdit ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        router.push("/admin/offers");
+      } else {
+        const errorData = await res.json();
+        alert(`Error: ${errorData.error || errorData.message}`);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong");
+    }
+  };
 
   const generateRandomCode = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -61,7 +111,7 @@ function OfferForm() {
         </div>
         
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#F77F00] text-white shadow-lg shadow-orange-500/20 rounded-xl px-8 py-3 text-sm font-bold hover:bg-orange-600 transition-colors">
+          <button onClick={handleSave} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#F77F00] text-white shadow-lg shadow-orange-500/20 rounded-xl px-8 py-3 text-sm font-bold hover:bg-orange-600 transition-colors">
             <Save className="w-4 h-4" />
             {isEdit ? 'Save Changes' : 'Save Discount'}
           </button>
@@ -89,6 +139,14 @@ function OfferForm() {
                 <Sparkles className="w-4 h-4" /> Generate
               </button>
             </div>
+            
+            <input 
+              type="text" 
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Internal description (e.g. Summer Sale 20% Off)" 
+              className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-5 text-sm font-medium focus:border-[#F77F00] outline-none mb-2"
+            />
             <p className="text-sm font-medium text-neutral-500">Customers must enter this code at checkout.</p>
 
             <div className="h-px bg-black/5 dark:bg-white/5 my-8"></div>
@@ -144,15 +202,15 @@ function OfferForm() {
             
             <div className="flex flex-col gap-4">
               <label className="flex items-center gap-4 p-4 border border-black/5 dark:border-white/5 rounded-xl cursor-pointer hover:bg-neutral-50 dark:hover:bg-[#1a1a1a] transition-colors">
-                <input type="radio" name="req" defaultChecked className="w-4 h-4 accent-[#F77F00]" />
+                <input type="radio" name="req" checked={!hasMinOrder} onChange={() => setHasMinOrder(false)} className="w-4 h-4 accent-[#F77F00]" />
                 <span className="text-sm font-bold text-[#212529] dark:text-white">None</span>
               </label>
               
               <label className="flex items-center gap-4 p-4 border border-black/5 dark:border-white/5 rounded-xl cursor-pointer hover:bg-neutral-50 dark:hover:bg-[#1a1a1a] transition-colors">
-                <input type="radio" name="req" className="w-4 h-4 accent-[#F77F00]" />
+                <input type="radio" name="req" checked={hasMinOrder} onChange={() => setHasMinOrder(true)} className="w-4 h-4 accent-[#F77F00]" />
                 <div className="flex flex-col gap-3 flex-1">
                   <span className="text-sm font-bold text-[#212529] dark:text-white">Minimum purchase amount (Rp)</span>
-                  <input type="number" placeholder="Rp 0" className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-sm font-black focus:border-[#F77F00] outline-none" />
+                  <input type="number" value={minOrder} onChange={e => setMinOrder(e.target.value)} placeholder="Rp 0" className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-lg py-2 px-4 text-sm font-black focus:border-[#F77F00] outline-none" />
                 </div>
               </label>
 
@@ -180,7 +238,7 @@ function OfferForm() {
                 <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Start Date</label>
                 <div className="relative">
                   <Calendar className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
-                  <input type="date" className="w-full pl-11 pr-4 py-3 bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl text-sm font-bold focus:border-[#F77F00] outline-none" />
+                  <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl text-sm font-bold focus:border-[#F77F00] outline-none" />
                 </div>
               </div>
               
@@ -195,9 +253,17 @@ function OfferForm() {
               <div className="h-px bg-black/5 dark:bg-white/5 my-2"></div>
 
               <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded border-black/20 accent-[#F77F00]" />
+                <input type="checkbox" checked={hasEndDate} onChange={e => setHasEndDate(e.target.checked)} className="w-4 h-4 rounded border-black/20 accent-[#F77F00]" />
                 <span className="text-sm font-bold text-[#212529] dark:text-white">Set end date</span>
               </label>
+              {hasEndDate && (
+                <div>
+                  <div className="relative mt-2">
+                    <Calendar className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
+                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full pl-11 pr-4 py-3 bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl text-sm font-bold focus:border-[#F77F00] outline-none" />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -207,10 +273,12 @@ function OfferForm() {
             
             <div className="flex flex-col gap-5">
               <label className="flex items-start gap-3 cursor-pointer group">
-                <input type="checkbox" className="w-4 h-4 rounded border-black/20 accent-[#F77F00] mt-0.5" />
+                <input type="checkbox" checked={hasLimit} onChange={e => setHasLimit(e.target.checked)} className="w-4 h-4 rounded border-black/20 accent-[#F77F00] mt-0.5" />
                 <div className="flex flex-col gap-2">
                   <span className="text-sm font-bold text-[#212529] dark:text-white">Limit number of times this discount can be used in total</span>
-                  <input type="number" placeholder="0" className="w-24 bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-lg py-2 px-3 text-sm font-black focus:border-[#F77F00] outline-none" />
+                  {hasLimit && (
+                    <input type="number" value={limit} onChange={e => setLimit(e.target.value)} placeholder="0" className="w-24 bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-lg py-2 px-3 text-sm font-black focus:border-[#F77F00] outline-none" />
+                  )}
                 </div>
               </label>
 

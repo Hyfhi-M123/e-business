@@ -14,24 +14,25 @@ export default function Footer() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) {
-      showToast("Harap masukkan alamat email!");
-      return;
-    }
-    if (!email.includes("@")) {
-      showToast("Format email tidak valid!");
-      return;
-    }
+    if (!email) { showToast("Harap masukkan alamat email!"); return; }
+    if (!email.includes("@")) { showToast("Format email tidak valid!"); return; }
     
     setIsLoading(true);
-    // Simulasi API Call
-    setTimeout(() => {
-      setIsLoading(false);
-      showToast("Berhasil! Intel ekspedisi akan dikirim ke email Anda.");
-      setEmail("");
-    }, 1500);
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      showToast(data.message || data.error || "Berhasil!");
+      if (!data.error) setEmail("");
+    } catch {
+      showToast("Gagal terhubung ke server.");
+    }
+    setIsLoading(false);
   };
 
   return (
@@ -87,7 +88,7 @@ export default function Footer() {
           <ul className="space-y-4 text-sm font-bold text-[#6C757D] dark:text-neutral-400">
             <li><Link href="/katalog" className="hover:text-[#F77F00] transition-colors">Katalog Gear</Link></li>
             <li><Link href="/tentang-kami" className="hover:text-[#F77F00] transition-colors">Kisah Ekspedisi</Link></li>
-            <li><button onClick={() => showToast("Halaman ini sedang dalam tahap pengembangan (Coming Soon).")} className="hover:text-[#F77F00] transition-colors text-left">Riset Teknologi</button></li>
+            <li className="hidden"><button onClick={() => showToast("Halaman ini sedang dalam tahap pengembangan (Coming Soon).")} className="hover:text-[#F77F00] transition-colors text-left">Riset Teknologi</button></li>
             <li><Link href="/login" className="hover:text-[#F77F00] transition-colors">Masuk Basecamp</Link></li>
           </ul>
         </div>
@@ -96,10 +97,10 @@ export default function Footer() {
         <div>
           <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#212529] dark:text-white mb-6">Support</h4>
           <ul className="space-y-4 text-sm font-bold text-[#6C757D] dark:text-neutral-400">
-            <li><button onClick={() => showToast("Halaman ini sedang dalam tahap pengembangan (Coming Soon).")} className="hover:text-[#F77F00] transition-colors text-left">FAQ & Panduan</button></li>
-            <li><Link href="/track" className="hover:text-[#F77F00] transition-colors text-left">Lacak Pesanan</Link></li>
-            <li><button onClick={() => showToast("Halaman ini sedang dalam tahap pengembangan (Coming Soon).")} className="hover:text-[#F77F00] transition-colors text-left">Garansi & Retur</button></li>
-            <li><button onClick={() => showToast("Halaman ini sedang dalam tahap pengembangan (Coming Soon).")} className="hover:text-[#F77F00] transition-colors text-left">Hubungi Kami</button></li>
+            <li className="hidden"><Link href="/chat" className="hover:text-[#F77F00] transition-colors text-left">FAQ & Panduan</Link></li>
+            <li><Link href="/profil?tab=pesanan" className="hover:text-[#F77F00] transition-colors text-left">Pesanan Saya</Link></li>
+            <li><Link href="/panduan-ukuran" className="hover:text-[#F77F00] transition-colors text-left">Panduan Ukuran</Link></li>
+            <li><Link href="/chat" className="hover:text-[#F77F00] transition-colors text-left">Hubungi Kami</Link></li>
           </ul>
         </div>
       </div>
@@ -107,8 +108,8 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between pt-8 border-t border-[#DEE2E6] dark:border-white/10 text-xs font-bold text-[#6C757D] dark:text-neutral-500">
         <p>© 2026 TrailForge Expedition Gear. All rights reserved.</p>
         <div className="flex gap-4 mt-4 md:mt-0">
-          <button onClick={() => showToast("Halaman ini sedang dalam tahap pengembangan (Coming Soon).")} className="hover:text-black dark:hover:text-white transition-colors">Terms of Service</button>
-          <button onClick={() => showToast("Halaman ini sedang dalam tahap pengembangan (Coming Soon).")} className="hover:text-black dark:hover:text-white transition-colors">Privacy Policy</button>
+          <Link href="/terms-of-service" className="hover:text-black dark:hover:text-white transition-colors">Terms of Service</Link>
+          <Link href="/privacy-policy" className="hover:text-black dark:hover:text-white transition-colors">Privacy Policy</Link>
         </div>
       </div>
     </footer>

@@ -10,6 +10,9 @@ import "leaflet/dist/leaflet.css";
 
 const MapPicker = dynamic(() => import("./MapPicker"), { ssr: false, loading: () => <div className="w-full h-56 rounded-2xl bg-neutral-100 dark:bg-white/5 animate-pulse" /> });
 
+import { useWishlist } from "../context/WishlistContext";
+import { useCart } from "../context/CartContext";
+
 interface Address {
   id: string;
   label: string;
@@ -21,18 +24,15 @@ interface Address {
   isDefault: boolean;
 }
 
-type TabKey = "profil" | "pesanan" | "alamat" | "pembayaran" | "wishlist";
+type TabKey = "profil" | "pesanan" | "alamat" | "wishlist";
 
 const tabs = [
   { key: "profil" as TabKey, label: "Informasi Pribadi", icon: User },
   { key: "pesanan" as TabKey, label: "Riwayat Pesanan", icon: Package },
   { key: "alamat" as TabKey, label: "Alamat Tersimpan", icon: MapPin },
-  { key: "pembayaran" as TabKey, label: "Pembayaran", icon: CreditCard },
   { key: "wishlist" as TabKey, label: "Wishlist", icon: Heart },
 ];
 
-import { DUMMY_ORDERS } from "../lib/orders";
-import { ALL_PRODUCTS } from "../lib/products";
 
 const ORDER_TABS = ["Semua", "Belum Bayar", "Diproses", "Dikirim", "Selesai"];
 const DIPROSES_STATUSES = ["Menunggu Konfirmasi", "Dikemas"];
@@ -41,6 +41,8 @@ export default function ProfilPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("profil");
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { wishlistItems, removeFromWishlist } = useWishlist();
+  const { addToCart } = useCart();
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({ full_name: "", phone: "", birthday: "" });
   const [saving, setSaving] = useState(false);
@@ -54,8 +56,29 @@ export default function ProfilPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [orderFilter, setOrderFilter] = useState("Semua");
+  const [dbOrders, setDbOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  // Fetch orders from database
+  useEffect(() => {
+    const fetchOrders = async () => {
+      setLoadingOrders(true);
+      try {
+        const res = await fetch("/api/orders");
+        const data = await res.json();
+        if (data.orders) setDbOrders(data.orders);
+      } catch (e) {
+        console.error("Failed to fetch orders:", e);
+      }
+      setLoadingOrders(false);
+    };
+    fetchOrders();
+  }, []);
+
+  // All orders come strictly from the database now
+  const allOrders = dbOrders;
 
   // Read the ?tab= parameter from the URL on load
   useEffect(() => {
@@ -398,8 +421,13 @@ export default function ProfilPage() {
 
                 {/* Orders List */}
                 <div className="space-y-6">
-                  {DUMMY_ORDERS.filter(o => orderFilter === "Semua" || (orderFilter === "Diproses" ? DIPROSES_STATUSES.includes(o.status) : o.status === orderFilter)).length > 0 ? (
-                    DUMMY_ORDERS.filter(o => orderFilter === "Semua" || (orderFilter === "Diproses" ? DIPROSES_STATUSES.includes(o.status) : o.status === orderFilter)).map(order => (
+                  {loadingOrders ? (
+                    <div className="flex flex-col items-center justify-center py-16">
+                      <div className="w-8 h-8 border-4 border-[#F77F00] border-t-transparent rounded-full animate-spin mb-4"></div>
+                      <span className="text-xs font-mono uppercase tracking-widest text-[#6C757D]">Memuat pesanan...</span>
+                    </div>
+                  ) : allOrders.filter(o => orderFilter === "Semua" || (orderFilter === "Diproses" ? DIPROSES_STATUSES.includes(o.status) : o.status === orderFilter)).length > 0 ? (
+                    allOrders.filter(o => orderFilter === "Semua" || (orderFilter === "Diproses" ? DIPROSES_STATUSES.includes(o.status) : o.status === orderFilter)).map(order => (
                       <div key={order.id} className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                         {/* Header Store & Status */}
                         <Link href={`/pesanan/${order.id}`} className="block">
@@ -604,40 +632,6 @@ export default function ProfilPage() {
             )}
 
 
-            {/* === TAB: Pembayaran === */}
-            {activeTab === "pembayaran" && (
-              <div className="glass rounded-3xl p-8">
-                <h2 className="text-xl font-black uppercase tracking-tight mb-8">Metode Pembayaran</h2>
-                <div className="space-y-4 mb-8">
-                  {[
-                    { name: "QRIS", desc: "Scan QR untuk bayar dari e-wallet manapun", icon: "📱", },
-                    { name: "Transfer Bank (VA)", desc: "BCA, BNI, BRI, Mandiri, Permata", icon: "🏦", },
-                    { name: "GoPay / ShopeePay", desc: "Langsung dari aplikasi e-wallet", icon: "💚", },
-                    { name: "Kartu Kredit / Debit", desc: "Visa, Mastercard, JCB", icon: "💳", },
-                  ].map((method, i) => (
-                    <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}
-                      className="flex items-center gap-4 p-5 rounded-2xl bg-[#F8F9FA] dark:bg-white/[0.02] border border-[#DEE2E6] dark:border-white/5 hover:border-orange-500/30 transition-colors cursor-pointer group">
-                      <div className="w-12 h-12 rounded-xl bg-white dark:bg-white/5 flex items-center justify-center text-2xl shadow-sm">{method.icon}</div>
-                      <div className="flex-1">
-                        <p className="font-bold text-sm">{method.name}</p>
-                        <p className="text-xs text-[#6C757D] dark:text-neutral-500">{method.desc}</p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-orange-500 transition-colors" />
-                    </motion.div>
-                  ))}
-                </div>
-                <div className="p-4 rounded-xl bg-orange-500/5 border border-orange-500/20">
-                  <div className="flex items-center gap-3">
-                    <Wallet className="w-5 h-5 text-[#F77F00] dark:text-orange-500" />
-                    <div>
-                      <p className="text-xs font-bold text-[#F77F00] dark:text-orange-400">Didukung oleh Midtrans</p>
-                      <p className="text-[10px] text-[#6C757D] dark:text-neutral-500">Pembayaran diproses saat checkout. Semua transaksi dienkripsi dan aman.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* === TAB: Wishlist === */}
             {activeTab === "wishlist" && (
               <div className="glass rounded-3xl p-8">
@@ -645,7 +639,13 @@ export default function ProfilPage() {
                 <p className="text-[#6C757D] dark:text-neutral-500 font-mono text-xs tracking-widest uppercase mb-8">Gear impian yang Anda simpan</p>
 
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                  {ALL_PRODUCTS.slice(0, 3).map((item) => (
+                  {wishlistItems.length === 0 ? (
+                    <div className="col-span-full py-10 flex flex-col items-center justify-center text-center opacity-50">
+                      <Heart className="w-10 h-10 mb-4" />
+                      <p className="font-bold text-sm">Wishlist kosong</p>
+                      <p className="text-[10px] uppercase tracking-widest mt-1">Mulai cari barang impianmu</p>
+                    </div>
+                  ) : wishlistItems.map((item) => (
                     <div key={item.id} className="group relative border-2 border-black/10 dark:border-white/10 hover:border-[#F77F00] transition-colors bg-[#f8f9fa] dark:bg-[#0a0a0a] overflow-hidden flex flex-col rounded-2xl">
                       {/* Discount Badge */}
                       {item.discount > 0 && (
@@ -654,7 +654,7 @@ export default function ProfilPage() {
                         </div>
                       )}
                       <div className="absolute top-2 right-2 z-10">
-                        <button className="w-8 h-8 rounded-full bg-white dark:bg-black/50 backdrop-blur-sm border border-black/10 dark:border-white/10 flex items-center justify-center text-red-500 hover:scale-110 transition-transform">
+                        <button onClick={() => removeFromWishlist(item.id)} className="w-8 h-8 rounded-full bg-white dark:bg-black/50 backdrop-blur-sm border border-black/10 dark:border-white/10 flex items-center justify-center text-red-500 hover:scale-110 transition-transform">
                           <Heart className="w-4 h-4 fill-red-500" />
                         </button>
                       </div>
@@ -668,14 +668,14 @@ export default function ProfilPage() {
                         <div>
                           {item.discount > 0 ? (
                             <div className="flex flex-col gap-1">
-                              <span className="text-[#F77F00] font-black tracking-tighter text-sm">Rp {(item.price * (1 - item.discount/100)).toLocaleString('id-ID')}</span>
-                              <span className="text-neutral-400 text-[10px] line-through">Rp {item.price.toLocaleString('id-ID')}</span>
+                              <span className="text-[#F77F00] font-black tracking-tighter text-sm">Rp {(item.price).toLocaleString('id-ID')}</span>
+                              <span className="text-neutral-400 text-[10px] line-through">Rp {(item.originalPrice || 0).toLocaleString('id-ID')}</span>
                             </div>
                           ) : (
                             <span className="text-black dark:text-white font-black tracking-tighter text-sm">Rp {item.price.toLocaleString('id-ID')}</span>
                           )}
                         </div>
-                        <button className="w-full mt-4 py-2 bg-[#212529] dark:bg-white text-white dark:text-black text-[10px] font-black uppercase tracking-widest hover:bg-[#F77F00] dark:hover:bg-[#F77F00] hover:text-white transition-colors rounded-lg">
+                        <button onClick={() => addToCart({ id: item.id, name: item.name, price: item.price, originalPrice: item.originalPrice, image: item.image, category: item.category, quantity: 1 })} className="w-full mt-4 py-2 bg-[#212529] dark:bg-white text-white dark:text-black text-[10px] font-black uppercase tracking-widest hover:bg-[#F77F00] dark:hover:bg-[#F77F00] hover:text-white transition-colors rounded-lg">
                           + Keranjang
                         </button>
                       </div>

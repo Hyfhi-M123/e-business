@@ -1,32 +1,73 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Filter, ArrowDownToLine, ShoppingCart, Clock, Truck, Eye, CheckCircle2, ChevronRight, Download } from "lucide-react";
 import Link from "next/link";
 
-// Dummy Data
-const ORDERS_DATA = [
-  { id: "TRF-1029", date: "Today, 14:30", customer: "Budi Santoso", email: "budi@example.com", paymentStatus: "paid", fulfillmentStatus: "unfulfilled", total: 4650000, items: 3 },
-  { id: "TRF-1028", date: "Today, 11:15", customer: "Sarah Wijaya", email: "sarah.w@example.com", paymentStatus: "pending", fulfillmentStatus: "unfulfilled", total: 1200000, items: 1 },
-  { id: "TRF-1027", date: "Yesterday", customer: "Rizky Pratama", email: "rizky.p@example.com", paymentStatus: "paid", fulfillmentStatus: "fulfilled", total: 3450000, items: 1 },
-  { id: "TRF-1026", date: "Oct 24, 2023", customer: "Andi Saputra", email: "andi.s@example.com", paymentStatus: "failed", fulfillmentStatus: "unfulfilled", total: 850000, items: 2 },
-  { id: "TRF-1025", date: "Oct 24, 2023", customer: "Siti Aminah", email: "siti.a@example.com", paymentStatus: "paid", fulfillmentStatus: "fulfilled", total: 1800000, items: 1 },
-  { id: "TRF-1024", date: "Oct 23, 2023", customer: "David Kurniadi", email: "david.k@example.com", paymentStatus: "refunded", fulfillmentStatus: "unfulfilled", total: 4500000, items: 2 },
-  { id: "TRF-1023", date: "Oct 23, 2023", customer: "Linda Kusuma", email: "linda.k@example.com", paymentStatus: "paid", fulfillmentStatus: "partially-fulfilled", total: 2400000, items: 4 },
-];
-
 export default function OrdersPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const res = await fetch("/api/orders");
+        const data = await res.json();
+        
+        if (data.orders && data.orders.length > 0) {
+          const mappedOrders = data.orders.map((o: any) => {
+            // Extract name from address or use fallback
+            let customerName = "Guest";
+            if (o.shipping?.address) {
+              customerName = o.shipping.address.split("\n")[0];
+            }
+
+            // Map status to admin dashboard's UI
+            let paymentStatus = "pending";
+            let fulfillmentStatus = "unfulfilled";
+            
+            if (o.status !== "Belum Bayar") {
+              paymentStatus = "paid";
+            }
+            if (o.status === "Dikirim" || o.status === "Selesai") {
+              fulfillmentStatus = "fulfilled";
+            } else if (o.status === "Dikemas") {
+              fulfillmentStatus = "partially-fulfilled";
+            }
+
+            return {
+              id: o.id,
+              date: o.date,
+              customer: customerName,
+              email: o.user_email || "guest@trailforge.com",
+              paymentStatus,
+              fulfillmentStatus,
+              total: o.total,
+              items: o.items.length
+            };
+          });
+          setOrders(mappedOrders);
+        }
+      } catch (error) {
+        console.error("Failed to fetch admin orders", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchOrders();
+  }, []);
 
   // Stats
-  const totalOrders = ORDERS_DATA.length;
-  const unfulfilledOrders = ORDERS_DATA.filter(o => o.fulfillmentStatus === 'unfulfilled' && o.paymentStatus === 'paid').length;
-  const pendingPayments = ORDERS_DATA.filter(o => o.paymentStatus === 'pending').length;
+  const totalOrders = orders.length;
+  const unfulfilledOrders = orders.filter(o => o.fulfillmentStatus === 'unfulfilled' && o.paymentStatus === 'paid').length;
+  const pendingPayments = orders.filter(o => o.paymentStatus === 'pending').length;
 
   // Filter Logic
-  const filteredOrders = ORDERS_DATA.filter(order => {
+  const filteredOrders = orders.filter(order => {
     const matchesSearch = order.id.toLowerCase().includes(search.toLowerCase()) || 
                           order.customer.toLowerCase().includes(search.toLowerCase()) ||
                           order.email.toLowerCase().includes(search.toLowerCase());
@@ -43,6 +84,26 @@ export default function OrdersPage() {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
+  const handleExport = () => {
+    const headers = ["Order ID", "Date", "Customer", "Email", "Payment Status", "Fulfillment Status", "Items", "Total (Rp)"];
+    const csvContent = [
+      headers.join(","),
+      ...filteredOrders.map(o => 
+        `"${o.id}","${o.date}","${o.customer}","${o.email}","${o.paymentStatus}","${o.fulfillmentStatus}",${o.items},${o.total}`
+      )
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `orders_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <main className="p-8 lg:p-10 max-w-[1600px] mx-auto w-full min-h-screen">
       
@@ -54,7 +115,7 @@ export default function OrdersPage() {
         </div>
         
         <div className="flex gap-3 w-full md:w-auto">
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white dark:bg-[#111] border border-black/5 dark:border-white/5 shadow-sm text-[#212529] dark:text-white rounded-2xl px-6 py-3 text-sm font-bold hover:bg-neutral-50 dark:hover:bg-[#1a1a1a] transition-colors">
+          <button onClick={handleExport} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white dark:bg-[#111] border border-black/5 dark:border-white/5 shadow-sm text-[#212529] dark:text-white rounded-2xl px-6 py-3 text-sm font-bold hover:bg-neutral-50 dark:hover:bg-[#1a1a1a] transition-colors">
             <Download className="w-4 h-4" />
             Export CSV
           </button>

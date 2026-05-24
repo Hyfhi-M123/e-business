@@ -9,12 +9,70 @@ export default function SettingsPage() {
   const [isShutdown, setIsShutdown] = useState(false);
   const [loadingShutdown, setLoadingShutdown] = useState(false);
 
+  const [storeName, setStoreName] = useState("TrailForge Outdoors");
+  const [contactEmail, setContactEmail] = useState("hello@trailforge.com");
+  const [storeIndustry, setStoreIndustry] = useState("Sports & Outdoors");
+  const [legalName, setLegalName] = useState("PT TrailForge Indonesia");
+  const [address, setAddress] = useState("Jl. Jendral Sudirman Kav. 52-53");
+  const [city, setCity] = useState("Jakarta Selatan");
+  const [province, setProvince] = useState("DKI Jakarta");
+  const [postalCode, setPostalCode] = useState("12190");
+  const [currency, setCurrency] = useState("IDR (Rp)");
+  const [isSaving, setIsSaving] = useState(false);
+
   useEffect(() => {
     fetch("/api/shutdown")
       .then(res => res.json())
       .then(data => setIsShutdown(data.shutdown))
       .catch(console.error);
+      
+    fetch("/api/settings")
+      .then(res => res.json())
+      .then(data => {
+        if (data.settings) {
+          if (data.settings.storeName) setStoreName(data.settings.storeName);
+          if (data.settings.contactEmail) setContactEmail(data.settings.contactEmail);
+          if (data.settings.storeIndustry) setStoreIndustry(data.settings.storeIndustry);
+          if (data.settings.legalName) setLegalName(data.settings.legalName);
+          if (data.settings.address) setAddress(data.settings.address);
+          if (data.settings.city) setCity(data.settings.city);
+          if (data.settings.province) setProvince(data.settings.province);
+          if (data.settings.postalCode) setPostalCode(data.settings.postalCode);
+          if (data.settings.currency) setCurrency(data.settings.currency);
+        }
+      })
+      .catch(console.error);
   }, []);
+
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          settings: {
+            storeName,
+            contactEmail,
+            storeIndustry,
+            legalName,
+            address,
+            city,
+            province,
+            postalCode,
+            currency
+          }
+        })
+      });
+      if (res.ok) alert("Settings saved successfully!");
+      else alert("Failed to save settings");
+    } catch (e) {
+      console.error(e);
+      alert("Error saving settings");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const toggleShutdown = async () => {
     if (!confirm(isShutdown ? "Are you sure you want to bring the system BACK ONLINE?" : "WARNING: Are you sure you want to completely SHUTDOWN the entire e-commerce platform? Customers will not be able to access the site!")) {
@@ -111,17 +169,17 @@ export default function SettingsPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Store Name</label>
-                      <input type="text" defaultValue="TrailForge Outdoors" className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
+                      <input type="text" value={storeName} onChange={e => setStoreName(e.target.value)} className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Contact Email</label>
-                      <input type="email" defaultValue="hello@trailforge.com" className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
+                      <input type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
                     </div>
                   </div>
 
                   <div>
                     <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Store Industry</label>
-                    <select className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none appearance-none">
+                    <select value={storeIndustry} onChange={e => setStoreIndustry(e.target.value)} className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none appearance-none">
                       <option>Sports & Outdoors</option>
                       <option>Fashion & Apparel</option>
                       <option>Electronics</option>
@@ -138,26 +196,26 @@ export default function SettingsPage() {
                 <div className="flex flex-col gap-6">
                   <div>
                     <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Legal business name</label>
-                    <input type="text" defaultValue="PT TrailForge Indonesia" className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
+                    <input type="text" value={legalName} onChange={e => setLegalName(e.target.value)} className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
                   </div>
 
                   <div>
                     <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Address</label>
-                    <input type="text" defaultValue="Jl. Jendral Sudirman Kav. 52-53" className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
+                    <input type="text" value={address} onChange={e => setAddress(e.target.value)} className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     <div className="col-span-2">
                       <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">City</label>
-                      <input type="text" defaultValue="Jakarta Selatan" className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
+                      <input type="text" value={city} onChange={e => setCity(e.target.value)} className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Province</label>
-                      <input type="text" defaultValue="DKI Jakarta" className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
+                      <input type="text" value={province} onChange={e => setProvince(e.target.value)} className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Postal Code</label>
-                      <input type="text" defaultValue="12190" className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
+                      <input type="text" value={postalCode} onChange={e => setPostalCode(e.target.value)} className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
                     </div>
                   </div>
                 </div>
@@ -171,7 +229,7 @@ export default function SettingsPage() {
                     <p className="text-sm font-medium text-neutral-500 max-w-md">This is the currency your products are sold in. After your first sale, currency is locked.</p>
                   </div>
                   <div className="w-32">
-                    <select className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none appearance-none">
+                    <select value={currency} onChange={e => setCurrency(e.target.value)} className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none appearance-none">
                       <option>IDR (Rp)</option>
                       <option>USD ($)</option>
                       <option>EUR (€)</option>
@@ -181,9 +239,9 @@ export default function SettingsPage() {
               </div>
 
               <div className="flex justify-end pt-4">
-                <button className="flex items-center justify-center gap-2 bg-[#F77F00] text-white shadow-lg shadow-orange-500/20 rounded-xl px-8 py-4 text-sm font-bold hover:bg-orange-600 transition-colors">
+                <button onClick={handleSaveSettings} disabled={isSaving} className="flex items-center justify-center gap-2 bg-[#F77F00] text-white shadow-lg shadow-orange-500/20 rounded-xl px-8 py-4 text-sm font-bold hover:bg-orange-600 transition-colors disabled:opacity-50">
                   <Save className="w-4 h-4" />
-                  Save Settings
+                  {isSaving ? "Saving..." : "Save Settings"}
                 </button>
               </div>
 

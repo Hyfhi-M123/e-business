@@ -49,7 +49,12 @@ export default function LoginPage() {
     } else {
       setFailCount(0);
       showToast("Berhasil masuk! Mendarat di basecamp...", 'success');
-      setTimeout(() => window.location.href = "/", 1200);
+      
+      // Redirect logic based on role
+      const isAdmin = data?.user?.user_metadata?.role === 'admin';
+      const redirectUrl = isAdmin ? '/admin' : '/';
+      
+      setTimeout(() => window.location.href = redirectUrl, 1200);
     }
     
     setIsLoading(false);

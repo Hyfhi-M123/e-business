@@ -66,12 +66,9 @@ export default function CustomCursor() {
           </motion.div>
         ) : (
           // Mouse Biasa: Anak Panah Kompas (Navigation) miring ke KIRI ATAS (-45 derajat) menyerupai pointer biasa
-          <motion.div 
-            initial={{ rotate: -45 }} 
-            animate={{ rotate: -45, scale: 1 }}
-          >
+          <div style={{ transform: 'rotate(-45deg)' }}>
             <Navigation className="w-6 h-6 text-white fill-orange-500" />
-          </motion.div>
+          </div>
         )}
       </div>
     </>
