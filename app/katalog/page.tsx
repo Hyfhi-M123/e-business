@@ -5,7 +5,7 @@ import {
   Filter, ChevronDown, ChevronRight, ShoppingBag, ArrowUpRight, Search, Menu, 
   Star, Heart, X, Grid3X3, List, SlidersHorizontal, ChevronUp, Package, ShieldCheck
 } from "lucide-react";
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
@@ -13,6 +13,7 @@ import Footer from "../components/Footer";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useWishlist } from "../context/WishlistContext";
+import { useGuide } from "../context/GuideContext";
 import { supabase } from "../lib/supabase";
 import QuickAddModal from "../components/QuickAddModal";
 
@@ -54,6 +55,8 @@ export default function KatalogPage() {
   const [showPriceFilter, setShowPriceFilter] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const { aiProductIds, clearAiProducts } = useGuide();
+  const [aiMode, setAiMode] = useState(false);
   const [addedItems, setAddedItems] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(6);
   const [quickAddProduct, setQuickAddProduct] = useState<any>(null);
@@ -64,6 +67,12 @@ export default function KatalogPage() {
   // Database State
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Semantic Search State
+  const [smartSearchIds, setSmartSearchIds] = useState<string[]>([]);
+  const [smartSearchActive, setSmartSearchActive] = useState(false);
+  const [smartSearchLoading, setSmartSearchLoading] = useState(false);
+  const [smartSearchSort, setSmartSearchSort] = useState("");
 
   const gridRef = useRef(null);
   const gridInView = useInView(gridRef, { once: true, margin: "-50px" });
@@ -100,6 +109,7 @@ export default function KatalogPage() {
     // Ambil parameter dari URL secara dinamis (bereaksi terhadap perubahan rute Next.js)
     const cat = searchParams.get("category");
     const q = searchParams.get("search");
+    const aiParam = searchParams.get("ai");
     
     if (cat && CATEGORIES.includes(cat)) {
       setActiveCategory(cat);
@@ -107,7 +117,10 @@ export default function KatalogPage() {
     if (q) {
       setSearch(q);
     }
-  }, [searchParams]);
+    if (aiParam === "recommended" && aiProductIds.length > 0) {
+      setAiMode(true);
+    }
+  }, [searchParams, aiProductIds]);
 
   const showGuestWarning = () => {
     setGuestAlert(true);
@@ -144,12 +157,68 @@ export default function KatalogPage() {
     setTimeout(() => setAddedItems(prev => prev.filter(x => x !== cartItem.id)), 2000);
   };
 
+  // Semantic Search via Groq
+  const handleSmartSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSmartSearchActive(false);
+      setSmartSearchIds([]);
+      return;
+    }
+    setSmartSearchLoading(true);
+    try {
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json();
+      if (data.ids && data.ids.length > 0) {
+        setSmartSearchIds(data.ids);
+        setSmartSearchActive(true);
+        setSmartSearchSort(data.sort || "");
+        setVisibleCount(20);
+      } else {
+        setSmartSearchIds([]);
+        setSmartSearchActive(true);
+      }
+    } catch {
+      setSmartSearchActive(false);
+    }
+    setSmartSearchLoading(false);
+  }, []);
+
+  const clearSmartSearch = () => {
+    setSearch("");
+    setSmartSearchActive(false);
+    setSmartSearchIds([]);
+    setSmartSearchSort("");
+  };
+
   // Filter + Sort Logic
   const processed = useMemo(() => {
     let items = [...allProducts];
 
-    // Search
-    if (search.trim()) {
+    // AI Smart Filter — prioritize AI-recommended products (from chat assistant)
+    if (aiMode && aiProductIds.length > 0) {
+      const aiItems = items.filter(p => aiProductIds.includes(String(p.id)));
+      if (aiItems.length > 0) return aiItems;
+    }
+
+    // Semantic Search — LLM-powered product filter
+    if (smartSearchActive && smartSearchIds.length > 0) {
+      const ordered = smartSearchIds
+        .map(id => items.find(p => String(p.id) === id))
+        .filter(Boolean);
+      // Apply LLM-suggested sort
+      if (smartSearchSort === "price_asc") ordered.sort((a: any, b: any) => a.price - b.price);
+      if (smartSearchSort === "price_desc") ordered.sort((a: any, b: any) => b.price - a.price);
+      if (smartSearchSort === "rating") ordered.sort((a: any, b: any) => b.rating - a.rating);
+      if (smartSearchSort === "popularity") ordered.sort((a: any, b: any) => b.sold - a.sold);
+      return ordered;
+    }
+
+    // Regular keyword search (fallback when not using smart search)
+    if (search.trim() && !smartSearchActive) {
       const q = search.toLowerCase();
       items = items.filter(p => 
         (p.name && p.name.toLowerCase().includes(q)) || 
@@ -181,7 +250,7 @@ export default function KatalogPage() {
     }
 
     return items;
-  }, [allProducts, search, activeCategory, sortBy, priceRange]);
+  }, [allProducts, search, activeCategory, sortBy, priceRange, aiMode, aiProductIds, smartSearchActive, smartSearchIds, smartSearchSort]);
 
   const visibleProducts = processed.slice(0, visibleCount);
   const hasMore = visibleCount < processed.length;
@@ -242,28 +311,73 @@ export default function KatalogPage() {
             </p>
           </motion.div>
 
-          {/* SEARCH BAR */}
+          {/* SEARCH BAR — Semantic AI Search */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
-            className="w-full lg:w-[400px] relative group"
+            className="w-full lg:w-[500px] relative group"
           >
             <Search className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-5 text-[#212529] dark:text-white group-focus-within:text-[#F77F00] dark:group-focus-within:text-orange-500 transition-colors" />
             <input 
               type="text" 
               value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="SEARCH GEAR..."
-              className="w-full bg-transparent border-b-2 border-black/10 dark:border-white/10 text-[#212529] dark:text-white pl-8 pr-8 py-3 text-[11px] font-black tracking-widest uppercase placeholder:text-neutral-500 focus:outline-none focus:border-[#F77F00] dark:focus:border-orange-500 transition-all duration-300"
+              onChange={e => { setSearch(e.target.value); if(smartSearchActive) { setSmartSearchActive(false); setSmartSearchIds([]); } }}
+              onKeyDown={e => { if (e.key === "Enter" && search.trim()) handleSmartSearch(search); }}
+              placeholder="Cari dengan AI... contoh: jaket dibawah 1 juta"
+              className="w-full bg-transparent border-b-2 border-black/10 dark:border-white/10 text-[#212529] dark:text-white pl-8 pr-28 py-3 text-[11px] font-black tracking-widest uppercase placeholder:text-neutral-500 placeholder:normal-case placeholder:tracking-normal placeholder:font-medium placeholder:text-[11px] focus:outline-none focus:border-[#F77F00] dark:focus:border-orange-500 transition-all duration-300"
             />
-            <AnimatePresence>
-              {search && (
-                <motion.button initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={() => setSearch("")} className="absolute right-0 top-1/2 -translate-y-1/2">
-                  <X className="w-4 h-4 text-neutral-500 hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors" />
-                </motion.button>
-              )}
-            </AnimatePresence>
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <AnimatePresence>
+                {search && (
+                  <motion.button initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={clearSmartSearch}>
+                    <X className="w-4 h-4 text-neutral-500 hover:text-[#F77F00] dark:hover:text-orange-500 transition-colors" />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+              <button 
+                onClick={() => search.trim() && handleSmartSearch(search)}
+                disabled={!search.trim() || smartSearchLoading}
+                className="flex items-center gap-1 px-3 py-1.5 bg-[#F77F00] text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-orange-600 disabled:opacity-30 transition-all"
+              >
+                {smartSearchLoading ? (
+                  <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <SlidersHorizontal className="w-3 h-3" />
+                    AI
+                  </>
+                )}
+              </button>
+            </div>
           </motion.div>
         </div>
+
+        {/* AI SEARCH RESULTS BANNER */}
+        <AnimatePresence>
+          {smartSearchActive && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-6 bg-gradient-to-r from-[#F77F00]/10 to-orange-500/5 border border-[#F77F00]/20 rounded-2xl p-4 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[#F77F00] flex items-center justify-center">
+                  <Search className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-[#212529] dark:text-white">🧠 AI Semantic Search</h3>
+                  <p className="text-[10px] text-[#6C757D] dark:text-neutral-400">Ditemukan {processed.length} produk untuk "{search}"</p>
+                </div>
+              </div>
+              <button
+                onClick={clearSmartSearch}
+                className="px-3 py-1.5 bg-white/50 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-lg text-[10px] font-black text-[#212529] dark:text-white hover:bg-[#F77F00] hover:text-white hover:border-[#F77F00] transition-all"
+              >
+                Reset
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* AUDIENCE SELECTION CARDS (Pria, Wanita, Anak) */}
         <motion.div 
@@ -289,6 +403,34 @@ export default function KatalogPage() {
             </motion.div>
           ))}
         </motion.div>
+
+        {/* AI RECOMMENDATION BANNER */}
+        <AnimatePresence>
+          {aiMode && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-8 bg-gradient-to-r from-[#F77F00]/10 to-orange-500/5 border border-[#F77F00]/30 rounded-2xl p-6 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-[#F77F00] flex items-center justify-center">
+                  <SlidersHorizontal className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-[#212529] dark:text-white">🧭 Trail Guide AI Recommendation</h3>
+                  <p className="text-xs text-[#6C757D] dark:text-neutral-400 font-medium">Menampilkan {processed.length} produk yang direkomendasikan AI untuk Anda</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setAiMode(false); clearAiProducts(); }}
+                className="px-4 py-2 bg-white/50 dark:bg-white/10 border border-black/10 dark:border-white/10 rounded-xl text-xs font-black text-[#212529] dark:text-white hover:bg-[#F77F00] hover:text-white hover:border-[#F77F00] transition-all"
+              >
+                Tampilkan Semua
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* TOOLBAR: Filter + Sort + View Toggle */}
         <motion.div 

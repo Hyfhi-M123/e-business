@@ -2,21 +2,41 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, User, Compass, MountainSnow } from "lucide-react";
+import { X, Send, Compass, Loader2, Navigation, ShoppingBag, Sparkles } from "lucide-react";
+import { useGuide } from "../context/GuideContext";
+import { useRouter } from "next/navigation";
+
+interface Message {
+  id: number;
+  sender: "user" | "ai";
+  text: string;
+  timestamp: string;
+  action?: string | null;
+  guide?: any;
+  products?: string[];
+  productDetails?: any[];
+  offer_guide?: boolean;
+  isLoading?: boolean;
+  dismissed?: boolean;
+}
 
 export default function ChatAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
       sender: "ai",
-      text: "Halo! Saya Trail Guide AI. Sedang mencari gear spesifik atau butuh saran ekspedisi?",
-      timestamp: "00:00"
-    }
+      text: "Halo! Saya **Trail Guide AI** 🧭\nSedang mencari gear, butuh bantuan navigasi, atau ada pertanyaan? Tanya aja!",
+      timestamp: "00:00",
+    },
   ]);
   const [inputValue, setInputValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { startGuide, setAiProductIds } = useGuide();
+  const router = useRouter();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -24,141 +44,255 @@ export default function ChatAssistant() {
 
   useEffect(() => {
     setIsMounted(true);
-    setMessages(prev => [{...prev[0], timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}]);
+    setMessages((prev) => [
+      { ...prev[0], timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+    ]);
   }, []);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, isOpen]);
 
-  // Render placeholder with same dimensions to prevent layout shift on mount
+  useEffect(() => {
+    if (isOpen) inputRef.current?.focus();
+  }, [isOpen]);
+
   if (!isMounted) {
-    return (
-      <div className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-[#F77F00] to-orange-600 rounded-full z-50 shadow-2xl" />
-    );
+    return <div className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-[#F77F00] to-orange-600 rounded-full z-50 shadow-2xl" />;
   }
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const now = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || isTyping) return;
 
-    const newUserMsg = {
-      id: Date.now(),
-      sender: "user",
-      text: inputValue,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-    
-    setMessages(prev => [...prev, newUserMsg]);
+    const userMsg: Message = { id: Date.now(), sender: "user", text: inputValue, timestamp: now() };
+    setMessages((prev) => [...prev, userMsg]);
     setInputValue("");
+    setIsTyping(true);
 
-    setTimeout(() => {
-      const aiResponse = {
-        id: Date.now() + 1,
+    // Add loading bubble
+    const loadingId = Date.now() + 1;
+    setMessages((prev) => [...prev, { id: loadingId, sender: "ai", text: "", timestamp: now(), isLoading: true }]);
+
+    try {
+      const res = await fetch("/api/assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userMsg.text,
+          history: messages.filter((m) => !m.isLoading).slice(-8),
+        }),
+      });
+      const data = await res.json();
+
+      const aiMsg: Message = {
+        id: loadingId,
         sender: "ai",
-        text: "Pesanan diterima. Karena ini adalah purwarupa, integrasi AI asli sedang dikembangkan. Silakan lanjut telusuri perlengkapan di katalog kami!",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        text: data.reply || "Hmm, saya tidak bisa menjawab itu sekarang.",
+        timestamp: now(),
+        action: data.action,
+        guide: data.guide,
+        products: data.products,
+        productDetails: data.productDetails,
+        offer_guide: data.offer_guide,
       };
-      setMessages(prev => [...prev, aiResponse]);
-    }, 1500);
+
+      setMessages((prev) => prev.map((m) => (m.id === loadingId ? aiMsg : m)));
+    } catch (err) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === loadingId
+            ? { ...m, text: "Koneksi ke server terputus. Coba lagi ya!", isLoading: false }
+            : m
+        )
+      );
+    }
+    setIsTyping(false);
+  };
+
+  const handleGuide = (msg: Message) => {
+    if (msg.action === "guide" && msg.guide) {
+      startGuide(msg.guide);
+      setIsOpen(false);
+    } else if (msg.action === "products" && msg.products?.length) {
+      setAiProductIds(msg.products);
+      router.push("/katalog?ai=recommended");
+      setIsOpen(false);
+    }
+  };
+
+  const renderMessageText = (text: string) => {
+    // Simple markdown-like: **bold**
+    return text.split("\n").map((line, i) => (
+      <span key={i}>
+        {line.split(/(\*\*.*?\*\*)/).map((part, j) =>
+          part.startsWith("**") && part.endsWith("**") ? (
+            <strong key={j} className="font-black">{part.slice(2, -2)}</strong>
+          ) : (
+            part
+          )
+        )}
+        {i < text.split("\n").length - 1 && <br />}
+      </span>
+    ));
   };
 
   return (
     <>
+      {/* Floating Button */}
       <AnimatePresence>
         {!isOpen && (
-          <button
+          <motion.button
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0 }}
+            whileHover={{ scale: 1.1 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-[#F77F00] to-orange-600 text-white flex items-center justify-center hover:shadow-orange-500/50 transition-all hover:scale-110 z-50 shadow-2xl rounded-full group"
+            className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-[#F77F00] to-orange-600 text-white flex items-center justify-center z-50 shadow-2xl shadow-orange-500/30 rounded-full group"
           >
             <Compass className="w-8 h-8 group-hover:rotate-45 transition-transform duration-500" />
-          </button>
+          </motion.button>
         )}
       </AnimatePresence>
 
+      {/* Chat Panel */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            initial={{ opacity: 0, y: 30, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.95 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed bottom-8 right-8 w-[350px] sm:w-[400px] h-[550px] bg-white/90 dark:bg-[#121212]/90 backdrop-blur-xl border border-black/10 dark:border-white/10 z-50 flex flex-col shadow-2xl overflow-hidden rounded-3xl"
+            exit={{ opacity: 0, y: 30, scale: 0.9 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="fixed bottom-8 right-8 w-[400px] max-w-[calc(100vw-2rem)] h-[600px] max-h-[calc(100vh-4rem)] bg-[#111] border border-white/10 rounded-[2rem] z-50 flex flex-col overflow-hidden shadow-2xl shadow-black/50"
           >
             {/* Header */}
-            <div className="bg-white/50 dark:bg-black/20 p-5 flex items-center justify-between border-b border-black/5 dark:border-white/5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#F77F00] to-orange-600 flex items-center justify-center text-white rounded-full shadow-md">
-                  <MountainSnow className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-[#212529] dark:text-white text-sm font-black uppercase tracking-widest leading-tight drop-shadow-sm">Trail Guide AI</h3>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
-                    <span className="text-[#6C757D] dark:text-neutral-400 text-[10px] font-bold uppercase tracking-widest">Online</span>
+            <div className="relative p-6 pb-4 border-b border-white/5 bg-gradient-to-r from-[#F77F00]/10 to-transparent">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#F77F00] to-orange-600 flex items-center justify-center">
+                    <Navigation className="w-5 h-5 text-white" />
                   </div>
-                </div>
-              </div>
-              <button 
-                onClick={() => setIsOpen(false)} 
-                className="w-10 h-10 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center text-[#212529] dark:text-white hover:bg-[#F77F00] hover:text-white transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Chat Area */}
-            <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-6 bg-transparent">
-              {messages.map((msg) => (
-                <div key={msg.id} className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
-                  <div className={`flex items-end gap-2 max-w-[85%] ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                    {msg.sender === 'ai' ? (
-                      <div className="w-8 h-8 flex-shrink-0 bg-gradient-to-br from-[#F77F00] to-orange-600 flex items-center justify-center rounded-full shadow-sm">
-                        <Compass className="w-5 h-5 text-white" />
-                      </div>
-                    ) : (
-                      <div className="w-8 h-8 flex-shrink-0 bg-white dark:bg-neutral-800 flex items-center justify-center rounded-full shadow-sm border border-black/5 dark:border-white/5">
-                        <User className="w-5 h-5 text-[#212529] dark:text-white" />
-                      </div>
-                    )}
-                    
-                    <div 
-                      className={`p-4 text-sm font-medium shadow-sm ${
-                        msg.sender === 'user' 
-                          ? 'bg-[#212529] text-white' 
-                          : 'bg-white dark:bg-[#1a1a1a] text-[#212529] dark:text-white border border-black/5 dark:border-white/5'
-                      }`}
-                      style={{
-                        borderRadius: msg.sender === 'user' ? "20px 20px 4px 20px" : "20px 20px 20px 4px"
-                      }}
-                    >
-                      {msg.text}
+                  <div>
+                    <h3 className="text-sm font-black text-white tracking-tight">Trail Guide AI</h3>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                      <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Groq LLM • Online</span>
                     </div>
                   </div>
-                  <span className={`text-[9px] font-bold uppercase tracking-widest text-[#6C757D] dark:text-neutral-500 mt-2 ${msg.sender === 'user' ? 'mr-12' : 'ml-12'}`}>
-                    {msg.timestamp}
-                  </span>
                 </div>
+                <button onClick={() => setIsOpen(false)} className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth" style={{ scrollbarWidth: "thin", scrollbarColor: "#333 transparent" }}>
+              {messages.map((msg) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div className={`max-w-[85%] ${msg.sender === "user" ? "order-2" : ""}`}>
+                    {/* Bubble */}
+                    <div
+                      className={`px-4 py-3 rounded-2xl text-[13px] leading-relaxed ${
+                        msg.sender === "user"
+                          ? "bg-[#F77F00] text-white rounded-br-md"
+                          : "bg-white/5 text-neutral-200 border border-white/5 rounded-bl-md"
+                      }`}
+                    >
+                      {msg.isLoading ? (
+                        <div className="flex items-center gap-2 py-1">
+                          <Loader2 className="w-4 h-4 animate-spin text-[#F77F00]" />
+                          <span className="text-xs text-neutral-500 font-mono">Menganalisis...</span>
+                        </div>
+                      ) : (
+                        renderMessageText(msg.text)
+                      )}
+                    </div>
+
+                    {/* Product Cards */}
+                    {msg.productDetails && msg.productDetails.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {msg.productDetails.map((p: any) => (
+                          <div
+                            key={p.id}
+                            onClick={() => router.push(`/produk/${p.id}`)}
+                            className="flex items-center gap-3 p-3 bg-white/5 border border-white/5 rounded-xl cursor-pointer hover:border-[#F77F00]/30 transition-colors group"
+                          >
+                            <div className="w-12 h-12 rounded-lg bg-neutral-800 overflow-hidden shrink-0">
+                              <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-white truncate">{p.name}</p>
+                              <p className="text-[11px] font-bold text-[#F77F00]">Rp {p.price?.toLocaleString("id-ID")}</p>
+                            </div>
+                            <ShoppingBag className="w-4 h-4 text-neutral-600 group-hover:text-[#F77F00] transition-colors shrink-0" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Guide Offer Buttons */}
+                    {msg.offer_guide && msg.action && !msg.dismissed && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.3 }}
+                        className="mt-3 flex gap-2"
+                      >
+                        <button
+                          onClick={() => handleGuide(msg)}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-[#F77F00] rounded-xl text-white text-[11px] font-black uppercase tracking-widest hover:bg-orange-600 transition-all group"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 group-hover:animate-spin" />
+                          {msg.action === "products" ? "Ya, Pandu!" : "Ya, Pandu!"}
+                        </button>
+                        <button
+                          onClick={() => setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, dismissed: true } : m))}
+                          className="flex-1 flex items-center justify-center py-2.5 px-3 bg-white/5 border border-white/10 rounded-xl text-neutral-400 text-[11px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all"
+                        >
+                          Tidak, Terima Kasih
+                        </button>
+                      </motion.div>
+                    )}
+
+                    {/* Timestamp */}
+                    <p className={`text-[10px] font-mono mt-1.5 ${msg.sender === "user" ? "text-right text-neutral-500" : "text-neutral-600"}`}>
+                      {msg.timestamp}
+                    </p>
+                  </div>
+                </motion.div>
               ))}
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area */}
-            <form onSubmit={handleSendMessage} className="p-4 bg-white/50 dark:bg-black/20 border-t border-black/5 dark:border-white/5 flex gap-3">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Ketik pesan..."
-                className="flex-1 bg-white dark:bg-[#1a1a1a] border border-black/10 dark:border-white/10 px-5 py-3 text-sm font-medium text-[#212529] dark:text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#F77F00] transition-colors rounded-full shadow-inner"
-              />
-              <button 
-                type="submit"
-                disabled={!inputValue.trim()}
-                className="w-12 h-12 bg-[#F77F00] text-white rounded-full flex items-center justify-center hover:bg-orange-600 disabled:opacity-50 disabled:hover:bg-[#F77F00] transition-colors flex-shrink-0 shadow-md"
-              >
-                <Send className="w-5 h-5" />
-              </button>
+            {/* Input */}
+            <form onSubmit={handleSendMessage} className="p-4 pt-2 border-t border-white/5">
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2 focus-within:border-[#F77F00]/50 transition-colors">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="Tanya apa saja..."
+                  disabled={isTyping}
+                  className="flex-1 bg-transparent text-sm text-white placeholder:text-neutral-600 outline-none disabled:opacity-50"
+                />
+                <button
+                  type="submit"
+                  disabled={!inputValue.trim() || isTyping}
+                  className="w-8 h-8 rounded-lg bg-[#F77F00] text-white flex items-center justify-center hover:bg-orange-600 transition-colors disabled:opacity-30 disabled:hover:bg-[#F77F00] shrink-0"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-[9px] text-neutral-600 text-center mt-2 font-mono">Powered by Groq LLM • llama-3.3-70b</p>
             </form>
           </motion.div>
         )}

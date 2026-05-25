@@ -5,6 +5,8 @@ import { ThemeProvider } from "next-themes";
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
 import { WishlistProvider } from "./context/WishlistContext";
+import { GuideProvider } from "./context/GuideContext";
+import GuideOverlay from "./components/GuideOverlay";
 
 // Suppress React 19 script tag warning from next-themes in Next.js 15
 if (typeof window !== "undefined") {
@@ -26,7 +28,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <AuthProvider>
         <CartProvider>
           <WishlistProvider>
-            {children}
+            <GuideProvider>
+              {children}
+              <GuideOverlay />
+            </GuideProvider>
           </WishlistProvider>
         </CartProvider>
       </AuthProvider>

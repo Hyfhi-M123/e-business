@@ -1,11 +1,27 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Compass, MountainSnow, ArrowRight, User } from "lucide-react";
+import { Compass, MountainSnow, ArrowRight, User, ShoppingBag, Sparkles, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
+import { useGuide } from "../context/GuideContext";
+
+interface Message {
+  id: number;
+  sender: string;
+  text: string;
+  timestamp: string;
+  action?: string | null;
+  guide?: any;
+  products?: string[];
+  productDetails?: any[];
+  offer_guide?: boolean;
+  isLoading?: boolean;
+  dismissed?: boolean;
+}
 
 export default function ChatRoomPage() {
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
       sender: "ai",
@@ -16,6 +32,8 @@ export default function ChatRoomPage() {
   const [inputValue, setInputValue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const { startGuide, setAiProductIds } = useGuide();
+  const router = useRouter();
 
   // Set timestamp setelah mount untuk menghindari hydration mismatch
   useEffect(() => {
@@ -29,38 +47,73 @@ export default function ChatRoomPage() {
   }, []);
 
   // Auto scroll ke bawah dengan scrollTop, BUKAN scrollIntoView
-  // Ini menghindari bug browser yang menggeser seluruh body/layout halaman
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages, isProcessing]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const now = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isProcessing) return;
 
-    const newUserMsg = {
+    const newUserMsg: Message = {
       id: Date.now(),
       sender: "user",
       text: inputValue,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timestamp: now()
     };
     
     setMessages(prev => [...prev, newUserMsg]);
     setInputValue("");
     setIsProcessing(true);
 
-    setTimeout(() => {
-      const aiResponse = {
-        id: Date.now() + 1,
+    // Add loading bubble
+    const loadingId = Date.now() + 1;
+    setMessages(prev => [...prev, { id: loadingId, sender: "ai", text: "", timestamp: now(), isLoading: true }]);
+
+    try {
+      const res = await fetch("/api/assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: newUserMsg.text,
+          history: messages.filter(m => !m.isLoading).slice(-8),
+        }),
+      });
+      const data = await res.json();
+
+      const aiMsg: Message = {
+        id: loadingId,
         sender: "ai",
-        text: "Pesanan diterima (dummy response).",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        text: data.reply || "Hmm, saya tidak bisa menjawab itu sekarang.",
+        timestamp: now(),
+        action: data.action,
+        guide: data.guide,
+        products: data.products,
+        productDetails: data.productDetails,
+        offer_guide: data.offer_guide,
       };
-      setMessages(prev => [...prev, aiResponse]);
-      setIsProcessing(false);
-    }, 1000);
+      setMessages(prev => prev.map(m => (m.id === loadingId ? aiMsg : m)));
+    } catch {
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === loadingId ? { ...m, text: "Koneksi ke server terputus. Coba lagi ya!", isLoading: false } : m
+        )
+      );
+    }
+    setIsProcessing(false);
+  };
+
+  const handleGuide = (msg: Message) => {
+    if (msg.action === "guide" && msg.guide) {
+      startGuide(msg.guide);
+    } else if (msg.action === "products" && msg.products?.length) {
+      setAiProductIds(msg.products);
+      router.push("/katalog?ai=recommended");
+    }
   };
 
   return (
@@ -97,7 +150,11 @@ export default function ChatRoomPage() {
                   <p className="text-xs md:text-sm font-bold text-[#212529]/70 dark:text-white/70 uppercase tracking-widest mt-1">Personal Gear Assistant</p>
                 </div>
               </div>
-              <div className="flex shrink-0">
+              <div className="flex shrink-0 gap-2 items-center">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-black/40 backdrop-blur-md rounded-xl border border-white/20 shadow-sm">
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#212529] dark:text-white">Groq LLM • Online</span>
+                </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-black/40 backdrop-blur-md rounded-xl border border-white/20 shadow-sm">
                   <MountainSnow className="w-4 h-4 text-[#F77F00]" />
                   <span className="text-[10px] font-bold uppercase tracking-widest text-[#212529] dark:text-white">Expert Advice</span>
@@ -124,17 +181,67 @@ export default function ChatRoomPage() {
                         </div>
                       )}
                       
-                      <div 
-                        className={`p-4 text-sm md:text-base font-medium leading-relaxed shadow-sm ${
-                          msg.sender === 'user' 
-                            ? 'bg-[#212529] text-white' 
-                            : 'bg-white dark:bg-[#1a1a1a] text-[#212529] dark:text-white border border-black/5 dark:border-white/5'
-                        }`}
-                        style={{
-                          borderRadius: msg.sender === 'user' ? "20px 20px 4px 20px" : "20px 20px 20px 4px"
-                        }}
-                      >
-                        {msg.text}
+                      <div className="flex flex-col gap-2">
+                        <div 
+                          className={`p-4 text-sm md:text-base font-medium leading-relaxed shadow-sm ${
+                            msg.sender === 'user' 
+                              ? 'bg-[#212529] text-white' 
+                              : 'bg-white dark:bg-[#1a1a1a] text-[#212529] dark:text-white border border-black/5 dark:border-white/5'
+                          }`}
+                          style={{
+                            borderRadius: msg.sender === 'user' ? "20px 20px 4px 20px" : "20px 20px 20px 4px"
+                          }}
+                        >
+                          {msg.isLoading ? (
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="w-4 h-4 animate-spin text-[#F77F00]" />
+                              <span className="text-sm text-neutral-500">Menganalisis...</span>
+                            </div>
+                          ) : (
+                            msg.text
+                          )}
+                        </div>
+
+                        {/* Product Cards */}
+                        {msg.productDetails && msg.productDetails.length > 0 && (
+                          <div className="space-y-2">
+                            {msg.productDetails.map((p: any) => (
+                              <div
+                                key={p.id}
+                                onClick={() => router.push(`/produk/${p.id}`)}
+                                className="flex items-center gap-3 p-3 bg-white dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl cursor-pointer hover:border-[#F77F00]/30 transition-colors group shadow-sm"
+                              >
+                                <div className="w-12 h-12 rounded-lg bg-neutral-100 dark:bg-neutral-800 overflow-hidden shrink-0">
+                                  <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold text-[#212529] dark:text-white truncate">{p.name}</p>
+                                  <p className="text-xs font-bold text-[#F77F00]">Rp {p.price?.toLocaleString("id-ID")}</p>
+                                </div>
+                                <ShoppingBag className="w-4 h-4 text-neutral-400 group-hover:text-[#F77F00] transition-colors shrink-0" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Guide / Pandu Buttons */}
+                        {msg.offer_guide && msg.action && !msg.dismissed && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleGuide(msg)}
+                              className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-[#F77F00] rounded-xl text-white text-xs font-black uppercase tracking-widest hover:bg-orange-600 transition-all group"
+                            >
+                              <Sparkles className="w-4 h-4 group-hover:animate-spin" />
+                              Ya, Pandu!
+                            </button>
+                            <button
+                              onClick={() => setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, dismissed: true } : m))}
+                              className="flex-1 flex items-center justify-center py-3 px-4 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl text-neutral-500 text-xs font-bold uppercase tracking-widest hover:bg-black/10 dark:hover:bg-white/10 transition-all"
+                            >
+                              Tidak, Terima Kasih
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <span className={`text-[10px] font-bold uppercase tracking-widest text-[#212529]/50 dark:text-white/50 mt-1.5 ${msg.sender === 'user' ? 'mr-12' : 'ml-12'}`}>
@@ -143,18 +250,6 @@ export default function ChatRoomPage() {
                   </div>
                 ))}
 
-                {isProcessing && (
-                  <div className="flex items-end gap-3 max-w-[75%]">
-                    <div className="w-9 h-9 flex-shrink-0 bg-gradient-to-br from-[#F77F00] to-orange-600 rounded-full flex items-center justify-center shadow-lg">
-                      <Compass className="w-5 h-5 text-white animate-pulse" />
-                    </div>
-                    <div className="p-4 bg-white dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 flex items-center gap-2 shadow-sm" style={{ borderRadius: "20px 20px 20px 4px" }}>
-                      <span className="w-2 h-2 rounded-full bg-[#F77F00] animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                      <span className="w-2 h-2 rounded-full bg-[#F77F00] animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                      <span className="w-2 h-2 rounded-full bg-[#F77F00] animate-bounce" style={{ animationDelay: "300ms" }}></span>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* INPUT AREA */}
@@ -177,6 +272,7 @@ export default function ChatRoomPage() {
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </form>
+                <p className="text-[9px] text-neutral-500 text-center mt-2 font-mono">Powered by Groq LLM • llama-3.3-70b-versatile</p>
               </div>
 
             </div>
