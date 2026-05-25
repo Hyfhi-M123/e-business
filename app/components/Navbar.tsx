@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Search, Menu, ArrowRight, ChevronDown, User, X, Package } from "lucide-react";
+import { ShoppingBag, Search, Menu, ArrowRight, ChevronDown, User, X, Package, Mountain } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
@@ -49,7 +49,7 @@ export default function Navbar() {
             <Menu className="w-4 h-4" />
           </div>
           <Link href="/" className="text-xl font-black tracking-tighter uppercase flex items-center gap-2 cursor-pointer">
-            TrailForge<span className="w-2 h-2 bg-[#F77F00] dark:bg-orange-500 rounded-full animate-pulse"></span>
+            <Mountain className="w-5 h-5 text-[#F77F00] dark:text-orange-500" />TrailForge<span className="w-2 h-2 bg-[#F77F00] dark:bg-orange-500 rounded-full animate-pulse"></span>
           </Link>
         </div>
         
@@ -187,7 +187,7 @@ export default function Navbar() {
             >
               {/* Header Sidebar */}
               <div className="flex items-center justify-between mb-12">
-                <span className="text-xl font-black tracking-tighter uppercase flex items-center gap-2">TrailForge<span className="w-2 h-2 bg-[#F77F00] dark:bg-orange-500 rounded-full animate-pulse"></span></span>
+                <span className="text-xl font-black tracking-tighter uppercase flex items-center gap-2"><Mountain className="w-5 h-5 text-[#F77F00] dark:text-orange-500" />TrailForge<span className="w-2 h-2 bg-[#F77F00] dark:bg-orange-500 rounded-full animate-pulse"></span></span>
                 <div onClick={() => setIsMenuOpen(false)} className="w-10 h-10 border border-black/20 dark:border-white/20 flex items-center justify-center rounded-full cursor-pointer hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors">
                   <X className="w-4 h-4" />
                 </div>
