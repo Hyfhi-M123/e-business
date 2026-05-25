@@ -95,7 +95,7 @@ export default function SalesPage() {
         <motion.div initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} className="xl:col-span-2 bg-[#F77F00] rounded-[2rem] p-8 shadow-lg shadow-orange-500/20 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-[60px] pointer-events-none"></div>
           <p className="text-sm font-bold text-white/80 uppercase tracking-widest mb-2">Net Sales (Profit)</p>
-          <h3 className="text-4xl xl:text-5xl font-black mb-4">Rp {(netSales / 1000000).toFixed(1)}M</h3>
+          <h3 className="text-4xl xl:text-5xl font-black mb-4">Rp {netSales.toLocaleString('id-ID')}</h3>
           <div className="inline-flex items-center gap-1.5 bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold backdrop-blur-md">
             <ArrowUpRight className="w-4 h-4" /> +12.5% from last month
           </div>
@@ -104,21 +104,21 @@ export default function SalesPage() {
         {/* Gross Sales */}
         <motion.div initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} transition={{delay: 0.1}} className="bg-white dark:bg-[#111] rounded-[2rem] p-6 border border-black/5 dark:border-white/5 shadow-sm flex flex-col justify-center">
           <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1">Gross Sales</p>
-          <h3 className="text-2xl font-black text-[#212529] dark:text-white mb-2">Rp {(totalGross / 1000000).toFixed(1)}M</h3>
+          <h3 className="text-2xl font-black text-[#212529] dark:text-white mb-2">Rp {totalGross.toLocaleString('id-ID')}</h3>
           <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1"><ArrowUpRight className="w-3 h-3" /> 8.2%</span>
         </motion.div>
 
         {/* Taxes */}
         <motion.div initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} transition={{delay: 0.2}} className="bg-white dark:bg-[#111] rounded-[2rem] p-6 border border-black/5 dark:border-white/5 shadow-sm flex flex-col justify-center">
           <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">Taxes (PPN 11%)</p>
-          <h3 className="text-2xl font-black text-[#212529] dark:text-white mb-2">Rp {(totalTaxes / 1000).toLocaleString('id-ID')}K</h3>
+          <h3 className="text-2xl font-black text-[#212529] dark:text-white mb-2">Rp {totalTaxes.toLocaleString('id-ID')}</h3>
           <span className="text-[10px] font-bold text-emerald-500 flex items-center gap-1"><ArrowUpRight className="w-3 h-3" /> 8.2%</span>
         </motion.div>
 
         {/* Discounts & Refunds */}
         <motion.div initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} transition={{delay: 0.3}} className="bg-white dark:bg-[#111] rounded-[2rem] p-6 border border-black/5 dark:border-white/5 shadow-sm flex flex-col justify-center">
           <p className="text-xs font-bold text-rose-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">Discounts & Refunds</p>
-          <h3 className="text-2xl font-black text-[#212529] dark:text-white mb-2">- Rp {((totalDiscounts + totalRefunds) / 1000000).toFixed(1)}M</h3>
+          <h3 className="text-2xl font-black text-[#212529] dark:text-white mb-2">- Rp {(totalDiscounts + totalRefunds).toLocaleString('id-ID')}</h3>
           <span className="text-[10px] font-bold text-rose-500 flex items-center gap-1"><ArrowDownRight className="w-3 h-3" /> Higher than usual</span>
         </motion.div>
 

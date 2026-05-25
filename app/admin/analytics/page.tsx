@@ -164,7 +164,7 @@ export default function AnalyticsPage() {
             </span>
           </div>
           <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1">Total Revenue</p>
-          <h3 className="text-2xl xl:text-3xl font-black text-[#212529] dark:text-white">Rp {(totalRevenue / 1000000).toFixed(1)}M</h3>
+          <h3 className="text-2xl xl:text-3xl font-black text-[#212529] dark:text-white">Rp {totalRevenue.toLocaleString('id-ID')}</h3>
         </motion.div>
 
         {/* Orders */}
@@ -207,7 +207,7 @@ export default function AnalyticsPage() {
           </div>
           <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1">Avg Order Value</p>
           <h3 className="text-2xl xl:text-3xl font-black text-[#212529] dark:text-white">
-            Rp {totalOrders > 0 ? (totalRevenue / totalOrders / 1000000).toFixed(2) : 0}M
+            Rp {totalOrders > 0 ? Math.round(totalRevenue / totalOrders).toLocaleString('id-ID') : 0}
           </h3>
         </motion.div>
 

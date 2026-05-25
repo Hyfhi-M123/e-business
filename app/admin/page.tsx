@@ -131,7 +131,7 @@ export default function AdminDashboard() {
         className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
       >
         {[
-          { title: "Total Revenue", value: `Rp ${(totalRevenue / 1000).toLocaleString('id-ID')}K`, trend: "+11.4%", isPositive: true, icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "hover:border-emerald-500/30" },
+          { title: "Total Revenue", value: `Rp ${totalRevenue.toLocaleString('id-ID')}`, trend: "+11.4%", isPositive: true, icon: DollarSign, color: "text-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "hover:border-emerald-500/30" },
           { title: "Total Orders", value: orders.length.toString(), trend: "+12.5%", isPositive: true, icon: ShoppingCart, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-500/10", border: "hover:border-blue-500/30" },
           { title: "Active Customers", value: activeCustomers.toLocaleString('id-ID'), trend: "+5.2%", isPositive: true, icon: Users, color: "text-[#F77F00]", bg: "bg-orange-50 dark:bg-[#F77F00]/10", border: "hover:border-orange-500/30" },
         ].map((stat, i) => (
@@ -181,14 +181,14 @@ export default function AdminDashboard() {
                 <div className="w-2 h-2 rounded-full bg-blue-500"></div>
                 <p className="text-xs font-bold text-neutral-500">Income</p>
               </div>
-              <span className="text-2xl font-black text-[#212529] dark:text-white">Rp {(chartData.income / 1000).toLocaleString('id-ID', {maximumFractionDigits: 0})}K</span>
+              <span className="text-2xl font-black text-[#212529] dark:text-white">Rp {chartData.income.toLocaleString('id-ID')}</span>
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-2 h-2 rounded-full bg-[#F77F00]"></div>
                 <p className="text-xs font-bold text-neutral-500">Expenses</p>
               </div>
-              <span className="text-2xl font-black text-[#212529] dark:text-white">Rp {(chartData.expenses / 1000).toLocaleString('id-ID', {maximumFractionDigits: 0})}K</span>
+              <span className="text-2xl font-black text-[#212529] dark:text-white">Rp {chartData.expenses.toLocaleString('id-ID')}</span>
             </div>
           </div>
 
