@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, Fragment } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Compass, Loader2, Navigation, ShoppingBag, Sparkles } from "lucide-react";
+import { X, Send, Compass, Loader2, Navigation, ShoppingBag, Sparkles, Trophy, CheckCircle, XCircle } from "lucide-react";
 import { useGuide } from "../context/GuideContext";
-import { useRouter } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
+import { useRouter, usePathname } from "next/navigation";
 
 interface Message {
   id: number;
@@ -18,6 +19,9 @@ interface Message {
   offer_guide?: boolean;
   isLoading?: boolean;
   dismissed?: boolean;
+  comparison?: any;
+  revealedText?: string;
+  isRevealing?: boolean;
 }
 
 export default function ChatAssistant() {
@@ -36,7 +40,9 @@ export default function ChatAssistant() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { startGuide, setAiProductIds } = useGuide();
+  const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,10 +50,13 @@ export default function ChatAssistant() {
 
   useEffect(() => {
     setIsMounted(true);
-    setMessages((prev) => [
-      { ...prev[0], timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+    const greeting = user?.user_metadata?.full_name
+      ? `Halo, **${user.user_metadata.full_name}**! 👋\nSaya Trail Guide AI 🧭 Ada yang bisa saya bantu hari ini?`
+      : "Halo! Saya **Trail Guide AI** 🧭\nSedang mencari gear, butuh bantuan navigasi, atau ada pertanyaan? Tanya aja!";
+    setMessages([
+      { id: 1, sender: "ai", text: greeting, timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
     ]);
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     scrollToBottom();
@@ -83,6 +92,9 @@ export default function ChatAssistant() {
         body: JSON.stringify({
           message: userMsg.text,
           history: messages.filter((m) => !m.isLoading).slice(-8),
+          userEmail: user?.email || null,
+          userName: user?.user_metadata?.full_name || null,
+          currentPage: pathname,
         }),
       });
       const data = await res.json();
@@ -97,9 +109,24 @@ export default function ChatAssistant() {
         products: data.products,
         productDetails: data.productDetails,
         offer_guide: data.offer_guide,
+        comparison: data.comparison,
+        revealedText: "",
+        isRevealing: true,
       };
 
       setMessages((prev) => prev.map((m) => (m.id === loadingId ? aiMsg : m)));
+
+      // Streaming reveal effect — word by word
+      const words = (data.reply || "").split(" ");
+      let revealed = "";
+      for (let i = 0; i < words.length; i++) {
+        revealed += (i > 0 ? " " : "") + words[i];
+        const snap = revealed;
+        await new Promise(r => setTimeout(r, 30));
+        setMessages((prev) => prev.map((m) => m.id === loadingId ? { ...m, revealedText: snap } : m));
+      }
+      // Mark reveal complete
+      setMessages((prev) => prev.map((m) => m.id === loadingId ? { ...m, isRevealing: false, revealedText: undefined } : m));
     } catch (err) {
       setMessages((prev) =>
         prev.map((m) =>
@@ -113,7 +140,12 @@ export default function ChatAssistant() {
   };
 
   const handleGuide = (msg: Message) => {
-    if (msg.action === "guide" && msg.guide) {
+    if (msg.action === "compare" && msg.products?.length) {
+      // Navigate to katalog showing the compared products
+      setAiProductIds(msg.products);
+      router.push("/katalog?ai=recommended");
+      setIsOpen(false);
+    } else if (msg.action === "guide" && msg.guide) {
       startGuide(msg.guide);
       setIsOpen(false);
     } else if (msg.action === "products" && msg.products?.length) {
@@ -212,7 +244,7 @@ export default function ChatAssistant() {
                           <span className="text-xs text-neutral-500 font-mono">Menganalisis...</span>
                         </div>
                       ) : (
-                        renderMessageText(msg.text)
+                        renderMessageText(msg.isRevealing ? (msg.revealedText || "") : msg.text)
                       )}
                     </div>
 
@@ -238,6 +270,77 @@ export default function ChatAssistant() {
                       </div>
                     )}
 
+                    {/* Comparison Cards — Premium Side by Side */}
+                    {msg.comparison && msg.comparison.products?.length > 0 && (() => {
+                      const prods = msg.comparison.products;
+                      const isWinner = (name: string) => name === msg.comparison.winner;
+                      const renderCard = (p: any, i: number, total: number) => {
+                        const roundClass = total === 1 ? "rounded-xl" : (i === 0 ? "rounded-l-xl" : (i === total - 1 ? "rounded-r-xl" : ""));
+                        return (
+                        <div key={p.id || i} className={`flex-1 flex flex-col ${roundClass} border overflow-hidden ${isWinner(p.name) ? "border-[#F77F00]/40 shadow-[0_0_15px_rgba(247,127,0,0.15)]" : "border-white/10"} bg-[#141414]`}>
+                          {/* Product Image — full, no crop */}
+                          <div className={`relative w-full h-24 ${isWinner(p.name) ? "bg-gradient-to-b from-[#F77F00]/15 to-transparent" : "bg-gradient-to-b from-white/5 to-transparent"}`}>
+                            {p.image ? (
+                              <img src={p.image} alt={p.name} className="w-full h-full object-contain p-1.5 drop-shadow-lg" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-neutral-600 text-[9px]">No Image</div>
+                            )}
+                            {isWinner(p.name) && (
+                              <div className="absolute top-1 left-1 flex items-center gap-0.5 px-1.5 py-0.5 bg-[#F77F00] rounded-md">
+                                <Trophy className="w-2 h-2 text-white" />
+                                <span className="text-[7px] font-black text-white uppercase">Best</span>
+                              </div>
+                            )}
+                          </div>
+                          {/* Info */}
+                          <div className="p-2.5 flex-1 flex flex-col gap-1 border-t border-white/5">
+                            <span className="text-[10px] font-black text-white leading-tight line-clamp-2">{p.name}</span>
+                            <span className="text-[11px] font-black text-[#F77F00]">Rp {p.price?.toLocaleString("id-ID")}</span>
+                            <div className="flex items-center gap-0.5">
+                              <span className="text-[8px] text-yellow-400">{'★'.repeat(Math.round(p.rating || 0))}</span>
+                              <span className="text-[8px] text-neutral-500">{p.rating}</span>
+                            </div>
+                            <div className="mt-1 space-y-0.5">
+                              {p.pros?.map((t: string, j: number) => (
+                                <div key={`p${j}`} className="flex items-start gap-1"><CheckCircle className="w-2.5 h-2.5 text-emerald-400 shrink-0 mt-px" /><span className="text-[8px] text-neutral-300 leading-tight">{t}</span></div>
+                              ))}
+                              {p.cons?.map((t: string, j: number) => (
+                                <div key={`c${j}`} className="flex items-start gap-1"><XCircle className="w-2.5 h-2.5 text-red-400/70 shrink-0 mt-px" /><span className="text-[8px] text-neutral-500 leading-tight">{t}</span></div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        );
+                      };
+                      return (
+                        <div className="mt-3 space-y-2">
+                          <p className="text-[9px] font-black text-[#F77F00] uppercase tracking-widest text-center">⚔️ Perbandingan Produk</p>
+                          <div className="flex items-stretch gap-0 relative">
+                            {prods.map((p: any, i: number) => (
+                              <Fragment key={p.id || i}>
+                                {renderCard(p, i, prods.length)}
+                                {i < prods.length - 1 && (
+                                  <div className="absolute left-1/2 top-[4.5rem] -translate-x-1/2 z-20" style={{ left: `${((i + 1) / prods.length) * 100}%` }}>
+                                    <div className="relative">
+                                      <div className="absolute inset-0 rounded-full bg-[#F77F00]/30 animate-ping" />
+                                      <div className="relative w-8 h-8 rounded-full bg-gradient-to-br from-[#F77F00] to-orange-600 flex items-center justify-center shadow-xl border-2 border-[#0a0a0a]">
+                                        <span className="text-[8px] font-black text-white">VS</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </Fragment>
+                            ))}
+                          </div>
+                          {msg.comparison.reason && (
+                            <div className="px-3 py-2 bg-gradient-to-r from-[#F77F00]/10 to-orange-500/5 border border-[#F77F00]/20 rounded-lg">
+                              <p className="text-[9px] text-[#F77F00] font-bold text-center">🏆 {msg.comparison.reason}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {/* Guide Offer Buttons */}
                     {msg.offer_guide && msg.action && !msg.dismissed && (
                       <motion.div
@@ -251,7 +354,7 @@ export default function ChatAssistant() {
                           className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 bg-[#F77F00] rounded-xl text-white text-[11px] font-black uppercase tracking-widest hover:bg-orange-600 transition-all group"
                         >
                           <Sparkles className="w-3.5 h-3.5 group-hover:animate-spin" />
-                          {msg.action === "products" ? "Ya, Pandu!" : "Ya, Pandu!"}
+                          {msg.action === "compare" ? "Lihat Produknya!" : "Ya, Pandu!"}
                         </button>
                         <button
                           onClick={() => setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, dismissed: true } : m))}

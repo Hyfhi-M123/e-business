@@ -105,6 +105,42 @@ export default function KatalogPage() {
     fetchProducts();
   }, []);
 
+  // Semantic Search via Groq (must be defined before the useEffect that uses it)
+  const handleSmartSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSmartSearchActive(false);
+      setSmartSearchIds([]);
+      return;
+    }
+    setSmartSearchLoading(true);
+    try {
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json();
+      if (data.ids && data.ids.length > 0) {
+        setSmartSearchIds(data.ids);
+        setSmartSearchActive(true);
+        setSmartSearchSort(data.sort || "");
+        setVisibleCount(20);
+      } else {
+        setSmartSearchIds([]);
+        setSmartSearchActive(true);
+      }
+    } catch {
+      setSmartSearchActive(false);
+    }
+    setSmartSearchLoading(false);
+  }, []);
+
+  const clearSmartSearch = () => {
+    setSearch("");
+    setSmartSearchActive(false);
+    setSmartSearchIds([]);
+    setSmartSearchSort("");
+  };
   useEffect(() => {
     // Ambil parameter dari URL secara dinamis (bereaksi terhadap perubahan rute Next.js)
     const cat = searchParams.get("category");
@@ -116,11 +152,13 @@ export default function KatalogPage() {
     }
     if (q) {
       setSearch(q);
+      // Auto-trigger AI smart search from navbar
+      handleSmartSearch(q);
     }
     if (aiParam === "recommended" && aiProductIds.length > 0) {
       setAiMode(true);
     }
-  }, [searchParams, aiProductIds]);
+  }, [searchParams, aiProductIds, handleSmartSearch]);
 
   const showGuestWarning = () => {
     setGuestAlert(true);
@@ -157,42 +195,7 @@ export default function KatalogPage() {
     setTimeout(() => setAddedItems(prev => prev.filter(x => x !== cartItem.id)), 2000);
   };
 
-  // Semantic Search via Groq
-  const handleSmartSearch = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setSmartSearchActive(false);
-      setSmartSearchIds([]);
-      return;
-    }
-    setSmartSearchLoading(true);
-    try {
-      const res = await fetch("/api/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
-      });
-      const data = await res.json();
-      if (data.ids && data.ids.length > 0) {
-        setSmartSearchIds(data.ids);
-        setSmartSearchActive(true);
-        setSmartSearchSort(data.sort || "");
-        setVisibleCount(20);
-      } else {
-        setSmartSearchIds([]);
-        setSmartSearchActive(true);
-      }
-    } catch {
-      setSmartSearchActive(false);
-    }
-    setSmartSearchLoading(false);
-  }, []);
 
-  const clearSmartSearch = () => {
-    setSearch("");
-    setSmartSearchActive(false);
-    setSmartSearchIds([]);
-    setSmartSearchSort("");
-  };
 
   // Filter + Sort Logic
   const processed = useMemo(() => {

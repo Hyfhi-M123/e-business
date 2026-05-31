@@ -724,7 +724,7 @@ export default function KeranjangPage() {
                 <div className="flex flex-col gap-3 font-mono text-xs uppercase text-black/80">
                   <div className="flex justify-between border-b border-dotted border-black/20 pb-2">
                     <span>SUBTOTAL PRODUK</span>
-                    <span className={totalProductDiscount > 0 ? "line-through opacity-50" : "font-bold"}>{formatRupiah(totalOriginalPrice)}</span>
+                    <span className="font-bold text-[#212529] dark:text-white">{formatRupiah(totalOriginalPrice)}</span>
                   </div>
                   
                   {totalProductDiscount > 0 && (

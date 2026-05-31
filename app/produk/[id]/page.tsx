@@ -702,7 +702,8 @@ export default function ProfessionalPDP() {
                 <motion.div
                   key={rev.id}
                   initial={{ opacity: 0, y: 30 }}
-                  animate={reviewInView ? { opacity: 1, y: 0 } : {}}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "50px" }}
                   transition={{ duration: 0.6, delay: idx * 0.15 }}
                   className="bg-white dark:bg-[#121212] border border-black/10 dark:border-white/10 p-8 hover:border-[#F77F00] transition-all group flex flex-col"
                 >

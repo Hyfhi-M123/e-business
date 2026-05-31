@@ -50,6 +50,41 @@ const NAVIGATION_KNOWLEDGE: Record<string, any> = {
     path: "/katalog",
     highlights: [],
     tooltips: {}
+  },
+  review_product: {
+    path: "/profil",
+    highlights: [".order-history-section"],
+    tooltips: { ".order-history-section": "Pilih pesanan yang sudah selesai untuk memberikan rating & ulasan" }
+  },
+  add_to_wishlist: {
+    path: "/katalog",
+    highlights: [".product-card"],
+    tooltips: { ".product-card": "Klik ikon hati (❤️) pada kartu produk untuk menyimpannya ke wishlist" }
+  },
+  cancel_order: {
+    path: "/profil",
+    highlights: [".order-history-section"],
+    tooltips: { ".order-history-section": "Pilih pesanan yang sedang berlangsung untuk membatalkan" }
+  },
+  return_product: {
+    path: "/profil",
+    highlights: [".order-history-section"],
+    tooltips: { ".order-history-section": "Pilih pesanan untuk mengajukan retur atau klaim garansi" }
+  },
+  contact_support: {
+    path: "/tentang-kami",
+    highlights: [],
+    tooltips: {}
+  },
+  logout: {
+    path: "/profil",
+    highlights: [".logout-btn", "button[title='Logout']", "button:contains('Keluar')"],
+    tooltips: { ".logout-btn": "Klik tombol ini untuk keluar dari akun Anda" }
+  },
+  view_tos: {
+    path: "/terms-of-service",
+    highlights: [],
+    tooltips: {}
   }
 };
 
@@ -104,22 +139,25 @@ async function callGroq(messages: any[], temperature = 0.7, maxTokens = 400) {
 }
 
 // ─── STEP 1: INTENT ROUTER ──────────────────────────────────
-async function routeIntent(userMessage: string) {
+async function routeIntent(userMessage: string, pageContextStr?: string) {
   const messages = [
     {
       role: "system",
       content: `Kamu adalah intent router. Klasifikasikan pesan user ke salah satu intent.
 Balas HANYA dalam JSON, tanpa penjelasan.
 
+${pageContextStr ? `KONTEKS LAYAR SAAT INI: ${pageContextStr}\n(Gunakan konteks ini jika pesan user memakai kata ganti seperti "ini", "di sini", dll)` : ""}
+
 Intent yang tersedia:
 - "product_search": user mencari/bertanya tentang produk, gear, rekomendasi barang, atau fitur produk
+- "product_compare": user ingin MEMBANDINGKAN 2 atau lebih produk (kata kunci: bandingkan, compare, vs, beda, perbedaan)
 - "navigation": user bertanya cara melakukan sesuatu di website (ganti password, checkout, cara beli, cara bayar, dll)
 - "order_status": user bertanya tentang pesanan, pengiriman, resi, atau status order mereka
 - "general_faq": pertanyaan umum (kebijakan, ongkir, jam operasional, kontak, pengembalian, dll)
 - "casual": sapaan, basa-basi, terima kasih, atau di luar konteks toko
 
 Format response:
-{"intent":"...","keywords":["..."],"nav_action":"..."}`
+{"intent":"...","keywords":["..."],"nav_action":"...","compare_products":["nama produk 1","nama produk 2"]}`
     },
     { role: "user", content: userMessage }
   ];
@@ -127,7 +165,7 @@ Format response:
 }
 
 // ─── STEP 2: CONTEXT RETRIEVER (no LLM) ─────────────────────
-async function retrieveContext(intent: string, keywords: string[], navAction: string) {
+async function retrieveContext(intent: string, keywords: string[], navAction: string, userEmail?: string) {
   if (intent === "product_search") {
     // Search products by keywords
     let query = supabase.from("products").select("id, name, description, price, category, image, stock");
@@ -164,6 +202,13 @@ async function retrieveContext(intent: string, keywords: string[], navAction: st
         view_promo: ["promo", "diskon", "kupon", "voucher", "sale"],
         size_guide: ["ukuran", "size", "panduan ukuran", "size guide"],
         view_catalog: ["katalog", "catalog", "produk", "product", "browse"],
+        review_product: ["rating", "review", "ulasan", "nilai", "bintang"],
+        add_to_wishlist: ["wishlist", "simpan", "favorit", "suka", "hati", "love"],
+        cancel_order: ["batal", "cancel", "batalkan pesanan", "batalin"],
+        return_product: ["retur", "kembalikan", "garansi", "rusak", "cacat", "tukar"],
+        contact_support: ["kontak", "admin", "cs", "developer", "hubungi", "bantuan", "support"],
+        logout: ["logout", "keluar", "sign out", "log out"],
+        view_tos: ["syarat", "ketentuan", "tos", "privacy", "kebijakan", "aturan"],
       };
       
       for (const [key, matchWords] of Object.entries(matchMap)) {
@@ -187,23 +232,67 @@ async function retrieveContext(intent: string, keywords: string[], navAction: st
   }
 
   if (intent === "order_status") {
-    return { orderInfo: "User perlu login untuk melihat status pesanan. Arahkan ke halaman Profil > Riwayat Pesanan." };
+    // Fetch real orders if user is logged in
+    if (userEmail) {
+      const { data: orders } = await supabase
+        .from("orders")
+        .select("id, status, total_amount, shipping_courier, shipping_receipt, shipping_address, recipient_name, created_at")
+        .eq("user_email", userEmail)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (orders && orders.length > 0) {
+        // Fetch items for each order
+        const orderIds = orders.map(o => o.id);
+        const { data: items } = await supabase
+          .from("order_items")
+          .select("order_id, product_name, price, quantity")
+          .in("order_id", orderIds);
+
+        const enriched = orders.map(o => ({
+          ...o,
+          items: (items || []).filter(i => i.order_id === o.id)
+        }));
+
+        return { orders: enriched, hasOrders: true };
+      }
+      return { orders: [], hasOrders: false, orderInfo: "User belum memiliki pesanan." };
+    }
+    return { orderInfo: "User belum login. Arahkan untuk login terlebih dahulu agar bisa mengecek pesanan." };
+  }
+
+  if (intent === "product_compare") {
+    // Fetch all products for comparison (including image)
+    const { data: products } = await supabase
+      .from("products")
+      .select("id, name, description, price, original_price, category, gender, tag, rating, sold, highlights, specs, image");
+    return { products: products || [] };
   }
 
   return {};
 }
 
 // ─── STEP 3: RESPONSE GENERATOR ─────────────────────────────
-async function generateResponse(intent: string, userMessage: string, context: any, history: any[]) {
+async function generateResponse(intent: string, userMessage: string, context: any, history: any[], userName?: string, pageContextStr?: string) {
   const conversationHistory = history.slice(-6).map((m: any) => ({
     role: m.sender === "user" ? "user" : "assistant",
     content: m.text
   }));
 
+  // Build personalization prefix
+  const personalization = userName 
+    ? `User yang sedang berbicara bernama ${userName}. Sapa dengan nama mereka sesekali agar terasa personal.`
+    : "User belum login, tidak perlu menyebut nama.";
+
+  const pageInfo = pageContextStr ? `\nKONTEKS LAYAR (SCREEN AWARENESS):\n${pageContextStr}\nJika user bertanya menggunakan kata ganti (seperti "ini", "di sini", "yang ini"), mereka merujuk pada informasi di layar ini.` : "";
+
   let systemPrompt = "";
 
   if (intent === "product_search") {
     systemPrompt = `Kamu adalah Trail Guide AI, asisten cerdas di toko outdoor TrailForge.
+${personalization}
+${pageInfo}
+
 User mencari produk. Berikut produk yang tersedia dan MUNGKIN relevan:
 
 ${JSON.stringify(context.products?.map((p: any) => ({ id: p.id, name: p.name, desc: p.description?.substring(0, 100), price: p.price, category: p.category })))}
@@ -221,6 +310,9 @@ Jika TIDAK ADA produk yang cocok:
 {"reply":"Maaf, belum ada produk yang cocok...","action":null,"products":[],"offer_guide":false}`;
   } else if (intent === "navigation") {
     systemPrompt = `Kamu adalah Trail Guide AI, asisten cerdas di toko outdoor TrailForge.
+${personalization}
+${pageInfo}
+
 User bertanya cara melakukan sesuatu di website.
 
 Info navigasi yang relevan: ${JSON.stringify(context.navigation)}
@@ -238,6 +330,8 @@ Jika navigasi tidak ditemukan, tetap jawab dengan helpful dan set action null:
 {"reply":"penjelasan...","action":null,"guide":null,"offer_guide":false}`;
   } else if (intent === "general_faq") {
     systemPrompt = `Kamu adalah Trail Guide AI, asisten cerdas di toko outdoor TrailForge.
+${personalization}
+${pageInfo}
 
 Informasi FAQ:
 ${context.faq}
@@ -245,14 +339,82 @@ ${context.faq}
 INSTRUKSI: Jawab pertanyaan user berdasarkan FAQ di atas. Singkat, ramah, dan informatif.
 Response dalam JSON: {"reply":"jawaban...","action":null,"offer_guide":false}`;
   } else if (intent === "order_status") {
-    systemPrompt = `Kamu adalah Trail Guide AI. User bertanya soal pesanan.
-${context.orderInfo}
-Arahkan user untuk mengecek di halaman Profil > Riwayat Pesanan, dan tawarkan untuk memandu.
-Response dalam JSON: {"reply":"...","action":"guide","guide":{"path":"/profil","highlights":[".order-history-section"],"tooltips":{".order-history-section":"Cek status pesanan Anda di sini"}},"offer_guide":true}`;
+    if (context.hasOrders && context.orders?.length > 0) {
+      const orderSummary = context.orders.map((o: any) => ({
+        id: o.id,
+        status: o.status,
+        total: `Rp ${o.total_amount?.toLocaleString("id-ID")}`,
+        kurir: o.shipping_courier,
+        resi: o.shipping_receipt || "Belum ada",
+        tanggal: new Date(o.created_at).toLocaleDateString("id-ID"),
+        penerima: o.recipient_name,
+        items: o.items?.map((i: any) => `${i.product_name} (x${i.quantity})`).join(", ")
+      }));
+      systemPrompt = `Kamu adalah Trail Guide AI.
+${personalization}
+
+User bertanya soal pesanan mereka. Berikut DATA PESANAN ASLI dari database:
+${JSON.stringify(orderSummary)}
+
+INSTRUKSI:
+1. Jawab dengan data pesanan yang AKURAT
+2. Sebutkan status, item, dan nomor resi jika ada
+3. Jika status "Dikirim", sampaikan nomor resi
+4. Jika status "Dikemas", informasikan pesanan sedang diproses
+5. Singkat tapi informatif
+
+Response dalam JSON: {"reply":"...","action":null,"offer_guide":false}`;
+    } else if (context.hasOrders === false) {
+      systemPrompt = `Kamu adalah Trail Guide AI.
+${personalization}
+User bertanya soal pesanan tapi belum punya pesanan. Informasikan dengan ramah bahwa belum ada pesanan dan ajak untuk mulai belanja.
+Response dalam JSON: {"reply":"...","action":"guide","guide":{"path":"/katalog","highlights":[],"tooltips":{}},"offer_guide":true}`;
+    } else {
+      systemPrompt = `Kamu adalah Trail Guide AI.
+User bertanya soal pesanan tapi belum login. Minta user untuk login terlebih dahulu agar bisa mengecek status pesanan.
+Response dalam JSON: {"reply":"...","action":null,"offer_guide":false}`;
+    }
   } else {
     systemPrompt = `Kamu adalah Trail Guide AI, asisten ramah di toko outdoor TrailForge.
+${personalization}
+${pageInfo}
 Jawab sapaan/basa-basi dengan ramah dan singkat. Arahkan pembicaraan ke topik toko jika memungkinkan.
 Response dalam JSON: {"reply":"jawaban ramah...","action":null,"offer_guide":false}`;
+  }
+
+  // Product comparison
+  if (intent === "product_compare") {
+    const productList = context.products?.map((p: any) => ({
+      id: p.id, nama: p.name, harga: p.price, harga_asli: p.original_price,
+      kategori: p.category, gender: p.gender, tag: p.tag,
+      rating: p.rating, terjual: p.sold,
+      deskripsi: p.description?.substring(0, 150) || "-",
+      highlights: p.highlights?.slice(0, 3) || [],
+    }));
+    systemPrompt = `Kamu adalah Trail Guide AI, asisten cerdas di toko outdoor TrailForge.
+${personalization}
+
+KATALOG PRODUK:
+${JSON.stringify(productList)}
+
+User ingin membandingkan produk. INSTRUKSI:
+1. Identifikasi 2-3 produk yang dimaksud user dari katalog
+2. Buat perbandingan yang informatif
+3. Berikan rekomendasi mana yang lebih cocok untuk kebutuhan user
+
+Response HARUS dalam JSON:
+{
+  "reply": "penjelasan singkat perbandingan...",
+  "action": "compare",
+  "comparison": {
+    "products": [
+      { "id": "...", "name": "...", "price": 0, "rating": 0, "pros": ["kelebihan 1", "kelebihan 2"], "cons": ["kekurangan 1"] }
+    ],
+    "winner": "nama produk terbaik",
+    "reason": "alasan singkat kenapa ini terbaik"
+  },
+  "offer_guide": true
+}`;
   }
 
   const messages = [
@@ -267,7 +429,7 @@ Response dalam JSON: {"reply":"jawaban ramah...","action":null,"offer_guide":fal
 // ─── MAIN HANDLER ────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
-    const { message, history = [] } = await req.json();
+    const { message, history = [], userEmail, userName, currentPage } = await req.json();
 
     if (!message?.trim()) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
@@ -277,17 +439,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "GROQ_API_KEY not configured" }, { status: 500 });
     }
 
+    // ── Pre-process: Screen Awareness ──
+    let pageContextStr = "";
+    if (currentPage?.startsWith("/produk/")) {
+      const productId = currentPage.split("/")[2];
+      if (productId) {
+        const { data: prod } = await supabase.from("products").select("id, name, description, price, category, gender, specs").eq("id", productId).single();
+        if (prod) {
+          pageContextStr = `User sedang membuka halaman detail produk: "${prod.name}" (Kategori: ${prod.category}, Gender: ${prod.gender || '-'}). Detail spesifikasi: ${prod.description}`;
+        }
+      }
+    } else if (currentPage === "/pesanan" || currentPage === "/profil") {
+      pageContextStr = `User sedang berada di halaman riwayat pesanan/profil. Jika bertanya "dimana tombol X" (misal ulasan, retur, batal), asumsikan intent adalah "navigation".`;
+    } else if (currentPage === "/keranjang") {
+      pageContextStr = `User sedang di halaman Keranjang, bersiap untuk checkout.`;
+    } else if (currentPage === "/katalog") {
+      pageContextStr = `User sedang di halaman Katalog, sedang browsing daftar produk.`;
+    }
+
     // Step 1: Route intent
-    const routerResult = await routeIntent(message);
+    const routerResult = await routeIntent(message, pageContextStr);
     const intent = routerResult.intent || "casual";
     const keywords = routerResult.keywords || [];
     const navAction = routerResult.nav_action || "";
 
-    // Step 2: Retrieve context (no LLM)
-    const context = await retrieveContext(intent, keywords, navAction);
+    // Step 2: Retrieve context (no LLM) — pass userEmail for order tracking
+    const context = await retrieveContext(intent, keywords, navAction, userEmail);
 
-    // Step 3: Generate response
-    const response = await generateResponse(intent, message, context, history);
+    // Step 3: Generate response — pass userName and pageContextStr for screen awareness
+    const response = await generateResponse(intent, message, context, history, userName, pageContextStr);
 
     // ── Post-process: force-inject correct structured data ──
     // Don't trust LLM to echo back complex JSON objects correctly
@@ -314,6 +494,24 @@ export async function POST(req: Request) {
         .select("id, name, price, image, category")
         .in("id", response.products);
       response.productDetails = productDetails || [];
+    }
+
+    // Comparison: enrich products with images from DB + set guide to katalog
+    if (response.action === "compare" && response.comparison?.products?.length > 0) {
+      const compareIds = response.comparison.products.map((p: any) => String(p.id));
+      const { data: imgData } = await supabase
+        .from("products")
+        .select("id, image")
+        .in("id", compareIds);
+      const imgMap = new Map((imgData || []).map((d: any) => [String(d.id), d.image]));
+      response.comparison.products = response.comparison.products.map((p: any) => ({
+        ...p,
+        image: imgMap.get(String(p.id)) || null
+      }));
+      // Set guide to navigate to katalog with these product IDs
+      response.offer_guide = true;
+      response.guide = { path: "/katalog", highlights: [], tooltips: {} };
+      response.products = compareIds;
     }
 
     return NextResponse.json({

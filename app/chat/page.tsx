@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Compass, MountainSnow, ArrowRight, User, ShoppingBag, Sparkles, Loader2 } from "lucide-react";
+import React, { useState, useRef, useEffect, Fragment } from "react";
+import { Compass, MountainSnow, ArrowRight, User, ShoppingBag, Sparkles, Loader2, Trophy, CheckCircle, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
 import { useGuide } from "../context/GuideContext";
+import { useAuth } from "../context/AuthContext";
 
 interface Message {
   id: number;
@@ -18,6 +19,9 @@ interface Message {
   offer_guide?: boolean;
   isLoading?: boolean;
   dismissed?: boolean;
+  comparison?: any;
+  revealedText?: string;
+  isRevealing?: boolean;
 }
 
 export default function ChatRoomPage() {
@@ -33,18 +37,21 @@ export default function ChatRoomPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { startGuide, setAiProductIds } = useGuide();
+  const { user } = useAuth();
   const router = useRouter();
 
-  // Set timestamp setelah mount untuk menghindari hydration mismatch
+  // Set greeting based on user login status
   useEffect(() => {
-    setMessages(prev => {
-      const newMsgs = [...prev];
-      if (!newMsgs[0].timestamp) {
-        newMsgs[0].timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      }
-      return newMsgs;
-    });
-  }, []);
+    const greeting = user?.user_metadata?.full_name
+      ? `Halo, ${user.user_metadata.full_name}! 👋 Saya Trail Guide AI. Ada yang bisa saya bantu hari ini?`
+      : "Halo, Petualang! Saya Trail Guide AI. Sedang mencari tenda ultralight, sepatu GORE-TEX, atau butuh saran perlengkapan untuk ekspedisi berikutnya?";
+    setMessages([{
+      id: 1,
+      sender: "ai",
+      text: greeting,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }]);
+  }, [user]);
 
   // Auto scroll ke bawah dengan scrollTop, BUKAN scrollIntoView
   useEffect(() => {
@@ -81,6 +88,9 @@ export default function ChatRoomPage() {
         body: JSON.stringify({
           message: newUserMsg.text,
           history: messages.filter(m => !m.isLoading).slice(-8),
+          userEmail: user?.email || null,
+          userName: user?.user_metadata?.full_name || null,
+          currentPage: "/chat",
         }),
       });
       const data = await res.json();
@@ -95,8 +105,22 @@ export default function ChatRoomPage() {
         products: data.products,
         productDetails: data.productDetails,
         offer_guide: data.offer_guide,
+        comparison: data.comparison,
+        revealedText: "",
+        isRevealing: true,
       };
       setMessages(prev => prev.map(m => (m.id === loadingId ? aiMsg : m)));
+
+      // Streaming reveal effect — word by word
+      const words = (data.reply || "").split(" ");
+      let revealed = "";
+      for (let i = 0; i < words.length; i++) {
+        revealed += (i > 0 ? " " : "") + words[i];
+        const snap = revealed;
+        await new Promise(r => setTimeout(r, 30));
+        setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, revealedText: snap } : m));
+      }
+      setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, isRevealing: false, revealedText: undefined } : m));
     } catch {
       setMessages(prev =>
         prev.map(m =>
@@ -108,7 +132,10 @@ export default function ChatRoomPage() {
   };
 
   const handleGuide = (msg: Message) => {
-    if (msg.action === "guide" && msg.guide) {
+    if (msg.action === "compare" && msg.products?.length) {
+      setAiProductIds(msg.products);
+      router.push("/katalog?ai=recommended");
+    } else if (msg.action === "guide" && msg.guide) {
       startGuide(msg.guide);
     } else if (msg.action === "products" && msg.products?.length) {
       setAiProductIds(msg.products);
@@ -198,7 +225,7 @@ export default function ChatRoomPage() {
                               <span className="text-sm text-neutral-500">Menganalisis...</span>
                             </div>
                           ) : (
-                            msg.text
+                            msg.isRevealing ? (msg.revealedText || "") : msg.text
                           )}
                         </div>
 
@@ -224,6 +251,77 @@ export default function ChatRoomPage() {
                           </div>
                         )}
 
+                        {/* Comparison Cards — Premium Side by Side */}
+                        {msg.comparison && msg.comparison.products?.length > 0 && (() => {
+                          const prods = msg.comparison.products;
+                          const isWinner = (name: string) => name === msg.comparison.winner;
+                          const renderCard = (p: any, i: number, total: number) => {
+                            const roundClass = total === 1 ? "rounded-xl" : (i === 0 ? "rounded-l-xl" : (i === total - 1 ? "rounded-r-xl" : ""));
+                            return (
+                            <div key={p.id || i} className={`flex-1 flex flex-col ${roundClass} border overflow-hidden ${isWinner(p.name) ? "border-[#F77F00]/40 shadow-[0_0_20px_rgba(247,127,0,0.12)]" : "border-black/10 dark:border-white/10"} bg-neutral-50 dark:bg-[#141414]`}>
+                              {/* Product Image — full, no crop */}
+                              <div className={`relative w-full h-28 ${isWinner(p.name) ? "bg-gradient-to-b from-[#F77F00]/10 to-transparent" : "bg-gradient-to-b from-black/[0.03] dark:from-white/5 to-transparent"}`}>
+                                {p.image ? (
+                                  <img src={p.image} alt={p.name} className="w-full h-full object-contain p-2 drop-shadow-lg" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-neutral-400 text-[10px]">No Image</div>
+                                )}
+                                {isWinner(p.name) && (
+                                  <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-2 py-0.5 bg-[#F77F00] rounded-md shadow-md">
+                                    <Trophy className="w-2.5 h-2.5 text-white" />
+                                    <span className="text-[8px] font-black text-white uppercase">Best Pick</span>
+                                  </div>
+                                )}
+                              </div>
+                              {/* Info */}
+                              <div className="p-3 flex-1 flex flex-col gap-1.5 border-t border-black/5 dark:border-white/5">
+                                <span className="text-xs font-black text-[#212529] dark:text-white leading-tight line-clamp-2">{p.name}</span>
+                                <span className="text-sm font-black text-[#F77F00]">Rp {p.price?.toLocaleString("id-ID")}</span>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[10px] text-yellow-500">{'★'.repeat(Math.round(p.rating || 0))}</span>
+                                  <span className="text-[10px] text-neutral-500">{p.rating}</span>
+                                </div>
+                                <div className="mt-1 space-y-1">
+                                  {p.pros?.map((t: string, j: number) => (
+                                    <div key={`p${j}`} className="flex items-start gap-1.5"><CheckCircle className="w-3 h-3 text-emerald-500 shrink-0 mt-0.5" /><span className="text-[10px] text-[#212529] dark:text-neutral-300 leading-tight">{t}</span></div>
+                                  ))}
+                                  {p.cons?.map((t: string, j: number) => (
+                                    <div key={`c${j}`} className="flex items-start gap-1.5"><XCircle className="w-3 h-3 text-red-400/70 shrink-0 mt-0.5" /><span className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-tight">{t}</span></div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            );
+                          };
+                          return (
+                            <div className="space-y-2">
+                              <p className="text-[10px] font-black text-[#F77F00] uppercase tracking-widest text-center">⚔️ Perbandingan Produk</p>
+                              <div className="flex items-stretch gap-0 relative">
+                                {prods.map((p: any, i: number) => (
+                                  <Fragment key={p.id || i}>
+                                    {renderCard(p, i, prods.length)}
+                                    {i < prods.length - 1 && (
+                                      <div className="absolute left-1/2 top-[5.5rem] -translate-x-1/2 z-20" style={{ left: `${((i + 1) / prods.length) * 100}%` }}>
+                                        <div className="relative">
+                                          <div className="absolute inset-0 rounded-full bg-[#F77F00]/30 animate-ping" />
+                                          <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-[#F77F00] to-orange-600 flex items-center justify-center shadow-xl border-2 border-white dark:border-[#0a0a0a]">
+                                            <span className="text-[9px] font-black text-white">VS</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </Fragment>
+                                ))}
+                              </div>
+                              {msg.comparison.reason && (
+                                <div className="px-3 py-2 bg-gradient-to-r from-[#F77F00]/10 to-orange-500/5 border border-[#F77F00]/20 rounded-lg">
+                                  <p className="text-[10px] text-[#F77F00] font-bold text-center">🏆 {msg.comparison.reason}</p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
                         {/* Guide / Pandu Buttons */}
                         {msg.offer_guide && msg.action && !msg.dismissed && (
                           <div className="flex gap-2">
@@ -232,7 +330,7 @@ export default function ChatRoomPage() {
                               className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-[#F77F00] rounded-xl text-white text-xs font-black uppercase tracking-widest hover:bg-orange-600 transition-all group"
                             >
                               <Sparkles className="w-4 h-4 group-hover:animate-spin" />
-                              Ya, Pandu!
+                              {msg.action === "compare" ? "Lihat Produknya!" : "Ya, Pandu!"}
                             </button>
                             <button
                               onClick={() => setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, dismissed: true } : m))}

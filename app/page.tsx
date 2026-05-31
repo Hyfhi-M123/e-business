@@ -206,10 +206,10 @@ export default function Home() {
           <div className="bg-white/70 dark:bg-neutral-900/60 backdrop-blur-xl rounded-[2rem] py-6 px-6 shadow-xl border border-white/50 dark:border-white/10">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-0 lg:divide-x divide-black/10 dark:divide-white/10">
               {[
-                { icon: ShieldCheck, title: "Garansi Seumur Hidup", desc: "Ketangguhan terjamin." },
-                { icon: Truck, title: "Gratis Ongkir", desc: "Seluruh Nusantara." },
-                { icon: RefreshCcw, title: "Pengembalian 7 Hari", desc: "Tidak puas? Uang kembali." },
-                { icon: Lock, title: "Pembayaran Aman", desc: "Enkripsi bank standar." },
+                { icon: ShieldCheck, title: "Produk 100% Original", desc: "Kualitas pabrik terjamin." },
+                { icon: Truck, title: "Pengiriman Cepat", desc: "Dikirim di hari yang sama." },
+                { icon: ShoppingBag, title: "Katalog Lengkap", desc: "Gear untuk segala medan." },
+                { icon: Lock, title: "Pembayaran Aman", desc: "Enkripsi standar bank." },
               ].map((item, i) => (
                 <motion.div variants={popUpVariant} key={i} className="flex flex-row items-center justify-start lg:justify-center text-left group lg:px-4 gap-4">
                   <div className="bg-[#F77F00]/10 dark:bg-orange-500/10 p-3 rounded-full group-hover:scale-110 group-hover:bg-[#F77F00] dark:group-hover:bg-orange-500 group-hover:text-white text-[#F77F00] dark:text-orange-500 transition-all duration-300 shrink-0">

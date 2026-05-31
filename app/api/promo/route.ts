@@ -39,13 +39,22 @@ export async function GET(req: Request) {
       return NextResponse.json({ valid: false, message: "Kode promo sudah mencapai batas penggunaan." });
     }
 
-    // Check date range
+    // Check date range (Adjusting to WIB / UTC+7 for accurate local checking)
     const now = new Date();
-    if (promo.start_date && new Date(promo.start_date) > now) {
-      return NextResponse.json({ valid: false, message: "Kode promo belum aktif." });
+    const nowWIB = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+    const nowStr = nowWIB.toISOString().split('T')[0];
+
+    if (promo.start_date) {
+      const startStr = new Date(promo.start_date).toISOString().split('T')[0];
+      if (startStr > nowStr) {
+        return NextResponse.json({ valid: false, message: "Kode promo belum aktif." });
+      }
     }
-    if (promo.end_date && new Date(promo.end_date) < now) {
-      return NextResponse.json({ valid: false, message: "Kode promo sudah expired." });
+    if (promo.end_date) {
+      const endStr = new Date(promo.end_date).toISOString().split('T')[0];
+      if (endStr < nowStr) {
+        return NextResponse.json({ valid: false, message: "Kode promo sudah expired." });
+      }
     }
 
     return NextResponse.json({

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, AlertTriangle, Package, PackageX, History, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { Search, Filter, AlertTriangle, Package, PackageX, History, ArrowDownToLine } from "lucide-react";
 import Link from "next/link";
 
 export default function InventoryPage() {
@@ -10,7 +10,6 @@ export default function InventoryPage() {
   const [filter, setFilter] = useState("all");
   const [inventory, setInventory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     const fetchInventory = async () => {
       try {
@@ -44,15 +43,16 @@ export default function InventoryPage() {
                 });
               });
             } else {
+              const rootStock = p.stock !== undefined && p.stock !== null ? parseInt(p.stock) : 99;
               items.push({
                 id: p.id,
                 productId: p.id,
                 name: p.name,
                 variant: "All Size",
                 sku: p.id.toUpperCase(),
-                stock: 99,
+                stock: rootStock,
                 incoming: 0,
-                status: "in-stock"
+                status: rootStock === 0 ? "out-of-stock" : rootStock <= 5 ? "low-stock" : "in-stock"
               });
             }
           });
@@ -96,6 +96,26 @@ export default function InventoryPage() {
     }));
   };
 
+  const exportCSV = () => {
+    const headers = ["Product Name", "Variant", "SKU", "Status", "Available Stock", "Incoming"];
+    const csvRows = [
+      headers.join(","),
+      ...filteredData.map(item => [
+        `"${item.name}"`,
+        `"${item.variant}"`,
+        `"${item.sku}"`,
+        item.status,
+        item.stock,
+        item.incoming
+      ].join(","))
+    ];
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `inventory_export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
   return (
     <main className="p-8 lg:p-10 max-w-[1600px] mx-auto w-full min-h-screen">
       
@@ -107,13 +127,9 @@ export default function InventoryPage() {
         </div>
         
         <div className="flex gap-3 w-full md:w-auto">
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white dark:bg-[#111] border border-black/5 dark:border-white/5 shadow-sm text-[#212529] dark:text-white rounded-2xl px-6 py-3 text-sm font-bold hover:bg-neutral-50 dark:hover:bg-[#1a1a1a] transition-colors">
+          <button onClick={exportCSV} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white dark:bg-[#111] border border-black/5 dark:border-white/5 shadow-sm text-[#212529] dark:text-white rounded-2xl px-6 py-3 text-sm font-bold hover:bg-neutral-50 dark:hover:bg-[#1a1a1a] transition-colors">
             <ArrowDownToLine className="w-4 h-4" />
             Export CSV
-          </button>
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-[#212529] dark:bg-white text-white dark:text-black shadow-lg rounded-2xl px-6 py-3 text-sm font-bold hover:bg-black dark:hover:bg-neutral-200 transition-colors">
-            <ArrowUpFromLine className="w-4 h-4" />
-            Receive Stock
           </button>
         </div>
       </div>
@@ -300,6 +316,7 @@ export default function InventoryPage() {
         </div>
 
       </div>
+
     </main>
   );
 }

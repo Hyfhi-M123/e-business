@@ -7,7 +7,7 @@ import { Mail, Send, Edit, Trash2, Users, MousePointerClick, Eye, Plus, Search, 
 
 // Dummy Campaign Data
 const CAMPAIGN_DATA = [
-  { id: "CMP-01", name: "Black Friday Early Access", subject: "Your VIP access is here! 🖤", audience: "VIP Customers", sentDate: "Nov 20, 2023", opens: 68, clicks: 24, status: "scheduled" },
+  { id: "CMP-01", name: "Black Friday Early Access", subject: "Your exclusive access is here! 🖤", audience: "Active Customers", sentDate: "Nov 20, 2023", opens: 68, clicks: 24, status: "scheduled" },
   { id: "CMP-02", name: "October Gear Digest", subject: "Top 5 Hiking Boots for Winter ❄️", audience: "All Subscribers", sentDate: "Oct 15, 2023", opens: 42, clicks: 12, status: "sent" },
   { id: "CMP-03", name: "Welcome Series - Email 1", subject: "Welcome to TrailForge!", audience: "New Signups", sentDate: "Automated", opens: 85, clicks: 40, status: "sent" },
   { id: "CMP-04", name: "Flash Sale 12.12", subject: "24 Hours Only! 50% OFF", audience: "All Subscribers", sentDate: "-", opens: 0, clicks: 0, status: "draft" },
@@ -51,48 +51,16 @@ export default function NewsletterPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div className="mb-10">
         
         {/* Subscribers */}
-        <motion.div initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} className="bg-white dark:bg-[#111] rounded-[2rem] p-6 border border-black/5 dark:border-white/5 shadow-sm flex items-center gap-6">
+        <motion.div initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} className="bg-white dark:bg-[#111] rounded-[2rem] p-6 border border-black/5 dark:border-white/5 shadow-sm flex items-center gap-6 max-w-sm">
           <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
             <Users className="w-6 h-6 text-blue-500" />
           </div>
           <div>
             <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1">Total Subscribers</p>
             <h3 className="text-3xl font-black text-[#212529] dark:text-white">{subscribers.length.toLocaleString('id-ID')}</h3>
-          </div>
-        </motion.div>
-
-        {/* Open Rate */}
-        <motion.div initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} transition={{delay: 0.1}} className="bg-white dark:bg-[#111] rounded-[2rem] p-6 border border-black/5 dark:border-white/5 shadow-sm flex items-center gap-6">
-          <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center shrink-0">
-            <Eye className="w-6 h-6 text-emerald-500" />
-          </div>
-          <div className="flex-1">
-            <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1 flex items-center justify-between">
-              Avg Open Rate
-              <span className="text-emerald-500 font-black">48%</span>
-            </p>
-            <div className="w-full h-2 bg-neutral-100 dark:bg-[#222] rounded-full overflow-hidden mt-2">
-              <div className="h-full w-[48%] bg-emerald-500 rounded-full"></div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Click Rate */}
-        <motion.div initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} transition={{delay: 0.2}} className="bg-white dark:bg-[#111] rounded-[2rem] p-6 border border-black/5 dark:border-white/5 shadow-sm flex items-center gap-6">
-          <div className="w-14 h-14 rounded-full bg-[#F77F00]/10 flex items-center justify-center shrink-0">
-            <MousePointerClick className="w-6 h-6 text-[#F77F00]" />
-          </div>
-          <div className="flex-1">
-            <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-1 flex items-center justify-between">
-              Avg Click Rate
-              <span className="text-[#F77F00] font-black">12%</span>
-            </p>
-            <div className="w-full h-2 bg-neutral-100 dark:bg-[#222] rounded-full overflow-hidden mt-2">
-              <div className="h-full w-[12%] bg-[#F77F00] rounded-full"></div>
-            </div>
           </div>
         </motion.div>
 
@@ -158,8 +126,6 @@ export default function NewsletterPage() {
                   <th className="py-5 px-8 text-[10px] font-black uppercase tracking-widest text-neutral-400">Campaign Name</th>
                   <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Status</th>
                   <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Audience</th>
-                  <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Open Rate</th>
-                  <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Click Rate</th>
                   <th className="py-5 px-8 text-[10px] font-black uppercase tracking-widest text-neutral-400 text-right">Sent Date</th>
                 </tr>
               </thead>
@@ -205,26 +171,6 @@ export default function NewsletterPage() {
                           <Users className="w-3 h-3 text-neutral-400" />
                           {cmp.audience}
                         </span>
-                      </td>
-
-                      {/* Open Rate */}
-                      <td className="py-4 px-4">
-                        <div className="flex flex-col gap-1 w-24">
-                          <span className="text-sm font-black text-[#212529] dark:text-white">{cmp.opens}%</span>
-                          <div className="w-full h-1.5 bg-neutral-100 dark:bg-[#222] rounded-full overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${cmp.opens}%` }} className="h-full bg-emerald-500 rounded-full"></motion.div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Click Rate */}
-                      <td className="py-4 px-4">
-                        <div className="flex flex-col gap-1 w-24">
-                          <span className="text-sm font-black text-[#212529] dark:text-white">{cmp.clicks}%</span>
-                          <div className="w-full h-1.5 bg-neutral-100 dark:bg-[#222] rounded-full overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${cmp.clicks}%` }} className="h-full bg-[#F77F00] rounded-full"></motion.div>
-                          </div>
-                        </div>
                       </td>
 
                       {/* Date */}

@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Store, CreditCard, Truck, Users, Bell, Shield, Globe, Save, HelpCircle, AlertOctagon } from "lucide-react";
+import { useToast } from "../../components/Toast";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general");
   const [isShutdown, setIsShutdown] = useState(false);
   const [loadingShutdown, setLoadingShutdown] = useState(false);
+  const { toast } = useToast();
 
   const [storeName, setStoreName] = useState("TrailForge Outdoors");
   const [contactEmail, setContactEmail] = useState("hello@trailforge.com");
@@ -18,9 +20,43 @@ export default function SettingsPage() {
   const [province, setProvince] = useState("DKI Jakarta");
   const [postalCode, setPostalCode] = useState("12190");
   const [currency, setCurrency] = useState("IDR (Rp)");
+  
+  // Payment Config State
+  const [midtransServerKey, setMidtransServerKey] = useState("");
+  const [midtransClientKey, setMidtransClientKey] = useState("");
+
+  // Shipping Config State
+  const [biteshipApiKey, setBiteshipApiKey] = useState("");
+  
+  // Admins Config State
+  const [admins, setAdmins] = useState<any[]>([]);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminPassword, setNewAdminPassword] = useState("");
+  const [isInviting, setIsInviting] = useState(false);
+
+  // Notification Config State
+  const [adminOrderAlerts, setAdminOrderAlerts] = useState(true);
+  const [adminStockAlerts, setAdminStockAlerts] = useState(true);
+  const [customerOrderEmails, setCustomerOrderEmails] = useState(true);
+  const [customerShippingEmails, setCustomerShippingEmails] = useState(true);
+
   const [isSaving, setIsSaving] = useState(false);
 
+  const fetchAdmins = async () => {
+    try {
+      const res = await fetch("/api/admin/users");
+      const data = await res.json();
+      if (data.success) {
+        setAdmins(data.admins);
+      }
+    } catch (e) {
+      console.error("Failed to load admins", e);
+    }
+  };
+
   useEffect(() => {
+    fetchAdmins();
     fetch("/api/shutdown")
       .then(res => res.json())
       .then(data => setIsShutdown(data.shutdown))
@@ -39,6 +75,14 @@ export default function SettingsPage() {
           if (data.settings.province) setProvince(data.settings.province);
           if (data.settings.postalCode) setPostalCode(data.settings.postalCode);
           if (data.settings.currency) setCurrency(data.settings.currency);
+          if (data.settings.midtransServerKey) setMidtransServerKey(data.settings.midtransServerKey);
+          if (data.settings.midtransClientKey) setMidtransClientKey(data.settings.midtransClientKey);
+          if (data.settings.biteshipApiKey) setBiteshipApiKey(data.settings.biteshipApiKey);
+          
+          if (data.settings.adminOrderAlerts !== undefined) setAdminOrderAlerts(data.settings.adminOrderAlerts === 'true' || data.settings.adminOrderAlerts === true);
+          if (data.settings.adminStockAlerts !== undefined) setAdminStockAlerts(data.settings.adminStockAlerts === 'true' || data.settings.adminStockAlerts === true);
+          if (data.settings.customerOrderEmails !== undefined) setCustomerOrderEmails(data.settings.customerOrderEmails === 'true' || data.settings.customerOrderEmails === true);
+          if (data.settings.customerShippingEmails !== undefined) setCustomerShippingEmails(data.settings.customerShippingEmails === 'true' || data.settings.customerShippingEmails === true);
         }
       })
       .catch(console.error);
@@ -60,15 +104,26 @@ export default function SettingsPage() {
             city,
             province,
             postalCode,
-            currency
+            currency,
+            midtransServerKey,
+            midtransClientKey,
+            biteshipApiKey,
+            adminOrderAlerts,
+            adminStockAlerts,
+            customerOrderEmails,
+            customerShippingEmails
           }
         })
       });
-      if (res.ok) alert("Settings saved successfully!");
-      else alert("Failed to save settings");
-    } catch (e) {
+      const data = await res.json();
+      if (res.ok) {
+        toast("success", "Settings Saved", "Your store details have been successfully updated.");
+      } else {
+        toast("error", "Update Failed", data.error || "Unknown error occurred while saving.");
+      }
+    } catch (e: any) {
       console.error(e);
-      alert("Error saving settings");
+      toast("error", "Connection Error", e.message || "Failed to reach the server.");
     } finally {
       setIsSaving(false);
     }
@@ -92,6 +147,56 @@ export default function SettingsPage() {
       console.error(e);
     } finally {
       setLoadingShutdown(false);
+    }
+  };
+
+  const handleInviteAdmin = async () => {
+    if (!newAdminEmail) {
+      toast("warning", "Missing Email", "Please provide an email address to invite.");
+      return;
+    }
+    
+    setIsInviting(true);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: newAdminEmail })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast("success", "Invitation Sent!", `An email has been sent to ${newAdminEmail}.`);
+        setShowInviteForm(false);
+        setNewAdminEmail("");
+        fetchAdmins(); // Refresh the table
+      } else {
+        toast("error", "Failed to Invite", data.error || "Unknown error occurred.");
+      }
+    } catch (e: any) {
+      toast("error", "Connection Error", e.message || "Failed to reach server.");
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleRevokeAdmin = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to revoke admin access for ${name}? They will become a normal user.`)) {
+      return;
+    }
+    
+    try {
+      const res = await fetch(`/api/admin/users?id=${id}`, {
+        method: "DELETE"
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast("success", "Access Revoked", `${name} is no longer an admin.`);
+        fetchAdmins();
+      } else {
+        toast("error", "Failed to Revoke", data.error || "Unknown error occurred.");
+      }
+    } catch (e: any) {
+      toast("error", "Connection Error", e.message || "Failed to reach server.");
     }
   };
 
@@ -255,29 +360,51 @@ export default function SettingsPage() {
                 <p className="text-sm text-neutral-500 mb-8">Accept payments on your store using third-party providers.</p>
                 
                 <div className="flex flex-col gap-4">
-                  {/* Midtrans */}
-                  <div className="flex items-center justify-between p-6 border border-black/5 dark:border-white/5 rounded-2xl">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-12 bg-blue-50 dark:bg-blue-500/10 rounded-lg flex items-center justify-center text-blue-500 font-black text-sm">MID</div>
+                  {/* Midtrans Config */}
+                  <div className="flex flex-col gap-6 p-8 border border-black/5 dark:border-white/5 rounded-[2rem] bg-neutral-50/50 dark:bg-[#1a1a1a]/50">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-12 bg-blue-50 dark:bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500 font-black text-sm">MID</div>
+                        <div>
+                          <h3 className="text-sm font-bold text-[#212529] dark:text-white">Midtrans Configuration</h3>
+                          <p className="text-xs font-medium text-neutral-500 mt-0.5">Enter your production or sandbox keys</p>
+                        </div>
+                      </div>
+                      <a href="https://dashboard.midtrans.com/" target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-white dark:bg-[#111] border border-black/5 dark:border-white/5 shadow-sm text-neutral-600 dark:text-neutral-300 text-xs font-bold rounded-lg hover:bg-neutral-50 dark:hover:bg-[#1a1a1a] transition-colors flex items-center gap-2">
+                        Open Dashboard <Globe className="w-3 h-3" />
+                      </a>
+                    </div>
+                    
+                    <div className="flex flex-col gap-5">
                       <div>
-                        <h3 className="text-sm font-bold text-[#212529] dark:text-white">Midtrans (Active)</h3>
-                        <p className="text-xs text-neutral-500">QRIS, GoPay, Bank Transfer</p>
+                        <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Server Key</label>
+                        <input 
+                          type="text" 
+                          value={midtransServerKey} 
+                          onChange={(e) => setMidtransServerKey(e.target.value)} 
+                          placeholder="e.g. Mid-server-xxxxxxxxx" 
+                          className="w-full bg-white dark:bg-[#111] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none shadow-sm" 
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Client Key</label>
+                        <input 
+                          type="text" 
+                          value={midtransClientKey} 
+                          onChange={(e) => setMidtransClientKey(e.target.value)} 
+                          placeholder="e.g. Mid-client-xxxxxxxxx" 
+                          className="w-full bg-white dark:bg-[#111] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none shadow-sm" 
+                        />
                       </div>
                     </div>
-                    <button className="px-4 py-2 bg-neutral-100 dark:bg-[#222] text-sm font-bold rounded-lg hover:bg-neutral-200 transition-colors">Manage</button>
+
+                    <div className="flex justify-end pt-2 border-t border-black/5 dark:border-white/5 mt-2">
+                      <button onClick={handleSaveSettings} disabled={isSaving} className="px-6 py-3 bg-[#F77F00] text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-50">
+                        {isSaving ? "Saving..." : "Save Configuration"}
+                      </button>
+                    </div>
                   </div>
 
-                  {/* PayPal */}
-                  <div className="flex items-center justify-between p-6 border border-black/5 dark:border-white/5 rounded-2xl">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-12 bg-[#00457C]/10 rounded-lg flex items-center justify-center text-[#00457C] font-black text-sm">PYPL</div>
-                      <div>
-                        <h3 className="text-sm font-bold text-[#212529] dark:text-white">PayPal</h3>
-                        <p className="text-xs text-neutral-500">International Credit Cards</p>
-                      </div>
-                    </div>
-                    <button className="px-4 py-2 bg-[#F77F00] text-white text-sm font-bold rounded-lg hover:bg-orange-600 transition-colors">Connect</button>
-                  </div>
                 </div>
               </div>
             </motion.div>
@@ -286,23 +413,37 @@ export default function SettingsPage() {
           {activeTab === "shipping" && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-8">
               <div className="bg-white dark:bg-[#111] rounded-[2rem] p-8 shadow-sm border border-black/5 dark:border-white/5">
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h2 className="text-xl font-black text-[#212529] dark:text-white mb-2">Shipping Zones</h2>
-                    <p className="text-sm text-neutral-500">Manage where you ship and how much you charge.</p>
-                  </div>
-                  <button className="px-4 py-2 bg-neutral-100 dark:bg-[#222] text-sm font-bold rounded-lg">Create Zone</button>
-                </div>
-                
-                <div className="flex flex-col gap-4">
-                  <div className="p-6 border border-black/5 dark:border-white/5 rounded-2xl">
-                    <h3 className="text-sm font-bold text-[#212529] dark:text-white mb-1">Domestic (Indonesia)</h3>
-                    <p className="text-xs text-neutral-500 mb-4">JNE, SiCepat, GoSend</p>
-                    <div className="h-px w-full bg-black/5 dark:bg-white/5 mb-4"></div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="font-medium text-neutral-600">Standard Shipping</span>
-                      <span className="font-bold">Rp 15.000</span>
+                <div className="flex flex-col gap-6 p-8 border border-black/5 dark:border-white/5 rounded-[2rem] bg-neutral-50/50 dark:bg-[#1a1a1a]/50">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-12 bg-[#31C48D]/10 rounded-xl flex items-center justify-center text-[#31C48D] font-black text-sm">BITE</div>
+                      <div>
+                        <h3 className="text-sm font-bold text-[#212529] dark:text-white">Biteship Configuration</h3>
+                        <p className="text-xs font-medium text-neutral-500 mt-0.5">Rates and fulfillments are automated via Biteship API</p>
+                      </div>
                     </div>
+                    <a href="https://dashboard.biteship.com/" target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-white dark:bg-[#111] border border-black/5 dark:border-white/5 shadow-sm text-neutral-600 dark:text-neutral-300 text-xs font-bold rounded-lg hover:bg-neutral-50 dark:hover:bg-[#1a1a1a] transition-colors flex items-center gap-2">
+                      Open Dashboard <Globe className="w-3 h-3" />
+                    </a>
+                  </div>
+                  
+                  <div className="flex flex-col gap-5">
+                    <div>
+                      <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">API Key</label>
+                      <input 
+                        type="text" 
+                        value={biteshipApiKey} 
+                        onChange={(e) => setBiteshipApiKey(e.target.value)} 
+                        placeholder="e.g. biteship_test.eyJhbGciOi..." 
+                        className="w-full bg-white dark:bg-[#111] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none shadow-sm" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-2 border-t border-black/5 dark:border-white/5 mt-2">
+                    <button onClick={handleSaveSettings} disabled={isSaving} className="px-6 py-3 bg-[#F77F00] text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-50">
+                      {isSaving ? "Saving..." : "Save Configuration"}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -317,8 +458,22 @@ export default function SettingsPage() {
                     <h2 className="text-xl font-black text-[#212529] dark:text-white mb-2">Team Members</h2>
                     <p className="text-sm text-neutral-500">Manage who has access to your admin dashboard.</p>
                   </div>
-                  <button className="px-4 py-2 bg-[#F77F00] text-white text-sm font-bold rounded-lg hover:bg-orange-600">Invite Staff</button>
+                  <button onClick={() => setShowInviteForm(!showInviteForm)} className="px-4 py-2 bg-[#F77F00] text-white text-sm font-bold rounded-lg hover:bg-orange-600">
+                    {showInviteForm ? "Cancel" : "Invite Staff"}
+                  </button>
                 </div>
+                
+                {showInviteForm && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="mb-8 p-6 bg-neutral-50 dark:bg-[#1a1a1a] rounded-2xl border border-black/5 dark:border-white/5 flex flex-col md:flex-row gap-4 items-end">
+                    <div className="flex-1 w-full">
+                      <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Staff Email</label>
+                      <input type="email" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} placeholder="admin@example.com" className="w-full bg-white dark:bg-[#111] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-bold focus:border-[#F77F00] outline-none" />
+                    </div>
+                    <button onClick={handleInviteAdmin} disabled={isInviting} className="px-6 py-3 h-[46px] bg-[#212529] dark:bg-white text-white dark:text-[#111] text-sm font-bold rounded-xl hover:opacity-80 transition-opacity whitespace-nowrap">
+                      {isInviting ? "Sending..." : "Send Invitation"}
+                    </button>
+                  </motion.div>
+                )}
                 
                 <table className="w-full text-left">
                   <thead>
@@ -329,19 +484,35 @@ export default function SettingsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-black/5 dark:border-white/5">
-                      <td className="py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-orange-100 text-[#F77F00] flex items-center justify-center font-bold text-xs">AD</div>
-                          <div>
-                            <p className="text-sm font-bold text-[#212529] dark:text-white">Admin User</p>
-                            <p className="text-xs text-neutral-500">admin@trailforge.com</p>
+                    {admins.map((admin, idx) => (
+                      <tr key={admin.id || idx} className="border-b border-black/5 dark:border-white/5 last:border-0">
+                        <td className="py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 text-[#F77F00] flex items-center justify-center font-bold text-xs uppercase">
+                              {admin.name?.substring(0, 2) || "AD"}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-[#212529] dark:text-white capitalize">{admin.name}</p>
+                              <p className="text-xs text-neutral-500">{admin.email}</p>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-4"><span className="px-2 py-1 bg-emerald-50 text-emerald-500 rounded text-xs font-bold">Owner</span></td>
-                      <td className="py-4 text-right"><button className="text-sm font-bold text-neutral-400">Edit</button></td>
-                    </tr>
+                        </td>
+                        <td className="py-4"><span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded text-xs font-bold capitalize">{admin.role}</span></td>
+                        <td className="py-4 text-right">
+                          <button 
+                            onClick={() => handleRevokeAdmin(admin.id, admin.name)}
+                            className="text-sm font-bold text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 bg-rose-50 dark:bg-rose-500/10 px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            Revoke
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {admins.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="py-8 text-center text-sm font-medium text-neutral-500">Loading team members...</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -416,7 +587,72 @@ export default function SettingsPage() {
             </motion.div>
           )}
 
-          {["notifications", "domains"].includes(activeTab) && (
+          {activeTab === "notifications" && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-8">
+              <div className="bg-white dark:bg-[#111] rounded-[2rem] p-8 shadow-sm border border-black/5 dark:border-white/5">
+                <div className="mb-8">
+                  <h2 className="text-xl font-black text-[#212529] dark:text-white mb-2">Notifications Settings</h2>
+                  <p className="text-sm text-neutral-500">Manage email alerts for you and your customers.</p>
+                </div>
+                
+                <div className="flex flex-col gap-8">
+                  {/* Admin Alerts */}
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4">Admin Alerts</h3>
+                    <div className="flex flex-col gap-4">
+                      <label className="flex items-center justify-between p-4 border border-black/5 dark:border-white/5 rounded-2xl cursor-pointer hover:bg-neutral-50 dark:hover:bg-[#1a1a1a] transition-colors">
+                        <div>
+                          <p className="text-sm font-bold text-[#212529] dark:text-white">New Order Notifications</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">Receive an email when a customer places a new order</p>
+                        </div>
+                        <input type="checkbox" checked={adminOrderAlerts} onChange={(e) => setAdminOrderAlerts(e.target.checked)} className="w-5 h-5 accent-[#F77F00]" />
+                      </label>
+                      
+                      <label className="flex items-center justify-between p-4 border border-black/5 dark:border-white/5 rounded-2xl cursor-pointer hover:bg-neutral-50 dark:hover:bg-[#1a1a1a] transition-colors">
+                        <div>
+                          <p className="text-sm font-bold text-[#212529] dark:text-white">Low Stock Warnings</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">Get alerted when a product's stock drops below 5 items</p>
+                        </div>
+                        <input type="checkbox" checked={adminStockAlerts} onChange={(e) => setAdminStockAlerts(e.target.checked)} className="w-5 h-5 accent-[#F77F00]" />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="h-px w-full bg-black/5 dark:bg-white/5"></div>
+
+                  {/* Customer Emails */}
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-500 uppercase tracking-widest mb-4">Customer Emails</h3>
+                    <div className="flex flex-col gap-4">
+                      <label className="flex items-center justify-between p-4 border border-black/5 dark:border-white/5 rounded-2xl cursor-pointer hover:bg-neutral-50 dark:hover:bg-[#1a1a1a] transition-colors">
+                        <div>
+                          <p className="text-sm font-bold text-[#212529] dark:text-white">Order Confirmations</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">Automatically send a receipt to customers upon payment</p>
+                        </div>
+                        <input type="checkbox" checked={customerOrderEmails} onChange={(e) => setCustomerOrderEmails(e.target.checked)} className="w-5 h-5 accent-[#F77F00]" />
+                      </label>
+                      
+                      <label className="flex items-center justify-between p-4 border border-black/5 dark:border-white/5 rounded-2xl cursor-pointer hover:bg-neutral-50 dark:hover:bg-[#1a1a1a] transition-colors">
+                        <div>
+                          <p className="text-sm font-bold text-[#212529] dark:text-white">Shipping Updates</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">Notify customers when their tracking number is available</p>
+                        </div>
+                        <input type="checkbox" checked={customerShippingEmails} onChange={(e) => setCustomerShippingEmails(e.target.checked)} className="w-5 h-5 accent-[#F77F00]" />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-8">
+                  <button onClick={handleSaveSettings} disabled={isSaving} className="px-6 py-3 bg-[#F77F00] text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/20 disabled:opacity-50">
+                    {isSaving ? "Saving..." : "Save Preferences"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {["domains"].includes(activeTab) && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-[#111] rounded-[2rem] p-16 shadow-sm border border-black/5 dark:border-white/5 flex flex-col items-center justify-center text-center">
               <div className="w-20 h-20 bg-neutral-100 dark:bg-[#1a1a1a] rounded-full flex items-center justify-center mb-6">
                 <HelpCircle className="w-8 h-8 text-neutral-400" />

@@ -77,6 +77,7 @@ export async function GET(req: Request) {
         id: order.id,
         status: order.status,
         date: dateStr,
+        created_at: order.created_at,
         total: order.total_amount,
         store: "TrailForge Official",
         items: items,
@@ -111,7 +112,15 @@ export async function GET(req: Request) {
       };
     });
 
-    return NextResponse.json({ orders: formattedOrders });
+    // REAL FUNNEL DATA: Count active items currently in carts across all users
+    const { count: cartCount } = await supabase
+      .from("cart_items")
+      .select("*", { count: "exact", head: true });
+
+    return NextResponse.json({ 
+      orders: formattedOrders,
+      cartCount: cartCount || 0
+    });
   } catch (error: any) {
     console.error("Orders API Error:", error.message);
     return NextResponse.json({ orders: [], error: error.message }, { status: 500 });
@@ -160,6 +169,83 @@ export async function PUT(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Update Order API Error:", error.message);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { customerForm, items, subtotal, shipping, discount, total, status } = body;
+
+    if (!customerForm || !items || items.length === 0) {
+      return NextResponse.json({ error: "Data pesanan tidak lengkap" }, { status: 400 });
+    }
+
+    // Generate Order ID
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const order_id = `TRF-${dateStr}-${randomStr}`;
+
+    const now = new Date().toISOString();
+
+    // 1. Insert order
+    const { error: orderError } = await supabase.from("orders").insert({
+      id: order_id,
+      user_email: customerForm.email,
+      status: status || "Belum Bayar",
+      total_amount: total,
+      payment_method: "Manual Admin",
+      shipping_courier: "Manual / POS",
+      shipping_address: `${customerForm.address}\n${customerForm.city}\n${customerForm.postal}`,
+      recipient_name: customerForm.name,
+      recipient_phone: customerForm.phone,
+      subtotal: subtotal,
+      shipping_cost: shipping,
+      promo_discount: discount,
+      paid_at: status === "Selesai" ? now : null,
+      confirmed_at: status === "Selesai" ? now : null,
+    });
+
+    if (orderError) throw new Error("Gagal menyimpan ke tabel orders: " + orderError.message);
+
+    // 2. Insert order items
+    const orderItems = items.map((item: any) => ({
+      order_id: order_id,
+      product_id: item.productId || item.id.split('-var-')[0],
+      product_name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+    }));
+
+    const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
+    if (itemsError) throw new Error("Gagal menyimpan ke tabel order_items: " + itemsError.message);
+
+    // 3. Deduct stock (Best Effort)
+    for (const item of items) {
+      const pId = item.productId || item.id.split('-var-')[0];
+      const { data: prod } = await supabase.from("products").select("variants, stock").eq("id", pId).single();
+      if (prod) {
+        if (prod.variants && Array.isArray(prod.variants) && prod.variants.length > 0) {
+          let updated = false;
+          const newVariants = prod.variants.map((v: any) => {
+            if (!updated && item.variant.includes(v.size || "")) {
+              v.stock = Math.max(0, (parseInt(v.stock) || 0) - item.quantity).toString();
+              updated = true;
+            }
+            return v;
+          });
+          await supabase.from("products").update({ variants: newVariants }).eq("id", pId);
+        } else {
+          const newStock = Math.max(0, (parseInt(prod.stock) || 0) - item.quantity);
+          await supabase.from("products").update({ stock: newStock }).eq("id", pId);
+        }
+      }
+    }
+
+    return NextResponse.json({ success: true, order_id });
+  } catch (error: any) {
+    console.error("Create Order Error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -7,6 +7,34 @@ import { ArrowLeft, Save, Send, Eye, Users, Clock, Calendar, Image as ImageIcon,
 
 export default function CreateCampaignPage() {
   const [schedule, setSchedule] = useState("now");
+  const [subject, setSubject] = useState("");
+  const [content, setContent] = useState("Hey Adventurer! \n\nWinter is fast approaching, and we want to make sure you are geared up and ready to conquer the frost. \n\nFor the next 48 hours, all our premium Arctic Pro jackets are 20% off. Don't let the cold stop your expedition.");
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSend = async () => {
+    if (!subject) return alert("Email Subject Line is required!");
+    if (!content) return alert("Email Content is required!");
+    if (schedule !== "now") return alert("Scheduling is not yet supported. Please select 'Send Immediately'.");
+
+    setIsSending(true);
+    try {
+      const res = await fetch("/api/send-newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject, content })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || "Failed to send campaign");
+      
+      alert(data.message);
+      window.location.href = "/admin/newsletter";
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   return (
     <main className="p-8 lg:p-10 max-w-[1400px] mx-auto w-full min-h-screen">
@@ -60,6 +88,8 @@ export default function CreateCampaignPage() {
                 <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2 block">Email Subject Line</label>
                 <input 
                   type="text" 
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
                   placeholder="The first thing your subscribers will see..." 
                   className="w-full bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl py-3 px-4 text-sm font-medium focus:border-[#F77F00] outline-none"
                 />
@@ -117,9 +147,10 @@ export default function CreateCampaignPage() {
 
                   <div className="w-full">
                     <textarea 
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
                       className="w-full min-h-[150px] bg-transparent text-center text-[#212529] dark:text-white text-lg font-medium outline-none resize-none placeholder:text-neutral-300 dark:placeholder:text-neutral-700"
                       placeholder="Write your email content here..."
-                      defaultValue="Hey Adventurer! &#10;&#10;Winter is fast approaching, and we want to make sure you are geared up and ready to conquer the frost. &#10;&#10;For the next 48 hours, all our premium Arctic Pro jackets are 20% off. Don't let the cold stop your expedition."
                     ></textarea>
                   </div>
 
@@ -152,7 +183,7 @@ export default function CreateCampaignPage() {
                   <Users className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400" />
                   <select className="w-full pl-11 pr-10 py-3 bg-neutral-50 dark:bg-[#1a1a1a] border border-black/5 dark:border-white/5 rounded-xl text-sm font-bold text-[#212529] dark:text-white appearance-none cursor-pointer focus:border-[#F77F00] outline-none">
                     <option>All Subscribers (12,450)</option>
-                    <option>VIP Customers (342)</option>
+                    <option>Active Customers</option>
                     <option>New Signups (Last 30 Days)</option>
                     <option>Inactive Customers</option>
                   </select>
@@ -209,8 +240,14 @@ export default function CreateCampaignPage() {
             
             <h2 className="text-lg font-black text-white mb-6 relative z-10">Confirm Campaign</h2>
             
-            <button className="w-full bg-white text-[#212529] font-black py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-neutral-100 transition-colors shadow-xl relative z-10">
-              {schedule === 'now' ? (
+            <button 
+              onClick={handleSend}
+              disabled={isSending}
+              className="w-full bg-white text-[#212529] font-black py-4 rounded-xl flex items-center justify-center gap-2 hover:bg-neutral-100 transition-colors shadow-xl relative z-10 disabled:opacity-50"
+            >
+              {isSending ? (
+                <div className="w-5 h-5 border-2 border-[#F77F00]/30 border-t-[#F77F00] rounded-full animate-spin"></div>
+              ) : schedule === 'now' ? (
                 <><Send className="w-5 h-5 text-[#F77F00]" /> Send Campaign Now</>
               ) : (
                 <><Clock className="w-5 h-5 text-blue-500" /> Schedule Campaign</>

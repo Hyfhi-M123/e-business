@@ -2,10 +2,11 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Star, Camera, Upload, CheckCircle2, ChevronRight, Package } from "lucide-react";
 import Navbar from "../../../components/Navbar";
 import Footer from "../../../components/Footer";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function NilaiPage() {
   const pathname = usePathname();
@@ -16,6 +17,7 @@ export default function NilaiPage() {
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -41,12 +43,40 @@ export default function NilaiPage() {
     setRatings(prev => ({ ...prev, [itemId]: rating }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
-      router.push(`/pesanan/${order.id}`);
-    }, 2000);
+    if (Object.keys(ratings).length === 0) return;
+    
+    setIsSubmitting(true);
+    try {
+      const promises = Object.entries(ratings).map(([productId, rating]) => {
+        return fetch("/api/reviews", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            product_id: productId,
+            user_email: user?.email || "guest@trailforge.id",
+            user_name: user?.user_metadata?.full_name || "Guest User",
+            rating: rating,
+            comment: reviews[productId] || "",
+          }),
+        });
+      });
+      
+      await Promise.all(promises);
+      
+      setSubmitted(true);
+      setTimeout(() => {
+        router.push(`/pesanan/${order.id}`);
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to submit reviews:", err);
+      alert("Gagal mengirim ulasan. Silakan coba lagi.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -173,13 +203,7 @@ export default function NilaiPage() {
                     className="w-full h-32 p-4 bg-transparent resize-none outline-none text-sm text-[#212529] dark:text-white placeholder:text-neutral-400"
                   />
                   
-                  {/* Photo Upload Area */}
-                  <div className="p-4 border-t border-black/10 dark:border-white/10 flex gap-4 overflow-x-auto scrollbar-hide">
-                    <button type="button" className="w-20 h-20 flex-shrink-0 border-2 border-dashed border-[#F77F00]/50 hover:border-[#F77F00] hover:bg-[#F77F00]/5 rounded-xl flex flex-col items-center justify-center gap-1 transition-colors group text-[#F77F00]">
-                      <Camera className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                      <span className="text-[9px] font-bold uppercase">Tambah Foto</span>
-                    </button>
-                  </div>
+
                 </div>
 
               </div>
@@ -189,10 +213,10 @@ export default function NilaiPage() {
           <div className="sticky bottom-6 z-10 pt-4">
             <button 
               type="submit"
-              disabled={Object.keys(ratings).length === 0}
+              disabled={Object.keys(ratings).length === 0 || isSubmitting}
               className="w-full h-14 bg-[#212529] dark:bg-white text-white dark:text-black font-black uppercase tracking-widest text-sm flex items-center justify-center gap-3 hover:bg-[#F77F00] hover:text-black dark:hover:bg-[#F77F00] transition-colors rounded-xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Kirim Penilaian
+              {isSubmitting ? "Mengirim..." : "Kirim Penilaian"}
             </button>
           </div>
 

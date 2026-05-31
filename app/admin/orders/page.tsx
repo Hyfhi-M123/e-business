@@ -209,7 +209,6 @@ export default function OrdersPage() {
           <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
               <tr className="border-b border-black/5 dark:border-white/5 bg-white dark:bg-[#111]">
-                <th className="py-5 px-8 w-12"><input type="checkbox" className="w-4 h-4 rounded border-black/20 accent-[#F77F00]" /></th>
                 <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Order ID</th>
                 <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Customer</th>
                 <th className="py-5 px-4 text-[10px] font-black uppercase tracking-widest text-neutral-400">Payment</th>
@@ -230,8 +229,6 @@ export default function OrdersPage() {
                     key={order.id} 
                     className="border-b border-black/5 dark:border-white/5 group hover:bg-neutral-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer"
                   >
-                    <td className="py-4 px-8 w-12"><input type="checkbox" className="w-4 h-4 rounded border-black/20 accent-[#F77F00]" /></td>
-                    
                     {/* Order ID & Date */}
                     <td className="py-4 px-4">
                       <div className="flex flex-col">

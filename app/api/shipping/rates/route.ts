@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-const BITESHIP_API_KEY = process.env.BITESHIP_API_KEY || "";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://wsenprneavjusqmmxobd.supabase.co";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
 const BITESHIP_BASE_URL = "https://api.biteship.com/v1";
 
 // Alamat toko (origin) — Jakarta Selatan
@@ -8,6 +12,14 @@ const STORE_POSTAL_CODE = 12190;
 
 export async function POST(req: Request) {
   try {
+    let dynamicBiteshipKey = process.env.BITESHIP_API_KEY || "";
+    
+    // 1. Fetch Dynamic Biteship Key from Settings
+    const { data: settingsData } = await supabase.from("store_settings").select("*");
+    if (settingsData) {
+      const biteshipRow = settingsData.find(row => row.key === "biteshipApiKey");
+      if (biteshipRow?.value) dynamicBiteshipKey = biteshipRow.value;
+    }
     const body = await req.json();
     const { destination_postal_code, items } = body;
 
@@ -54,7 +66,7 @@ export async function POST(req: Request) {
     const response = await fetch(`${BITESHIP_BASE_URL}/rates/couriers`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${BITESHIP_API_KEY}`,
+        Authorization: `Bearer ${dynamicBiteshipKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),

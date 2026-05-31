@@ -18,7 +18,9 @@ export default function AdminDashboard() {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [activeCustomers, setActiveCustomers] = useState(0);
   const [topProducts, setTopProducts] = useState<any[]>([]);
-  const [chartData, setChartData] = useState<{income: number, expenses: number, labels: string[], svgPath: string, polyPath: string}>({ income: 0, expenses: 0, labels: [], svgPath: "", polyPath: "" });
+  const [chartData, setChartData] = useState<{income: number, labels: string[], values: number[], maxVal: number}>({ income: 0, labels: [], values: [], maxVal: 1 });
+  const [timeRange, setTimeRange] = useState("Weekly");
+  const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export default function AdminDashboard() {
               if (!productMap[item.id]) {
                 productMap[item.id] = { name: item.name, sold: 0, img: item.image || "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=200&q=80" };
               }
-              productMap[item.id].sold += item.quantity;
+              productMap[item.id].sold += (item.qty || item.quantity || 1);
             });
           });
           const sortedProducts = Object.values(productMap).sort((a, b) => b.sold - a.sold).slice(0, 4);
@@ -51,40 +53,6 @@ export default function AdminDashboard() {
             { name: "AeroStep Boot", sold: 542, img: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=200&q=80" }
           ]);
 
-          // 3. Calculate 7-Day Chart Data
-          const last7Days = Array.from({length: 7}).map((_, i) => {
-            const d = new Date();
-            d.setDate(d.getDate() - (6 - i));
-            return d;
-          });
-          
-          const labels = last7Days.map(d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-          
-          const values = last7Days.map(day => {
-            const dayOrders = data.orders.filter((o: any) => {
-               const od = new Date(o.date);
-               return od.getDate() === day.getDate() && od.getMonth() === day.getMonth() && od.getFullYear() === day.getFullYear();
-            });
-            return dayOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
-          });
-          
-          const maxVal = Math.max(...values, 1000000); // prevent div by zero, baseline 1jt
-          // Map to Y coordinates (0 is top, 100 is bottom). Give it a max height of 20 (so it doesn't touch the top)
-          const normalizedValues = values.map(v => 100 - ((v / maxVal) * 80)); 
-          
-          let svgPath = `M0,${normalizedValues[0]} `;
-          const step = 100 / 6; // 6 intervals for 7 points
-          for(let i = 1; i < 7; i++) {
-             svgPath += `L${i * step},${normalizedValues[i]} `;
-          }
-
-          setChartData({
-            income: revenue,
-            expenses: revenue * 0.45, // Simulation of expenses based on revenue
-            labels: labels,
-            svgPath: svgPath,
-            polyPath: `${svgPath} L100,100 L0,100`
-          });
         }
       } catch (error) {
         console.error("Failed to fetch admin dashboard stats", error);
@@ -94,6 +62,67 @@ export default function AdminDashboard() {
     };
     fetchOrders();
   }, []);
+
+  useEffect(() => {
+    if (orders.length === 0) return;
+    
+    let labels: string[] = [];
+    let values: number[] = [];
+
+    if (timeRange === "Weekly") {
+      const last7Days = Array.from({length: 7}).map((_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (6 - i));
+        return d;
+      });
+      labels = last7Days.map(d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      values = last7Days.map((day) => {
+        const dayOrders = orders.filter((o: any) => {
+           const od = new Date(o.created_at || o.date || new Date());
+           return od.getDate() === day.getDate() && od.getMonth() === day.getMonth() && od.getFullYear() === day.getFullYear();
+        });
+        return dayOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+      });
+    } else if (timeRange === "Monthly") {
+      const last7Months = Array.from({length: 7}).map((_, i) => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - (6 - i));
+        return d;
+      });
+      labels = last7Months.map(d => d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }));
+      values = last7Months.map((month) => {
+        const monthOrders = orders.filter((o: any) => {
+           const od = new Date(o.created_at || o.date || new Date());
+           return od.getMonth() === month.getMonth() && od.getFullYear() === month.getFullYear();
+        });
+        return monthOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+      });
+    } else {
+      const last7Years = Array.from({length: 7}).map((_, i) => {
+        const d = new Date();
+        d.setFullYear(d.getFullYear() - (6 - i));
+        return d;
+      });
+      labels = last7Years.map(d => d.getFullYear().toString());
+      values = last7Years.map((year) => {
+        const yearOrders = orders.filter((o: any) => {
+           const od = new Date(o.created_at || o.date || new Date());
+           return od.getFullYear() === year.getFullYear();
+        });
+        return yearOrders.reduce((sum: number, o: any) => sum + (o.total || 0), 0);
+      });
+    }
+    
+    const maxVal = Math.max(...values, 1000000);
+    const periodRevenue = values.reduce((sum, v) => sum + v, 0);
+    
+    setChartData({
+      income: periodRevenue,
+      labels: labels,
+      values: values,
+      maxVal: maxVal
+    });
+  }, [orders, timeRange]);
 
   return (
     <main className="p-8 lg:p-10 max-w-[1600px] mx-auto w-full min-h-screen">
@@ -164,56 +193,78 @@ export default function AdminDashboard() {
         {/* Premium Sales Analytic Chart */}
         <motion.div variants={itemVariant} initial="hidden" animate="show" className="xl:col-span-2 bg-white dark:bg-[#111] rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/5 dark:border-white/5 relative overflow-hidden group">
           
-          <div className="flex justify-between items-center mb-8 relative z-10">
+          <div className="flex justify-between items-center mb-8 relative z-50">
             <div>
               <h2 className="text-xl font-black text-[#212529] dark:text-white">Sales Analytic</h2>
               <p className="text-xs font-bold text-neutral-400 mt-1">Monitor your store's financial health</p>
             </div>
-            <button className="flex items-center gap-2 bg-neutral-50 dark:bg-[#1a1a1a] px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 transition-colors border border-black/5 dark:border-white/5">
-              <span>Monthly</span>
-              <ChevronDown className="w-3 h-3" />
-            </button>
+            <div className="relative">
+              <button onClick={() => setShowDropdown(!showDropdown)} className="flex items-center gap-2 bg-neutral-50 dark:bg-[#1a1a1a] px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 transition-colors border border-black/5 dark:border-white/5">
+                <span>{timeRange}</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${showDropdown ? "rotate-180" : ""}`} />
+              </button>
+              
+              {showDropdown && (
+                <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-[#1a1a1a] rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-black/5 dark:border-white/5 overflow-hidden z-50">
+                  {["Weekly", "Monthly", "Yearly"].map(opt => (
+                    <button 
+                      key={opt}
+                      onClick={() => { setTimeRange(opt); setShowDropdown(false); }}
+                      className={`w-full text-left px-4 py-2.5 text-xs font-bold transition-colors ${timeRange === opt ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400" : "text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-white/5"}`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           
           <div className="flex flex-wrap gap-10 mb-12 relative z-10">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                <p className="text-xs font-bold text-neutral-500">Income</p>
+                <p className="text-xs font-bold text-neutral-500">Pendapatan</p>
               </div>
               <span className="text-2xl font-black text-[#212529] dark:text-white">Rp {chartData.income.toLocaleString('id-ID')}</span>
             </div>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-2 h-2 rounded-full bg-[#F77F00]"></div>
-                <p className="text-xs font-bold text-neutral-500">Expenses</p>
-              </div>
-              <span className="text-2xl font-black text-[#212529] dark:text-white">Rp {chartData.expenses.toLocaleString('id-ID')}</span>
-            </div>
           </div>
 
-          {/* Premium Animated Chart Placeholder */}
-          <div className="w-full h-64 relative border-b border-black/5 dark:border-white/5 flex items-end -mx-2 px-2">
+          {/* Premium Animated Bar Chart */}
+          <div className="w-full h-64 relative border-b border-black/5 dark:border-white/5 flex items-end justify-between px-2 pb-1 mt-4">
             {/* Grid lines */}
-            <div className="absolute inset-0 flex flex-col justify-between border-t border-black/5 dark:border-white/5">
+            <div className="absolute inset-0 flex flex-col justify-between border-t border-black/5 dark:border-white/5 pb-1">
+              <div className="w-full h-px bg-black/5 dark:bg-white/5" />
               <div className="w-full h-px bg-black/5 dark:bg-white/5" />
               <div className="w-full h-px bg-black/5 dark:bg-white/5" />
               <div className="w-full h-px bg-black/5 dark:bg-white/5" />
               <div className="w-full h-px bg-black/5 dark:bg-white/5" />
             </div>
 
-            {/* Income Gradient */}
-            <div className="absolute bottom-0 left-0 right-0 h-[80%] bg-gradient-to-t from-blue-500/20 to-transparent opacity-60" style={{ clipPath: `polygon(${chartData.polyPath || '0 100%, 0 80%, 15% 40%, 30% 70%, 45% 20%, 60% 80%, 75% 50%, 90% 10%, 100% 40%, 100% 100%'})` }} />
-            <svg className="w-full h-[80%] absolute bottom-0 left-0 right-0 preserve-3d overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 100">
-              <path d={chartData.svgPath || "M0,80 Q7.5,60 15,40 T30,70 T45,20 T60,80 T75,50 T90,10 T100,40"} fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" className="drop-shadow-[0_4px_10px_rgba(59,130,246,0.5)]"/>
-            </svg>
-
-            {/* Labels */}
-            <div className="w-full flex justify-between text-[10px] font-bold text-neutral-400 absolute -bottom-6">
-              {chartData.labels.length > 0 ? chartData.labels.map((lbl, idx) => <span key={idx}>{lbl}</span>) : (
-                <><span>Jul 22</span><span>Jul 23</span><span>Jul 24</span><span>Jul 25</span><span>Jul 26</span><span>Jul 27</span><span>Jul 28</span><span>Jul 29</span></>
-              )}
-            </div>
+            {/* Bars */}
+            {chartData.values.length > 0 ? chartData.values.map((val, idx) => (
+              <div key={idx} className="relative flex flex-col items-center justify-end w-10 md:w-16 h-[90%] z-10 group">
+                {/* Tooltip */}
+                <div className="absolute -top-10 bg-[#212529] dark:bg-white text-white dark:text-black text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl">
+                  Rp {val.toLocaleString('id-ID')}
+                </div>
+                {/* Bar */}
+                <motion.div 
+                  initial={{ height: 0 }}
+                  animate={{ height: `${Math.max((val / chartData.maxVal) * 100, 2)}%` }}
+                  transition={{ duration: 1, delay: idx * 0.1, type: "spring", stiffness: 60 }}
+                  className="w-6 md:w-12 bg-blue-500 rounded-t-xl group-hover:bg-[#F77F00] transition-colors"
+                />
+                <span className="absolute -bottom-8 text-[10px] font-bold text-neutral-400 whitespace-nowrap">{chartData.labels[idx]}</span>
+              </div>
+            )) : (
+              [1,2,3,4,5,6,7].map(i => (
+                <div key={i} className="relative flex flex-col items-center justify-end w-10 md:w-16 h-[90%] z-10">
+                  <div className="w-6 md:w-12 h-4 bg-neutral-100 dark:bg-[#1a1a1a] rounded-t-xl" />
+                  <span className="absolute -bottom-8 text-[10px] font-bold text-neutral-300 dark:text-neutral-700">---</span>
+                </div>
+              ))
+            )}
           </div>
         </motion.div>
 
@@ -234,7 +285,12 @@ export default function AdminDashboard() {
               <div key={i} className="flex items-center gap-4 p-3 -mx-3 rounded-2xl hover:bg-neutral-50 dark:hover:bg-[#1a1a1a] transition-all cursor-pointer group">
                 <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-neutral-100 flex-shrink-0">
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors z-10" />
-                  <img src={prod.img} alt={prod.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  <img 
+                    src={prod.img} 
+                    alt={prod.name} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                    onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=200&q=80" }}
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="text-sm font-bold text-[#212529] dark:text-white truncate group-hover:text-[#F77F00] transition-colors">{prod.name}</h4>

@@ -9,10 +9,22 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(req: Request) {
   try {
+    // 1. Fetch Dynamic Midtrans Keys from Settings
+    const { data: settingsData } = await supabase.from("store_settings").select("*");
+    let dynamicServerKey = process.env.MIDTRANS_SERVER_KEY || "";
+    let dynamicClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "";
+    
+    if (settingsData) {
+      const serverKeyRow = settingsData.find(row => row.key === "midtransServerKey");
+      const clientKeyRow = settingsData.find(row => row.key === "midtransClientKey");
+      if (serverKeyRow?.value) dynamicServerKey = serverKeyRow.value;
+      if (clientKeyRow?.value) dynamicClientKey = clientKeyRow.value;
+    }
+
     const snap = new Midtrans.Snap({
       isProduction: false,
-      serverKey: process.env.MIDTRANS_SERVER_KEY || "",
-      clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "",
+      serverKey: dynamicServerKey,
+      clientKey: dynamicClientKey,
     });
 
     const body = await req.json();
@@ -62,37 +74,39 @@ export async function POST(req: Request) {
       } else {
         // 3. Auto-Deduct Stock from Products
         for (const item of productItems) {
-          const { data: prod } = await supabase.from("products").select("variants").eq("id", item.id).single();
-          if (prod && prod.variants && Array.isArray(prod.variants)) {
-            let updated = false;
-            const newVariants = prod.variants.map((v: any) => {
-              // Extract size/color from item.name if possible (Format: "Name - Size - Color")
-              // If we can't accurately match, we just deduct from the first available variant to satisfy the basic requirement
-              const itemName = item.name.toLowerCase();
-              const sizeMatch = v.size ? itemName.includes(v.size.toLowerCase()) : false;
-              const colorMatch = v.colorName ? itemName.includes(v.colorName.toLowerCase()) : false;
-              
-              if (!updated && (sizeMatch || colorMatch || prod.variants.length === 1)) {
-                const currentStock = parseInt(v.stock) || 0;
-                v.stock = Math.max(0, currentStock - item.quantity).toString();
-                updated = true;
-              }
-              return v;
-            });
-            
-            // Fallback: If no exact variant matched, just deduct the first one that has stock
-            if (!updated) {
-              for (const v of newVariants) {
-                const currentStock = parseInt(v.stock) || 0;
-                if (currentStock > 0) {
+          const { data: prod } = await supabase.from("products").select("variants, stock").eq("id", item.id).single();
+          if (prod) {
+            if (prod.variants && Array.isArray(prod.variants) && prod.variants.length > 0) {
+              let updated = false;
+              const newVariants = prod.variants.map((v: any) => {
+                const itemName = item.name.toLowerCase();
+                const sizeMatch = v.size ? itemName.includes(v.size.toLowerCase()) : false;
+                const colorMatch = v.colorName ? itemName.includes(v.colorName.toLowerCase()) : false;
+                
+                if (!updated && (sizeMatch || colorMatch || prod.variants.length === 1)) {
+                  const currentStock = parseInt(v.stock) || 0;
                   v.stock = Math.max(0, currentStock - item.quantity).toString();
-                  break;
+                  updated = true;
+                }
+                return v;
+              });
+              
+              if (!updated) {
+                for (const v of newVariants) {
+                  const currentStock = parseInt(v.stock) || 0;
+                  if (currentStock > 0) {
+                    v.stock = Math.max(0, currentStock - item.quantity).toString();
+                    break;
+                  }
                 }
               }
+              await supabase.from("products").update({ variants: newVariants }).eq("id", item.id);
+            } else {
+              // No variants array found, deduct from root product stock
+              const currentStock = prod.stock !== undefined && prod.stock !== null ? parseInt(prod.stock) : 99;
+              const newStock = Math.max(0, currentStock - item.quantity);
+              await supabase.from("products").update({ stock: newStock }).eq("id", item.id);
             }
-
-            // Save back to DB
-            await supabase.from("products").update({ variants: newVariants }).eq("id", item.id);
           }
         }
       }
