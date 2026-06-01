@@ -11,6 +11,8 @@ import { useAuth } from "../context/AuthContext";
 import { useWishlist } from "../context/WishlistContext";
 import QuickAddModal from "../components/QuickAddModal";
 
+import { ALL_PRODUCTS } from "../lib/products";
+
 // ==========================================
 // DATA PRODUK (Filter Khusus Diskon)
 // ==========================================
@@ -28,7 +30,7 @@ const staggerContainer = {
 };
 const cardReveal = {
   hidden: { opacity: 0, y: 50 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } }
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] as const } }
 };
 
 export default function PromoPage() {

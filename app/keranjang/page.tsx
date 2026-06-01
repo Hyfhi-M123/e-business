@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart, CartItem } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
@@ -17,7 +17,7 @@ import Barcode from "react-barcode";
 
 const MapPicker = dynamic(() => import("../profil/MapPicker"), { ssr: false, loading: () => <div className="w-full h-56 rounded-2xl bg-neutral-100 dark:bg-white/5 animate-pulse" /> });
 
-export default function KeranjangPage() {
+function KeranjangContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { cartItems, removeFromCart, updateQuantity, clearCart, cartTotal, selectedItemIds: contextSelectedIds, toggleSelect, toggleSelectAll } = useCart();
@@ -957,5 +957,17 @@ export default function KeranjangPage() {
       </AnimatePresence>
 
     </main>
+  );
+}
+
+export default function KeranjangPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center bg-[#f8f9fa] dark:bg-[#0a0a0a]">
+        <div className="w-10 h-10 border-4 border-[#F77F00] border-t-transparent rounded-full animate-spin"></div>
+      </main>
+    }>
+      <KeranjangContent />
+    </Suspense>
   );
 }

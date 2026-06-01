@@ -86,7 +86,7 @@ export default function Home() {
       y: 0, 
       scale: 1, 
       filter: "blur(0px)",
-      transition: { type: "spring", stiffness: 100, damping: 15, mass: 1 } 
+      transition: { type: "spring" as const, stiffness: 100, damping: 15, mass: 1 } 
     }
   };
 
@@ -100,7 +100,7 @@ export default function Home() {
   };
 
   return (
-    <main className="text-[#212529] dark:text-white font-sans selection:bg-[#F77F00] dark:bg-orange-500 selection:text-[#212529] dark:text-white relative min-h-screen overflow-x-hidden">
+    <main className="text-[#212529] dark:text-white font-sans selection:bg-[#F77F00] dark:selection:bg-orange-500 selection:text-[#212529] dark:selection:text-white relative min-h-screen overflow-x-hidden">
       
       {/* FIXED GLOBAL PARALLAX BACKGROUND */}
       <div className="fixed inset-0 z-0 bg-[#F8F9FA] dark:bg-neutral-950 overflow-hidden pointer-events-none">
@@ -281,6 +281,159 @@ export default function Home() {
               </Link>
             </motion.div>
           </motion.div>
+        </motion.section>
+
+        {/* SECTION: INTERACTIVE GEAR HOTSPOTS */}
+        <motion.section
+          initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-100px" }} transition={{ duration: 1 }}
+          className="max-w-7xl mx-auto px-6 md:px-12 py-24 relative z-20"
+        >
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 pb-4 border-b border-[#DEE2E6] dark:border-white/10">
+            <div className="flex flex-col">
+              <span className="text-[#F77F00] dark:text-orange-500 text-[10px] font-black tracking-[0.2em] uppercase mb-2 flex items-center gap-2">
+                <Crosshair className="w-3 h-3" /> Inspeksi Gear Interaktif
+              </span>
+              <h3 className="text-4xl md:text-6xl font-black uppercase tracking-tighter">Field Intel.</h3>
+            </div>
+            <p className="text-sm text-[#6C757D] dark:text-neutral-400 font-medium max-w-sm mt-4 md:mt-0 md:text-right">
+              Hover pada titik-titik aktif untuk menginspeksi setiap gear yang dipakai oleh penjelajah kami di lapangan.
+            </p>
+          </div>
+
+          {/* Interactive Image Container */}
+          <div className="relative w-full aspect-[16/9] md:aspect-[21/9] rounded-[2rem] overflow-hidden border border-white/30 dark:border-white/10 shadow-2xl bg-black group">
+            {/* Background Adventure Photo */}
+            <img
+              src="https://images.unsplash.com/photo-1551632811-561732d1e306?ixlib=rb-4.0.3&auto=format&fit=crop&w=2560&q=80"
+              alt="Adventurer with full gear on mountain trail"
+              className="w-full h-full object-cover opacity-90 group-hover:scale-[1.02] transition-transform duration-[3s] ease-out"
+            />
+            {/* Dark overlay for contrast */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/30 z-[1]" />
+
+            {/* HUD corner decorations */}
+            <div className="absolute top-4 left-4 z-[5] flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[9px] font-mono tracking-[0.3em] uppercase text-white/60">SCAN AKTIF • 5 TARGET TERDETEKSI</span>
+            </div>
+            <div className="absolute top-4 right-4 z-[5]">
+              <span className="text-[9px] font-mono tracking-[0.3em] uppercase text-white/60">FIELD INTEL v2.4</span>
+            </div>
+            {/* Corner brackets */}
+            <div className="absolute top-3 left-3 w-8 h-8 border-t-2 border-l-2 border-white/20 z-[5] rounded-tl-lg" />
+            <div className="absolute top-3 right-3 w-8 h-8 border-t-2 border-r-2 border-white/20 z-[5] rounded-tr-lg" />
+            <div className="absolute bottom-3 left-3 w-8 h-8 border-b-2 border-l-2 border-white/20 z-[5] rounded-bl-lg" />
+            <div className="absolute bottom-3 right-3 w-8 h-8 border-b-2 border-r-2 border-white/20 z-[5] rounded-br-lg" />
+
+            {/* ═══ HOTSPOT DOTS ═══ */}
+            {[
+              {
+                id: "102",
+                top: "30%", left: "22%",
+                name: "Timberline X-Coat Arctic",
+                category: "Jaket Ekspedisi",
+                price: 1200000,
+                img: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=300&q=80",
+                cardPosition: "right" as const
+              },
+              {
+                id: "103",
+                top: "75%", left: "35%",
+                name: "AeroStep Mountain Boot",
+                category: "Sepatu Gunung",
+                price: 2150000,
+                img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&q=80",
+                cardPosition: "right" as const
+              },
+              {
+                id: "110",
+                top: "25%", left: "55%",
+                name: "Trailblazer 55L Pack",
+                category: "Tas Carrier",
+                price: 2800000,
+                img: "https://images.unsplash.com/photo-1622260614153-03223fb72052?w=300&q=80",
+                cardPosition: "left" as const
+              },
+              {
+                id: "101",
+                top: "45%", left: "75%",
+                name: "Vertex Summit Tent",
+                category: "Tenda Ekspedisi",
+                price: 3500000,
+                img: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=300&q=80",
+                cardPosition: "left" as const
+              },
+              {
+                id: "104",
+                top: "60%", left: "15%",
+                name: "TerraGrip Trekking Pole",
+                category: "Alat Navigasi",
+                price: 850000,
+                img: "https://images.unsplash.com/photo-1522163182402-834f871fd851?w=300&q=80",
+                cardPosition: "right" as const
+              }
+            ].map((hotspot, idx) => (
+              <div
+                key={hotspot.id}
+                className="absolute z-[10] group/dot"
+                style={{ top: hotspot.top, left: hotspot.left }}
+              >
+                {/* Outer ping ring */}
+                <div className="absolute -inset-3 rounded-full bg-[#F77F00]/20 animate-ping" style={{ animationDelay: `${idx * 0.4}s`, animationDuration: '2.5s' }} />
+                {/* Middle glow ring */}
+                <div className="absolute -inset-2 rounded-full bg-[#F77F00]/10 animate-pulse" />
+                {/* Core dot */}
+                <div className="relative w-4 h-4 rounded-full bg-[#F77F00] border-2 border-white shadow-[0_0_15px_rgba(247,127,0,0.6)] cursor-pointer group-hover/dot:scale-150 group-hover/dot:bg-white transition-all duration-300 z-[2]" />
+                {/* Crosshair lines */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-px bg-[#F77F00]/40 pointer-events-none group-hover/dot:w-12 group-hover/dot:bg-white/60 transition-all duration-300" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-px bg-[#F77F00]/40 pointer-events-none group-hover/dot:h-12 group-hover/dot:bg-white/60 transition-all duration-300" />
+
+                {/* ═══ PRODUCT CARD (appears on hover) ═══ */}
+                <div className={`absolute z-[20] pointer-events-none group-hover/dot:pointer-events-auto opacity-0 group-hover/dot:opacity-100 scale-90 group-hover/dot:scale-100 transition-all duration-300 ease-out ${
+                  hotspot.cardPosition === "right" ? "left-8 top-1/2 -translate-y-1/2" : "right-8 top-1/2 -translate-y-1/2"
+                }`}>
+                  {/* Connector line */}
+                  <div className={`absolute top-1/2 -translate-y-1/2 h-px bg-[#F77F00]/60 w-4 ${
+                    hotspot.cardPosition === "right" ? "-left-4" : "-right-4"
+                  }`} />
+
+                  <Link href={`/produk/${hotspot.id}`} className="block">
+                    <div className="w-[220px] bg-[#111]/95 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-[0_20px_40px_rgba(0,0,0,0.6)] hover:border-[#F77F00]/50 transition-colors duration-300">
+                      {/* Card image */}
+                      <div className="relative h-28 overflow-hidden">
+                        <img src={hotspot.img} alt={hotspot.name} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#111] to-transparent" />
+                        <span className="absolute top-2 left-2 px-2 py-0.5 bg-[#F77F00] text-[8px] font-black tracking-widest uppercase text-white rounded-full">
+                          {hotspot.category}
+                        </span>
+                      </div>
+                      {/* Card info */}
+                      <div className="p-3">
+                        <h4 className="text-xs font-black uppercase tracking-tight text-white mb-1 line-clamp-1">{hotspot.name}</h4>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#F77F00] text-sm font-black font-mono">Rp {hotspot.price.toLocaleString("id-ID")}</span>
+                          <span className="text-[8px] font-black uppercase tracking-widest text-white/50 flex items-center gap-1 group-hover/dot:text-[#F77F00] transition-colors">
+                            Inspect <ArrowUpRight className="w-3 h-3" />
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              </div>
+            ))}
+
+            {/* Bottom HUD bar */}
+            <div className="absolute bottom-0 left-0 right-0 z-[5] bg-gradient-to-t from-black/80 to-transparent pt-12 pb-4 px-6 flex items-end justify-between">
+              <div>
+                <h3 className="text-white text-xl md:text-2xl font-black uppercase tracking-tight mb-1">Perlengkapan Lengkap Ekspedisi</h3>
+                <p className="text-white/50 text-[10px] font-mono tracking-widest uppercase">Hover hotspot untuk inspeksi • Klik untuk detail produk</p>
+              </div>
+              <Link href="/katalog" className="hidden md:flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-[#F77F00] border border-white/20 hover:border-[#F77F00] text-white text-[10px] font-black uppercase tracking-widest rounded-full backdrop-blur-md transition-all duration-300">
+                Katalog Lengkap <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+          </div>
         </motion.section>
 
         {/* INFINITE MARQUEE BANNER */}

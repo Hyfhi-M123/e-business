@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ShieldCheck, Copy, ArrowRight, Lock, CheckCircle2, ChevronRight, Home, Smartphone, QrCode as QrCodeIcon, Wallet, Building2, CreditCard } from "lucide-react";
 import Link from "next/link";
 import Navbar from "../components/Navbar";
 
-export default function PembayaranPage() {
+function PembayaranContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isMounted, setIsMounted] = useState(false);
@@ -275,5 +275,17 @@ export default function PembayaranPage() {
         
       </div>
     </main>
+  );
+}
+
+export default function PembayaranPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center bg-[#f8f9fa] dark:bg-[#0a0a0a]">
+        <div className="w-10 h-10 border-4 border-[#F77F00] border-t-transparent rounded-full animate-spin"></div>
+      </main>
+    }>
+      <PembayaranContent />
+    </Suspense>
   );
 }

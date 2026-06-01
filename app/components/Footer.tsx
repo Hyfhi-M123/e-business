@@ -19,7 +19,6 @@ export default function Footer() {
     e.preventDefault();
     if (!email) { showToast("Harap masukkan alamat email!"); return; }
     if (!email.includes("@")) { showToast("Format email tidak valid!"); return; }
-    
     setIsLoading(true);
     try {
       const res = await fetch("/api/newsletter", {
@@ -46,15 +45,15 @@ export default function Footer() {
             Dapatkan intel eksklusif tentang rilisan gear terbaru dan diskon 10% untuk ekspedisi pertamamu bersama kami.
           </p>
           <form className="flex gap-2 max-w-md relative" onSubmit={handleSubscribe}>
-            <input 
-              type="email" 
+            <input
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email Address..." 
-              className="flex-1 bg-white/50 dark:bg-white/5 backdrop-blur-md border border-[#DEE2E6] dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[#F77F00] outline-none transition-colors" 
+              placeholder="Email Address..."
+              className="flex-1 bg-white/50 dark:bg-white/5 backdrop-blur-md border border-[#DEE2E6] dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-[#F77F00] outline-none transition-colors"
               disabled={isLoading}
             />
-            <button 
+            <button
               type="submit"
               disabled={isLoading}
               className="px-6 py-3 min-w-[100px] flex items-center justify-center bg-[#212529] dark:bg-white text-white dark:text-black font-black text-xs uppercase tracking-widest rounded-xl hover:bg-[#F77F00] dark:hover:bg-[#F77F00] hover:text-white transition-colors shadow-lg disabled:opacity-70"
@@ -70,7 +69,7 @@ export default function Footer() {
           {/* Toast Notification */}
           <AnimatePresence>
             {toast && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}

@@ -203,7 +203,7 @@ export default function ProfilPage() {
   };
 
   const containerV = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.15 } } };
-  const itemV = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } };
+  const itemV = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } } };
 
   if (loading) {
     return (
@@ -610,7 +610,7 @@ export default function ProfilPage() {
                               <button onClick={() => setDefaultAddress(addr.id)} title="Jadikan Utama"
                                 className="p-2 hover:bg-emerald-500/10 rounded-lg transition-colors"><Star className="w-4 h-4 text-neutral-500 hover:text-emerald-500" /></button>
                             )}
-                            <button onClick={() => { setEditingAddress(addr); setAddrForm({ label: addr.label, name: addr.name, phone: addr.phone, full: addr.full }); setShowAddressForm(true); }} title="Edit"
+                            <button onClick={() => { setEditingAddress(addr); setAddrForm({ label: addr.label, name: addr.name, phone: addr.phone, full: addr.full, lat: addr.lat || 0, lng: addr.lng || 0 }); setShowAddressForm(true); }} title="Edit"
                               className="p-2 hover:bg-orange-500/10 rounded-lg transition-colors"><Edit3 className="w-4 h-4 text-neutral-500 hover:text-orange-500" /></button>
                             <button onClick={() => deleteAddress(addr.id)} title="Hapus"
                               className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-neutral-500 hover:text-red-500" /></button>

@@ -5,7 +5,7 @@ import {
   Filter, ChevronDown, ChevronRight, ShoppingBag, ArrowUpRight, Search, Menu, 
   Star, Heart, X, Grid3X3, List, SlidersHorizontal, ChevronUp, Package, ShieldCheck
 } from "lucide-react";
-import { useState, useRef, useMemo, useEffect, useCallback } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
@@ -40,7 +40,7 @@ const cardReveal = {
   visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } }
 };
 
-export default function KatalogPage() {
+function KatalogContent() {
   const { addToCart } = useCart();
   const { user } = useAuth(); // Action Guard Listener
   const searchParams = useSearchParams();
@@ -237,7 +237,8 @@ export default function KatalogPage() {
 
     // Audience (Gender)
     if (activeAudience !== "Semua") {
-      items = items.filter(p => p.gender === activeAudience || p.gender === "Unisex");
+      const apparelCategories = ["Pakaian", "Sepatu", "Tas"];
+      items = items.filter(p => (p.gender === activeAudience || p.gender === "Unisex") && apparelCategories.includes(p.category));
     }
 
     // Price Range
@@ -253,7 +254,7 @@ export default function KatalogPage() {
     }
 
     return items;
-  }, [allProducts, search, activeCategory, sortBy, priceRange, aiMode, aiProductIds, smartSearchActive, smartSearchIds, smartSearchSort]);
+  }, [allProducts, search, activeCategory, activeAudience, sortBy, priceRange, aiMode, aiProductIds, smartSearchActive, smartSearchIds, smartSearchSort]);
 
   const visibleProducts = processed.slice(0, visibleCount);
   const hasMore = visibleCount < processed.length;
@@ -388,13 +389,13 @@ export default function KatalogPage() {
           className="grid grid-cols-1 md:grid-cols-3 gap-1 mb-16 bg-black/10 dark:bg-white/10 p-1"
         >
           {[
-            { id: "Pria", label: "MENS", img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&q=80" },
-            { id: "Wanita", label: "WOMENS", img: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80" },
-            { id: "Anak", label: "YOUTH", img: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&q=80" }
+            { id: "Pria", label: "PRIA", img: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&q=80" },
+            { id: "Wanita", label: "WANITA", img: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80" },
+            { id: "Anak", label: "ANAK", img: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&q=80" }
           ].map((item) => (
             <motion.div
               key={item.id}
-              onClick={() => { setActiveAudience(item.id); setVisibleCount(6); }}
+              onClick={() => { setActiveAudience(prev => prev === item.id ? "Semua" : item.id); setVisibleCount(6); }}
               className={`relative h-48 md:h-64 overflow-hidden cursor-pointer group transition-all duration-500 bg-black ${
                 activeAudience === item.id ? "ring-2 ring-[#F77F00] dark:ring-orange-500 ring-inset z-10" : "hover:opacity-90"
               }`}
@@ -808,5 +809,17 @@ export default function KatalogPage() {
         onAdd={handleConfirmQuickAdd}
       />
     </main>
+  );
+}
+
+export default function KatalogPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center bg-[#f8f9fa] dark:bg-[#0a0a0a]">
+        <div className="w-10 h-10 border-4 border-[#F77F00] border-t-transparent rounded-full animate-spin"></div>
+      </main>
+    }>
+      <KatalogContent />
+    </Suspense>
   );
 }

@@ -19,7 +19,7 @@ const LIFECYCLE = [
 function getStepIndex(s: string) { const i = LIFECYCLE.findIndex(x => x.key === s); return i >= 0 ? i : 0; }
 function getIcon(icon: string) {
   const c = "w-5 h-5";
-  const m: Record<string, JSX.Element> = { check: <CheckCircle2 className={c} />, box: <Box className={c} />, warehouse: <Warehouse className={c} />, truck: <Truck className={c} />, navigation: <Navigation className={c} />, delivered: <PackageCheck className={c} /> };
+  const m: Record<string, React.ReactNode> = { check: <CheckCircle2 className={c} />, box: <Box className={c} />, warehouse: <Warehouse className={c} />, truck: <Truck className={c} />, navigation: <Navigation className={c} />, delivered: <PackageCheck className={c} /> };
   return m[icon] || <CircleDot className={c} />;
 }
 function fmtDate(iso: string) { return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }); }

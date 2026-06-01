@@ -19,7 +19,7 @@ import { supabase } from "../../lib/supabase";
 // Variasi animasi global
 const fadeUp = {
   hidden: { opacity: 0, y: 40, filter: "blur(8px)" },
-  visible: (delay: number = 0) => ({ opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] } })
+  visible: (delay: number = 0) => ({ opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] as const } })
 };
 const staggerContainer = {
   hidden: {},
@@ -27,7 +27,7 @@ const staggerContainer = {
 };
 const staggerItem = {
   hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const } }
 };
 
 // ==========================================
