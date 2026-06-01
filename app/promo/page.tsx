@@ -164,9 +164,8 @@ export default function PromoPage() {
             <span className="text-[#6C757D] dark:text-neutral-500 font-mono text-[10px] ml-2">[{promoProducts.length} ITEMS]</span>
           </div>
           
-          <div className="flex gap-2">
-            <button className="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest bg-[#212529] text-white dark:bg-white dark:text-black border border-[#212529] dark:border-white">Diskon Terbesar</button>
-            <button className="px-5 py-2.5 text-[10px] font-black uppercase tracking-widest bg-transparent text-[#6C757D] dark:text-neutral-400 border border-black/10 dark:border-white/10 hover:border-[#212529] hover:text-[#212529] dark:hover:border-white dark:hover:text-white transition-colors">Terpopuler</button>
+          <div className="hidden">
+            {/* Sorting buttons removed by user request */}
           </div>
         </div>
 
